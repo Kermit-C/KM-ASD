@@ -155,3 +155,11 @@ cython_debug/
 # Dataset
 *.csv
 /data
+
+# Pytorch
+*.pth
+*.pt
+
+# IDE
+/.vscode
+/tmp
