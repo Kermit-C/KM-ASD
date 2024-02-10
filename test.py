@@ -11,9 +11,14 @@ from face_detection import RetinaFaceDetector
 
 
 def test_face_detector():
+    # detector = RetinaFaceDetector(
+    #     trained_model="face_detection/retinaface_weights/Resnet50_Final.pth",
+    #     network="resnet50",
+    #     cpu=True,
+    # )
     detector = RetinaFaceDetector(
-        trained_model="face_detection/retinaface_weights/resnet50_retinaface.pt",
-        network="resnet50",
+        trained_model="face_detection/retinaface_weights/mobilenet0.25_Final.pth",
+        network="mobile0.25",
         cpu=True,
     )
     dets = detector.detect_faces(
