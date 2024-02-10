@@ -23,4 +23,4 @@ torch-spline-conv==1.2.1
 torch-geometric==2.0.3
 
 # eventbus
-pysubpub==0.2.0
+pypubsub==4.0.3
