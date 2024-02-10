@@ -21,7 +21,6 @@ torch-cluster==1.5.9
 -f https://data.pyg.org/whl/torch-1.9.0%2Bcu111/torch_spline_conv-1.2.1-cp39-cp39-linux_x86_64.whl
 torch-spline-conv==1.2.1
 torch-geometric==2.0.3
-insightface==0.7.3
 
 # eventbus
 pysubpub==0.2.0
