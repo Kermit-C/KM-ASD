@@ -10,8 +10,8 @@ from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.event_bus_publisher import EventBusPublisher
 
 # 全局发布者和处理器
-publisher_map: map[str, EventBusPublisher] = map()
-processor_map: map[str, BaseEventBusProcessor] = map()
+publisher_map: dict[str, EventBusPublisher] = {}
+processor_map: dict[str, BaseEventBusProcessor] = {}
 
 
 def get_publisher(publisher_name: str) -> EventBusPublisher:
