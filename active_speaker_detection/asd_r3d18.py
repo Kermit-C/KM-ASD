@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+"""
+@Description: 
+@Author: chenkeming
+@Date: 2024-02-10 15:46:54
+"""
+
+import os
+import sys
+
+import torch
+from torch.optim.lr_scheduler import MultiStepLR
+from torch_geometric.loader import DataLoader
+from torchvision import transforms
+
+import active_speaker_detection.asd_config as asd_conf
+import active_speaker_detection.utils.custom_transforms as ct
+from active_speaker_detection.datasets.graph_dataset import IndependentGraphDatasetETE3D
+from active_speaker_detection.optimizers.optimizer_amp import optimize_asd
+from active_speaker_detection.utils.command_line import (
+    get_default_arg_parser,
+    unpack_command_line_args,
+)
+from active_speaker_detection.utils.logging import setup_optim_outputs
+
+from .models.graph_layouts import (
+    get_spatial_connection_pattern,
+    get_temporal_connection_pattern,
+)
+
+if __name__ == "__main__":
+    # 解析命令行参数
+    command_line_args = get_default_arg_parser().parse_args()
+    lr_arg, frames_per_clip, ctx_size, n_clips, strd, img_size = (
+        unpack_command_line_args(command_line_args)
+    )
+
+    # 图形头连接模式
+    # 获取空间连接模式
+    scp = get_spatial_connection_pattern(ctx_size, n_clips)
+    # 获取时间连接模式
+    tcp = get_temporal_connection_pattern(ctx_size, n_clips)
+
+    # 模型主体选项
+    opt_config = asd_conf.ASD_R3D_18_4lvl_params
+    # 模型输入配置
+    asd_config = asd_conf.ASD_R3D_18_inputs
+
+    # 数据转换
+    image_size = (img_size, img_size)
+    video_train_transform = transforms.Compose(
+        [transforms.Resize(image_size), ct.video_train]
+    )
+    video_val_transform = transforms.Compose(
+        [transforms.Resize(image_size), ct.video_val]
+    )
+
+    # 输出配置
+    model_name = (
+        "ASD_R3D_18"
+        + "_clip"
+        + str(frames_per_clip)
+        + "_ctx"
+        + str(ctx_size)
+        + "_len"
+        + str(n_clips)
+        + "_str"
+        + str(strd)
+    )
+    log, target_models = setup_optim_outputs(
+        asd_config["models_out"], opt_config, model_name
+    )
+
+    # 创建网络并转移到GPU
+    pretrain_weightds_path = asd_config["video_pretrain_weights"]
+    audio_pretrain_weightds_path = asd_config["audio_pretrain_weights"]
+    ez_net = opt_config["backbone"](
+        pretrain_weightds_path, audio_pretrain_weightds_path
+    )
+
+    has_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if has_cuda else "cpu")
+    print("Cuda info ", has_cuda, device)
+    ez_net.to(device)
+
+    # 优化配置
+    criterion = opt_config["criterion"]
+    optimizer = opt_config["optimizer"](
+        ez_net.parameters(), lr=opt_config["learning_rate"]
+    )
+    scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
+
+    # 数据路径
+    video_train_path = asd_config["video_train_dir"]
+    audio_train_path = asd_config["audio_train_dir"]
+    video_val_path = asd_config["video_val_dir"]
+    audio_val_path = asd_config["audio_val_dir"]
+
+    # 数据加载器
+    d_train = IndependentGraphDatasetETE3D(
+        audio_train_path,
+        video_train_path,
+        asd_config["csv_train_full"],
+        n_clips,
+        strd,
+        ctx_size,
+        frames_per_clip,
+        scp,
+        tcp,
+        video_train_transform,
+        do_video_augment=True,
+        crop_ratio=0.95,
+    )
+    d_val = IndependentGraphDatasetETE3D(
+        audio_val_path,
+        video_val_path,
+        asd_config["csv_val_full"],
+        n_clips,
+        strd,
+        ctx_size,
+        frames_per_clip,
+        scp,
+        tcp,
+        video_val_transform,
+        do_video_augment=False,
+    )
+
+    dl_train = DataLoader(
+        d_train,
+        batch_size=opt_config["batch_size"],
+        shuffle=True,
+        num_workers=opt_config["threads"],
+        pin_memory=True,
+    )
+    dl_val = DataLoader(
+        d_val,
+        batch_size=opt_config["batch_size"],
+        shuffle=True,
+        num_workers=opt_config["threads"],
+        pin_memory=True,
+    )
+
+    # 优化循环
+    model = optimize_asd(
+        ez_net,
+        dl_train,
+        dl_val,
+        device,
+        criterion,
+        optimizer,
+        scheduler,
+        num_epochs=opt_config["epochs"],
+        spatial_ctx_size=ctx_size,
+        time_len=n_clips,
+        models_out=target_models,
+        log=log,
+    )
