@@ -67,6 +67,12 @@ class RetinaFaceDetector:
         image_or_image_path: Union[cv2.typing.MatLike, np.ndarray, str],
         save_path: str = None,
     ):
+        """
+        :param image_or_image_path: 输入图片或图片路径
+        :param save_path: 保存路径
+        :return: 返回检测到的人脸信息，一个 list，每个元素是一个 tuple，包含以下信息：
+            (xmin, ymin, xmax, ymax, score, w, h, eye1_x, eye1_y, eye2_x, eye2_y, nose_x, nose_y, mouth1_x, mouth1_y, mouth2_x, mouth2_y)
+        """
         # 图片读取
         if isinstance(image_or_image_path, str):
             img_raw = cv2.imread(image_or_image_path, cv2.IMREAD_COLOR)
@@ -154,9 +160,9 @@ class RetinaFaceDetector:
         # show image
         self._save_image(save_path, img_raw, dets)
 
-        # xmin, ymin, xmax, ymax, score, w, h
+        # xmin, ymin, xmax, ymax, score, w, h, eye1_x, eye1_y, eye2_x, eye2_y, nose_x, nose_y, mouth1_x, mouth1_y, mouth2_x, mouth2_y
         results = [
-            (b[0], b[1], b[2], b[3], b[4], b[2] - b[0] + 1, b[3] - b[1] + 1)
+            (b[0], b[1], b[2], b[3], b[4], b[2] - b[0] + 1, b[3] - b[1] + 1, *b[5:15])
             for b in dets
         ]
         return results
