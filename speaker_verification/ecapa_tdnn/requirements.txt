@@ -1,0 +1,11 @@
+wandb
+yacs
+tqdm
+soundfile
+torchinfo
+sklearn==0.0
+timm
+einops
+scipy
+torchaudio
+librosa

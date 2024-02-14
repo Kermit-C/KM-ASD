@@ -155,10 +155,13 @@ cython_debug/
 # Dataset
 *.csv
 /data
+/voice_verification/cnceleb_verification/data
 
 # Pytorch
 *.pth
 *.pt
+/voice_verification/cnceleb_verification/train_models
+/active_speaker_detection/results
 
 # IDE
 /.vscode

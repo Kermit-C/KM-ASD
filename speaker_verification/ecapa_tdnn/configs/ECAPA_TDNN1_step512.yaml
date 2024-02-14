@@ -1,0 +1,13 @@
+NAME : "ECAPA_TDNN1steplr512_cn"
+DATA:
+  BATCH_SIZE: 64
+  TRAIN_LIST: "data/train_cn.txt"
+  TEST_LIST: "data/test_cn.txt"
+  TRAIN_PATH: "data/CN-Celeb_flac/data"
+  TEST_PATH: "data/CN-Celeb_flac/eval/test"
+  NUM_WORKERS: 16
+MODEL:
+  NAME: "ECAPA_TDNN1"
+  CHANNELS: 512
+OPTIMIZER:
+  SCHEDULER: "StepLR"

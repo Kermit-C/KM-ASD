@@ -10,6 +10,7 @@ import numpy as np
 
 from face_detection import RetinaFaceDetector
 from face_recognition import ArcFaceRecognizer
+from speaker_verification import EcapaTdnnVerificator
 
 
 def test_face_detector():
@@ -65,6 +66,15 @@ def test_face_recognition():
     print(recognizer.calc_similarity(feat1, feat2))
 
 
+def test_speaker_verification():
+    verificator = EcapaTdnnVerificator(cpu=True)
+    path1 = "/hdd1/ckm/asd/tmp/example/speaker1-1.wav"
+    path2 = "/hdd1/ckm/asd/tmp/example/speaker2-2.wav"
+    is_same = verificator.verify(path1, path2)
+    print(is_same)
+
+
 if __name__ == "__main__":
     # test_face_detector()
-    test_face_recognition()
+    # test_face_recognition()
+    test_speaker_verification()
