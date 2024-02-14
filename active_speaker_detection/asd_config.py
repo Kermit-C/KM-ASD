@@ -17,10 +17,10 @@ ASD_R3D_18_inputs = {
     "csv_val_full": "/hdd1/ckm/datasets/ava/annotations_entity/ava_activespeaker_val_augmented.csv",
     "csv_test_full": "/hdd1/ckm/datasets/ava/annotations_entity/ava_activespeaker_test_augmented.csv",
     # 数据配置
-    "audio_train_dir": "/hdd1/ckm2/instance_wavs_time_train/",
-    "video_train_dir": "/hdd1/ckm2/instance_crops_time_train/",
-    "audio_val_dir": "/hdd1/ckm2/instance_wavs_time_val/",
-    "video_val_dir": "/hdd1/ckm2/instance_crops_time_val/",
+    "audio_train_dir": "/ssd1/ckm2/instance_wavs_time_train/",
+    "video_train_dir": "/ssd1/ckm2/instance_crops_time_train/",
+    "audio_val_dir": "/ssd1/ckm2/instance_wavs_time_val/",
+    "video_val_dir": "/ssd1/ckm2/instance_crops_time_val/",
     "models_out": "./results",  # 保存目录
     # 预训练权重
     "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
@@ -33,10 +33,10 @@ ASD_R3D_50_inputs = {
     "csv_val_full": "/hdd1/ckm/datasets/ava/annotations_entity/ava_activespeaker_val_augmented.csv",
     "csv_test_full": "/hdd1/ckm/datasets/ava/annotations_entity/ava_activespeaker_test_augmented.csv",
     # 数据配置
-    "audio_train_dir": "/hdd1/ckm2/instance_wavs_time_train/",
-    "video_train_dir": "/hdd1/ckm2/instance_crops_time_train/",
-    "audio_val_dir": "/hdd1/ckm2/instance_wavs_time_val/",
-    "video_val_dir": "/hdd1/ckm2/instance_crops_time_val/",
+    "audio_train_dir": "/ssd1/ckm2/instance_wavs_time_train/",
+    "video_train_dir": "/ssd1/ckm2/instance_crops_time_train/",
+    "audio_val_dir": "/ssd1/ckm2/instance_wavs_time_val/",
+    "video_val_dir": "/ssd1/ckm2/instance_crops_time_val/",
     "models_out": "./results",  # 保存目录
     # 预训练权重
     "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
