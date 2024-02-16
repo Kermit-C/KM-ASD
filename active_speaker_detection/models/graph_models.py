@@ -369,8 +369,11 @@ class GraphTwoStreamResNet3D(nn.Module):
         video_feat: torch.Tensor,
         vfal_size: Tuple[int, int, int],
     ):
-        a_vfal = torch.squeeze(a_vfal[:, 0, 0, : vfal_size[1], : vfal_size[2]], dim=1)
-        a_vfal = self.vfal_ecapa(a_vfal, torch.ones([1.0] * a_vfal.size(0)))
+        a_vfal = torch.squeeze(a_vfal[:, : vfal_size[1], : vfal_size[2]], dim=1)
+        a_vfal = self.vfal_ecapa(
+            a_vfal, torch.ones(a_vfal.size(0), dtype=torch.float32)
+        )
+        a_vfal = torch.squeeze(a_vfal, dim=1)
         a_vfal, v_vfal = self.vfal_encoder(a_vfal, video_feat)
         return a_vfal, v_vfal
 

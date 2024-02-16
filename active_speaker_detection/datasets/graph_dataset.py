@@ -109,6 +109,9 @@ class GraphContextualDataset(Dataset):
         csv_data.pop(0)  # CSV header
         # csv_data 是一个二维列表，每一行是一个列表，每一行的元素是一个字符串
         for csv_row in csv_data:
+            # TEMP: 限制实体数量，Debug 用
+            if len(entity_set) > 50:
+                break
             if len(csv_row) != 10:
                 # 如果不是 10 个元素，就跳过
                 continue
@@ -394,11 +397,11 @@ class GraphDatasetETE(GraphContextualDataset):
                 video_data[0].size(2),
             )
         )
+        audio_fbank = torch.from_numpy(audio_fbank)
         vfal_feature_set = torch.zeros((1, audio_fbank.size(1), audio_fbank.size(2)))
         # 音频特征数据，第一个维度是 1，第二个维度是梅尔特征的窗口数，第三个维度是时间
         # 第一维的第一个元素是音频特征
         audio_data = torch.from_numpy(audio_data)
-        audio_fbank = torch.from_numpy(audio_fbank)
         feature_set[0, 0, : audio_data.size(1), : audio_data.size(2)] = audio_data
         # 填充视频特征
         for i in range(self.context_size):
@@ -412,7 +415,7 @@ class GraphDatasetETE(GraphContextualDataset):
             x2=vfal_feature_set,
             edge_index=self.batch_edges,
             y=torch.tensor(target_set),
-            y2=torch.tensor(entities_set),
+            y2=torch.tensor([e % int(math.pow(2, 31)) for e in entities_set]),
         )
 
 
@@ -608,6 +611,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
                     video_data[0].size(2),
                     video_data[0].size(3),
                 )
+            audio_fbank = torch.from_numpy(audio_fbank)
             if vfal_feature_set is None:
                 vfal_feature_set = torch.zeros(
                     self.graph_time_steps,
@@ -619,7 +623,6 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             graph_offset = time_idx * nodes_per_time
             # 第一个维度的第一个节点是音频特征
             audio_data = torch.from_numpy(audio_data)
-            audio_fbank = torch.from_numpy(audio_fbank)
             feature_set[
                 graph_offset, 0, 0, : audio_data.size(1), : audio_data.size(2)
             ] = audio_data
@@ -636,5 +639,5 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             x2=vfal_feature_set,
             edge_index=(self.spatial_batch_edges, self.temporal_batch_edges),
             y=torch.tensor(target_set),
-            y2=torch.tensor(entities_set),
+            y2=torch.tensor([e % int(math.pow(2, 31)) for e in entities_set]),
         )

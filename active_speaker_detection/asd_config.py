@@ -22,7 +22,7 @@ ASD_R3D_18_inputs = {
     "video_train_dir": "/ssd1/ckm2/instance_crops_time_train/",
     "audio_val_dir": "/ssd1/ckm2/instance_wavs_time_val/",
     "video_val_dir": "/ssd1/ckm2/instance_crops_time_val/",
-    "models_out": "./results",  # 保存目录
+    "models_out": "./active_speaker_detection/results",  # 保存目录
     # 预训练权重
     "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
     "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
@@ -39,7 +39,7 @@ ASD_R3D_50_inputs = {
     "video_train_dir": "/ssd1/ckm2/instance_crops_time_train/",
     "audio_val_dir": "/ssd1/ckm2/instance_wavs_time_val/",
     "video_val_dir": "/ssd1/ckm2/instance_crops_time_val/",
-    "models_out": "./results",  # 保存目录
+    "models_out": "./active_speaker_detection/results",  # 保存目录
     # 预训练权重
     "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
     "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",

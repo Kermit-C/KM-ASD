@@ -46,15 +46,17 @@ def get_fbank_generater(sample_rate: int) -> np.ndarray:
 
 
 def generate_fbank(audio_clip: np.ndarray, sample_rate: int) -> torch.Tensor:
-    """计算音频片段的梅尔频谱图，维度为 (1, 80, T)"""
+    """计算音频片段的梅尔频谱图，维度为 (1, T, 80)"""
     fbank_generater = get_fbank_generater(sample_rate)
-    fbank = fbank_generater(audio_clip)
-    fbank = np.expand_dims(fbank, axis=0)
-    return torch.FloatTensor(fbank)
+    audio_tensor = torch.from_numpy(audio_clip).float()
+    audio_tensor = torch.unsqueeze(audio_tensor, dim=0)
+    fbank = fbank_generater(audio_tensor)
+    return fbank
 
 
 def get_fbank_normalizer() -> InputNormalization:
-    if _fbank_normalizer is not None:
+    global _fbank_normalizer
+    if _fbank_normalizer is None:
         _fbank_normalizer = InputNormalization(norm_type="sentence", std_norm=False)
     return _fbank_normalizer
 
@@ -63,7 +65,7 @@ def normalize_fbank(
     fbank: torch.Tensor, len_ratio: torch.Tensor = torch.FloatTensor([1.0])
 ) -> torch.Tensor:
     """对 fbank 进行归一化
-    :param fbank: (1, 80, T)
+    :param fbank: (1, T, 80)
     :param len_ratio: (1,)
     """
     normalizer = get_fbank_normalizer()

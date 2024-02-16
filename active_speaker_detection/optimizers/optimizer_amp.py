@@ -170,9 +170,7 @@ def _train_model_amp_avl(
                 aux_loss_v: torch.Tensor = criterion(video_out, targets[video_mask])
                 aux_loss_vfal: torch.Tensor = vfal_critierion(
                     torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-                    torch.cat(
-                        [entities[audio_mask], entities[video_mask]], dim=0
-                    ).squeeze(),
+                    torch.cat([entities[audio_mask], entities[video_mask]], dim=0),
                 )
                 # 图的损失
                 loss_graph: torch.Tensor = criterion(outputs, targets)
