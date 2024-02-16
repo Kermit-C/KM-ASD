@@ -10,17 +10,25 @@ import csv
 import os
 from typing import List
 
+"""
+标签：
+0: NOT_SPEAKING
+1: SPEAKING_AUDIBLE
+2: SPEAKING_NOT_AUDIBLE
+"""
 
 def postprocess_speech_label(speech_label):
     speech_label = int(speech_label)
-    if speech_label == 2:  # Remember 2 = SPEAKING_NOT_AUDIBLE
+    if speech_label == 2:
+        # 把说话但没有声音也标记为未说话
         speech_label = 0
     return speech_label
 
 
 def postprocess_entity_label(entity_label):
     entity_label = int(entity_label)
-    if entity_label == 2:  # Remember 2 = SPEAKING_NOT_AUDIBLE
+    if entity_label == 2:
+        # 把说话但没有声音也标记为未说话
         entity_label = 0
     return entity_label
 

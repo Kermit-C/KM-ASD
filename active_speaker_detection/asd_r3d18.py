@@ -6,8 +6,6 @@
 @Date: 2024-02-10 15:46:54
 """
 
-import os
-import sys
 
 import torch
 from torch.optim.lr_scheduler import MultiStepLR
@@ -29,7 +27,8 @@ from .models.graph_layouts import (
     get_temporal_connection_pattern,
 )
 
-if __name__ == "__main__":
+
+def train_asd_r3d18():
     # 解析命令行参数
     command_line_args = get_default_arg_parser().parse_args()
     lr_arg, frames_per_clip, ctx_size, n_clips, strd, img_size = (
@@ -75,19 +74,23 @@ if __name__ == "__main__":
     # 创建网络并转移到GPU
     pretrain_weightds_path = asd_config["video_pretrain_weights"]
     audio_pretrain_weightds_path = asd_config["audio_pretrain_weights"]
-    ez_net = opt_config["backbone"](
-        pretrain_weightds_path, audio_pretrain_weightds_path
+    vfal_ecapa_pretrain_weights = asd_config["vfal_ecapa_pretrain_weights"]
+    asd_net = opt_config["backbone"](
+        pretrain_weightds_path,
+        audio_pretrain_weightds_path,
+        vfal_ecapa_pretrain_weights,
     )
 
     has_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if has_cuda else "cpu")
     print("Cuda info ", has_cuda, device)
-    ez_net.to(device)
+    asd_net.to(device)
 
     # 优化配置
     criterion = opt_config["criterion"]
+    vfal_critierion = opt_config["vfal_criterion"]
     optimizer = opt_config["optimizer"](
-        ez_net.parameters(), lr=opt_config["learning_rate"]
+        asd_net.parameters(), lr=opt_config["learning_rate"]
     )
     scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
 
@@ -143,11 +146,12 @@ if __name__ == "__main__":
 
     # 优化循环
     model = optimize_asd(
-        ez_net,
+        asd_net,
         dl_train,
         dl_val,
         device,
         criterion,
+        vfal_critierion,
         optimizer,
         scheduler,
         num_epochs=opt_config["epochs"],

@@ -8,6 +8,9 @@
 
 import numpy as np
 import python_speech_features
+import torch
+from speechbrain.lobes.features import Fbank
+from speechbrain.processing.features import InputNormalization
 
 
 def generate_mel_spectrogram(audio_clip: np.ndarray, sample_rate: int) -> np.ndarray:
@@ -16,3 +19,52 @@ def generate_mel_spectrogram(audio_clip: np.ndarray, sample_rate: int) -> np.nda
     audio_features = np.stack([np.array(i) for i in mfcc])
     audio_features = np.expand_dims(audio_features, axis=0)
     return audio_features
+
+
+_fbank_generater_dict = {}
+_fbank_normalizer = None
+
+
+def get_fbank_generater(sample_rate: int) -> np.ndarray:
+    if sample_rate in _fbank_generater_dict:
+        return _fbank_generater_dict[sample_rate]
+
+    n_mels = 80
+    left_frames = 0
+    right_frames = 0
+    deltas = False
+
+    fbank_generater = Fbank(
+        sample_rate=sample_rate,
+        n_mels=n_mels,
+        left_frames=left_frames,
+        right_frames=right_frames,
+        deltas=deltas,
+    )
+    _fbank_generater_dict[sample_rate] = fbank_generater
+    return fbank_generater
+
+
+def generate_fbank(audio_clip: np.ndarray, sample_rate: int) -> torch.Tensor:
+    """计算音频片段的梅尔频谱图，维度为 (1, 80, T)"""
+    fbank_generater = get_fbank_generater(sample_rate)
+    fbank = fbank_generater(audio_clip)
+    fbank = np.expand_dims(fbank, axis=0)
+    return torch.FloatTensor(fbank)
+
+
+def get_fbank_normalizer() -> InputNormalization:
+    if _fbank_normalizer is not None:
+        _fbank_normalizer = InputNormalization(norm_type="sentence", std_norm=False)
+    return _fbank_normalizer
+
+
+def normalize_fbank(
+    fbank: torch.Tensor, len_ratio: torch.Tensor = torch.FloatTensor([1.0])
+) -> torch.Tensor:
+    """对 fbank 进行归一化
+    :param fbank: (1, 80, T)
+    :param len_ratio: (1,)
+    """
+    normalizer = get_fbank_normalizer()
+    return normalizer(fbank, len_ratio)

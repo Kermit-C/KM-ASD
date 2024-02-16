@@ -10,10 +10,15 @@ import os
 from typing import List, Tuple
 
 import numpy as np
+import torch
 from PIL import Image
 from scipy.io import wavfile
 
-from active_speaker_detection.utils.audio_processing import generate_mel_spectrogram
+from active_speaker_detection.utils.audio_processing import (
+    generate_fbank,
+    generate_mel_spectrogram,
+    normalize_fbank,
+)
 
 
 def _pil_loader(path):
@@ -88,7 +93,7 @@ def load_a_clip_from_metadata(
     audio_source,
     audio_offset: float,
     fail_silent=False,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, torch.Tensor]:
     """从片段元数据中获得音频梅尔特征"""
     # 从片段元数据中获得时间戳序列
     ts_sequence = [str(meta[1]) for meta in clip_meta_data]
@@ -101,6 +106,7 @@ def load_a_clip_from_metadata(
 
     # 音频文件
     audio_file = os.path.join(audio_source, entity_id.replace(":", "_") + ".wav")
+    # audio_data 是一个 numpy.ndarray，int16 pcm格式
     sample_rate, audio_data = wavfile.read(audio_file)
 
     # 通过时间戳和采样率计算音频起始和结束位置，位置是采样点
@@ -110,5 +116,7 @@ def load_a_clip_from_metadata(
 
     audio_clip = _fit_audio_clip(audio_clip, sample_rate, len(ts_sequence))
     audio_features = generate_mel_spectrogram(audio_clip, sample_rate)
+    audio_fbank = generate_fbank(audio_clip, sample_rate)
+    audio_fbank = normalize_fbank(audio_fbank, torch.FloatTensor([1.0]))
 
-    return audio_features
+    return audio_features, audio_fbank

@@ -28,6 +28,7 @@ from active_speaker_detection.utils.file_util import (
     postprocess_entity_label,
     postprocess_speech_label,
 )
+from active_speaker_detection.utils.hash_util import calculate_md5
 
 """
 csv 标注格式：
@@ -238,8 +239,8 @@ class GraphDatasetETE(GraphContextualDataset):
 
     def get_audio_size(
         self,
-    ) -> Tuple[int, int, int]:
-        """获得音频的大小，返回一个元组不确定是三个维度"""
+    ) -> Tuple[Tuple[int, int, int]]:
+        """获得音频的大小，返回一个元组(1, 13, T)"""
         video_id, entity_id = self.entity_list[0]
         # 一个人的所有时间戳的元数据
         entity_metadata = self.entity_data[video_id][entity_id]
@@ -252,14 +253,14 @@ class GraphDatasetETE(GraphContextualDataset):
             entity_metadata, mid_index, self.half_clip_length
         )
         # 从片段元数据中获得音频梅尔特征
-        audio_data = io.load_a_clip_from_metadata(
+        audio_data, audio_fbank = io.load_a_clip_from_metadata(
             clip_meta_data, self.video_root, self.audio_root, audio_offset
         )
-        return np.float32(audio_data).shape
+        return np.float32(audio_data).shape, np.float32(audio_fbank).shape
 
     def _get_scene_video_data(
         self, video_id: str, entity_id: str, mid_index: int
-    ) -> Tuple[List[torch.Tensor], List[int]]:
+    ) -> Tuple[List[torch.Tensor], List[int], List[int]]:
         """根据实体 ID 和中间某刻时间戳索引，获取所有人视频画面 List(人数) tensor((clip数 * 通道数) * 高度 * 宽度) 和这一刻所有实体的标签
         :param video_id: 视频 id
         :param entity_id: 实体 id
@@ -277,6 +278,8 @@ class GraphDatasetETE(GraphContextualDataset):
         video_data: List[List[Image.Image]] = []
         # 标签，索引和 video_data 对应
         targets: List[int] = []
+        # 实体
+        entities: List[int] = []
         for ctx_entity in context:
             # 查找时间戳在 entity_metadata 中的索引
             entity_metadata = self.entity_data[video_id][ctx_entity]
@@ -294,6 +297,7 @@ class GraphDatasetETE(GraphContextualDataset):
                 io.load_v_clip_from_metadata(clip_meta_data, self.video_root)
             )
             targets.append(target_ctx)
+            entities.append(calculate_md5(ctx_entity))
 
         if self.do_video_augment:
             # 随机视频增强
@@ -306,28 +310,46 @@ class GraphDatasetETE(GraphContextualDataset):
 
         # 把一个人的多个画面在通道维度上合并成一个 3D tensor
         video_data = [torch.cat(vd, dim=0) for vd in video_data]
-        return video_data, targets
+        return video_data, targets, entities
 
     def _get_audio_data(
         self, video_id: str, entity_id: str, mid_index: int
-    ) -> Tuple[np.ndarray, int]:
-        """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, 13, T)和标签"""
+    ) -> Tuple[np.ndarray, np.ndarray, int, int]:
+        """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, 13, T)、fbank(1, 80, T)和标签"""
         entity_metadata = self.entity_data[video_id][entity_id]
         # 获取这个实体的音频偏移
         audio_offset = float(entity_metadata[0][1])
         midone: Tuple[str, int, int] = entity_metadata[mid_index]
         # 获取目标时刻是否说话
         target_audio = self.speech_data[video_id][midone[1]]
+        # 获取目标时刻谁说话，计算 md5 作为 int 编号
+        target_entity = 0
+        if target_audio == 1:
+            # 获取包含自己的上下文实体列表
+            mid_ts = self.entity_data[video_id][entity_id][mid_index][1]
+            context_entities = list(self.ts_to_entity[video_id][mid_ts])
+            for ctx_entity in context_entities:
+                # 看哪个实体在这个时间点说话
+                ctx_entity_metadata = self.entity_data[video_id][ctx_entity]
+                ctx_mid_index = self.search_ts_in_meta_data(ctx_entity_metadata, mid_ts)
+                if self.entity_data[video_id][ctx_entity][ctx_mid_index][-1] == 1:
+                    target_entity = calculate_md5(ctx_entity)
+                    break
 
         # 生成一个长度为 half_clip_size*2+1 的单人时间片段
         clip_meta_data = cu.generate_clip_meta(
             entity_metadata, mid_index, self.half_clip_length
         )
         # 从片段元数据中获得音频梅尔特征
-        audio_data = io.load_a_clip_from_metadata(
+        audio_data, audio_fbank = io.load_a_clip_from_metadata(
             clip_meta_data, self.video_root, self.audio_root, audio_offset
         )
-        return np.float32(audio_data), target_audio
+        return (
+            np.float32(audio_data),
+            np.float32(audio_fbank),
+            target_audio,
+            target_entity,
+        )
 
     def __getitem__(self, index):
         """根据 entity_list 的索引，获取数据集中的一个数据
@@ -340,11 +362,13 @@ class GraphDatasetETE(GraphContextualDataset):
         target_index = random.randint(0, len(target_entity_metadata) - 1)
 
         # 获取视频特征和标签
-        video_data, target_v = self._get_scene_video_data(
+        video_data, target_v, entities_v = self._get_scene_video_data(
             video_id, entity_id, target_index
         )
         # 获取音频特征和标签
-        audio_data, target_a = self._get_audio_data(video_id, entity_id, target_index)
+        audio_data, audio_fbank, target_a, entity_a = self._get_audio_data(
+            video_id, entity_id, target_index
+        )
 
         if self.norm_audio:
             # 归一化音频，这里是 z-score 归一化
@@ -355,6 +379,11 @@ class GraphDatasetETE(GraphContextualDataset):
         target_set.append(target_a)
         for tv in target_v:
             target_set.append(tv)
+        # 填充实体
+        entities_set: List[int] = []
+        entities_set.append(entity_a)
+        for ev in entities_v:
+            entities_set.append(ev)
 
         # 创建一个 tensor，用于存放特征数据，这里是 4D 的，第一个维度是上下文大小+1，第二个维度是(clip数*通道数)，第三四个维度是画面的长宽
         feature_set = torch.zeros(
@@ -365,16 +394,25 @@ class GraphDatasetETE(GraphContextualDataset):
                 video_data[0].size(2),
             )
         )
+        vfal_feature_set = torch.zeros((1, audio_fbank.size(1), audio_fbank.size(2)))
         # 音频特征数据，第一个维度是 1，第二个维度是梅尔特征的窗口数，第三个维度是时间
-        audio_data = torch.from_numpy(audio_data)
         # 第一维的第一个元素是音频特征
+        audio_data = torch.from_numpy(audio_data)
+        audio_fbank = torch.from_numpy(audio_fbank)
         feature_set[0, 0, : audio_data.size(1), : audio_data.size(2)] = audio_data
         # 填充视频特征
         for i in range(self.context_size):
             feature_set[i + 1, ...] = video_data[i]
+            vfal_feature_set[i + 1, ...] = audio_fbank
+
+        vfal_feature_set[0, : audio_fbank.size(1), : audio_fbank.size(2)] = audio_fbank
 
         return Data(
-            x=feature_set, edge_index=self.batch_edges, y=torch.tensor(target_set)
+            x=feature_set,
+            x2=vfal_feature_set,
+            edge_index=self.batch_edges,
+            y=torch.tensor(target_set),
+            y2=torch.tensor(entities_set),
         )
 
 
@@ -430,7 +468,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
 
     def _get_scene_video_data(
         self, video_id: str, entity_id: str, mid_index: int, cache: dict
-    ) -> Tuple[List[torch.Tensor], List[int]]:
+    ) -> Tuple[List[torch.Tensor], List[int], List[int]]:
         """父类方案的改进，加了 cache
         根据实体 ID 和中间某刻时间戳索引，获取所有人视频画面 List(人数) tensor(通道数 * clip数 * 高度 * 宽度) 和这一刻所有实体的标签
         """
@@ -446,6 +484,8 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
         video_data: List[List[Image.Image]] = []
         # 标签，索引和 video_data 对应
         targets: list[int] = []
+        # 实体
+        entities: list[int] = []
         for ctx_entity in context:
             # 查找时间戳在 entity_metadata 中的索引
             entity_metadata = self.entity_data[video_id][ctx_entity]
@@ -465,6 +505,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
                 )
             )
             targets.append(target_ctx)
+            entities.append(calculate_md5(ctx_entity))
 
         if self.do_video_augment:
             # 视频角落增强，但这里没给具体实现
@@ -477,7 +518,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
 
         # 把一个人的多个画面合并成一个 4D tensor，这里和父类不一样
         video_data = [torch.stack(vd, dim=1) for vd in video_data]
-        return video_data, targets
+        return video_data, targets, entities
 
     def _get_time_context(
         self, entity_data: List[Tuple[str, int, int]], target_index: int
@@ -522,8 +563,12 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
 
         # 图节点的特征数据
         feature_set: torch.Tensor = None
+        # vfal 特征数据
+        vfal_feature_set: torch.Tensor = None
         # 图节点的标签数据
         target_set: List[int] = []
+        # 图节点的实体数据
+        entities_set: List[int] = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
@@ -536,11 +581,11 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             target_index = all_ts.index(tc)
 
             # 获取视频特征和标签
-            video_data, target_v = self._get_scene_video_data(
+            video_data, target_v, entities_v = self._get_scene_video_data(
                 video_id, entity_id, target_index, cache
             )
             # 获取音频特征和标签
-            audio_data, target_a = self._get_audio_data(
+            audio_data, audio_fbank, target_a, entity_a = self._get_audio_data(
                 video_id, entity_id, target_index
             )
 
@@ -548,6 +593,10 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             target_set.append(target_a)
             for tv in target_v:
                 target_set.append(tv)
+            # 填充实体
+            entities_set.append(entity_a)
+            for ev in entities_v:
+                entities_set.append(ev)
 
             # 创建一个 tensor，用于存放特征数据，这里是 5D 的，第一个维度是时刻上下文节点数*时间上下文数，第二个维度是通道数，第三个维度是clip数，第四五个维度是画面的长宽
             # IMPORTANT: 节点所在是第一个维度
@@ -559,11 +608,18 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
                     video_data[0].size(2),
                     video_data[0].size(3),
                 )
+            if vfal_feature_set is None:
+                vfal_feature_set = torch.zeros(
+                    self.graph_time_steps,
+                    audio_fbank.size(1),
+                    audio_fbank.size(2),
+                )
 
             # 图节点的偏移，在 feature_set 中的偏移
             graph_offset = time_idx * nodes_per_time
-            audio_data = torch.from_numpy(audio_data)
             # 第一个维度的第一个节点是音频特征
+            audio_data = torch.from_numpy(audio_data)
+            audio_fbank = torch.from_numpy(audio_fbank)
             feature_set[
                 graph_offset, 0, 0, : audio_data.size(1), : audio_data.size(2)
             ] = audio_data
@@ -571,8 +627,14 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             for i in range(self.context_size):
                 feature_set[graph_offset + (i + 1), ...] = video_data[i]
 
+            vfal_feature_set[time_idx, : audio_fbank.size(1), : audio_fbank.size(2)] = (
+                audio_fbank
+            )
+
         return Data(
             x=feature_set,
+            x2=vfal_feature_set,
             edge_index=(self.spatial_batch_edges, self.temporal_batch_edges),
             y=torch.tensor(target_set),
+            y2=torch.tensor(entities_set),
         )

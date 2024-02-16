@@ -15,6 +15,10 @@ import torch.nn.parameter
 from torch.nn import functional as F
 from torch_geometric.nn import EdgeConv
 
+from active_speaker_detection.models.vfal_ecapa_tdnn_model import get_ecapa_model
+from active_speaker_detection.models.vfal_sl_encoder_model import VfalSlEncoder
+from active_speaker_detection.utils.audio_processing import get_fbank_generater
+
 from .graph_layouts import generate_av_mask
 from .shared_2d import BasicBlock2D, conv1x1
 from .shared_3d import BasicBlock3D, Bottleneck3D, conv1x1x1, get_inplanes
@@ -184,13 +188,19 @@ class GraphTwoStreamResNet3D(nn.Module):
         self.v_avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
         self.fc_128_v = nn.Linear(512 * block_3d.expansion, 128)
 
+        # VFAL Audio
+        self.vfal_ecapa = get_ecapa_model()
+        self.vfal_encoder = VfalSlEncoder(
+            voice_size=192, face_size=512, embedding_size=128
+        )
+
         # Shared
         self.relu = nn.ReLU(inplace=True)
 
-        # Dim reduction
         # 降维，降到节点特征的维度 128
         self.reduction_a = nn.Linear(512 * block_2d.expansion, 128)
         self.reduction_v = nn.Linear(512 * block_3d.expansion, 128)
+        self.reduction_v_vfal = nn.Linear(128 * 3, 128)
 
         # Aux Supervision
         self.fc_aux_a = nn.Linear(128, 2)
@@ -353,24 +363,54 @@ class GraphTwoStreamResNet3D(nn.Module):
         v = v.reshape(v.size(0), -1)
         return v
 
-    def forward(self, data, ctx_size, audio_size: Tuple[int, int, int]):
-        x, edge_index, _ = data.x, data.edge_index, data.batch
+    def forward_vfal(
+        self,
+        a_vfal: torch.Tensor,
+        video_feat: torch.Tensor,
+        vfal_size: Tuple[int, int, int],
+    ):
+        a_vfal = torch.squeeze(a_vfal[:, 0, 0, : vfal_size[1], : vfal_size[2]], dim=1)
+        a_vfal = self.vfal_ecapa(a_vfal, torch.ones([1.0] * a_vfal.size(0)))
+        a_vfal, v_vfal = self.vfal_encoder(a_vfal, video_feat)
+        return a_vfal, v_vfal
 
-        # indexing masks
+    def forward(
+        self,
+        data,
+        ctx_size,
+        audio_size: Tuple[int, int, int],
+        vfal_size: Tuple[int, int, int],
+    ):
+        x, x2, edge_index, _ = data.x, data.x2, data.edge_index, data.batch
+
         # 生成音频和视频的 mask
         audio_mask, video_mask = generate_av_mask(ctx_size, x.size(0))
 
-        # Initial Conv. forward
         # 音频和视频的特征提取
         audio_feats = self.forward_audio(x[audio_mask], audio_size)
         video_feats = self.forward_video(x[video_mask])
+        vfal_a_feats, vfal_v_feats = self.forward_vfal(x2, video_feats, vfal_size)
 
-        # Dim Reduction
         # 降维，降到节点特征的维度 128
         audio_feats = self.relu(self.reduction_a(audio_feats))
         video_feats = self.relu(self.reduction_v(video_feats))
+        video_feats = self.relu(
+            self.reduction_v_vfal(
+                torch.cat(
+                    [
+                        video_feats,
+                        torch.cat(
+                            [vfal_a_feats]
+                            * (video_feats.size(0) // vfal_a_feats.size(0)),
+                            dim=0,
+                        ),
+                        vfal_v_feats,
+                    ],
+                    dim=1,
+                )
+            )
+        )
 
-        # Rebuild interleaved tensor
         # 重建交错张量
         graph_feats = torch.zeros(
             (x.size(0), 128), device=audio_feats.get_device(), dtype=audio_feats.dtype
@@ -388,7 +428,7 @@ class GraphTwoStreamResNet3D(nn.Module):
         graph_feats = self.edge2(graph_feats, edge_index)
         graph_feats = self.edge3(graph_feats, edge_index)
         graph_feats = self.edge4(graph_feats, edge_index)
-        return self.fc(graph_feats), audio_out, video_out
+        return self.fc(graph_feats), audio_out, video_out, vfal_a_feats, vfal_v_feats
 
 
 class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
@@ -414,8 +454,14 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
         # self.edge3 = None
         # self.edge4 = None
 
-    def forward(self, data, ctx_size, audio_size: Tuple[int, int, int]):
-        x, joint_edge_index, _ = data.x, data.edge_index, data.batch
+    def forward(
+        self,
+        data,
+        ctx_size,
+        audio_size: Tuple[int, int, int],
+        vfal_size: Tuple[int, int, int],
+    ):
+        x, x2, joint_edge_index, _ = data.x, data.x2, data.edge_index, data.batch
         spatial_edge_index = joint_edge_index[0]
         temporal_edge_index = joint_edge_index[1]
 
@@ -423,17 +469,38 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
         # 生成音频和视频的 mask，同 GraphTwoStreamResNet3D
         audio_mask, video_mask = generate_av_mask(ctx_size, x.size(0))
 
-        # Initial Conv. forward
         # 音频和视频的特征提取，同 GraphTwoStreamResNet3D
         audio_feats = self.forward_audio(x[audio_mask], audio_size)
         video_feats = self.forward_video(x[video_mask])
+        vfal_a_feats, vfal_v_feats = self.forward_vfal(x2, video_feats, vfal_size)
 
-        # Dim Reduction
         # 降维，降到节点特征的维度 128，同 GraphTwoStreamResNet3D
         audio_feats = self.relu(self.reduction_a(audio_feats))
         video_feats = self.relu(self.reduction_v(video_feats))
+        video_feats = self.relu(
+            self.reduction_v_vfal(
+                torch.cat(
+                    [
+                        video_feats,
+                        # 重复 vfal_a_feats，使得 batch 维度相同
+                        torch.cat(
+                            [
+                                torch.stack(
+                                    [vfal_a]
+                                    * (video_feats.size(0) // vfal_a_feats.size(0)),
+                                    dim=0,
+                                )
+                                for vfal_a in vfal_a_feats
+                            ],
+                            dim=0,
+                        ),
+                        vfal_v_feats,
+                    ],
+                    dim=1,
+                )
+            )
+        )
 
-        # Rebuild interleaved tensor
         # 重建交错张量，同 GraphTwoStreamResNet3D
         graph_feats = torch.zeros(
             (x.size(0), 128), device=audio_feats.get_device(), dtype=audio_feats.dtype
@@ -441,13 +508,11 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
         graph_feats[audio_mask] = audio_feats
         graph_feats[video_mask] = video_feats
 
-        # Aux supervision
         # 辅助监督，同 GraphTwoStreamResNet3D
         audio_out = self.fc_aux_a(graph_feats[audio_mask])
         video_out = self.fc_aux_v(graph_feats[video_mask])
 
         # 有残差的图神经网络
-        # Spatial Stream
         graph_feats_1s = self.edge_spatial_1(graph_feats, spatial_edge_index)
         graph_feats_1st = self.edge_temporal_1(graph_feats_1s, temporal_edge_index)
 
@@ -463,7 +528,13 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
         graph_feats_4st = self.edge_temporal_4(graph_feats_4s, temporal_edge_index)
         graph_feats_4st = graph_feats_4st + graph_feats_3st
 
-        return self.fc(graph_feats_4st), audio_out, video_out
+        return (
+            self.fc(graph_feats_4st),
+            audio_out,
+            video_out,
+            vfal_a_feats,
+            vfal_v_feats,
+        )
 
 
 def _load_video_weights_into_model(model: nn.Module, ws_file):
@@ -482,11 +553,7 @@ def _load_video_weights_into_model(model: nn.Module, ws_file):
 
 
 def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
-    """加载音频预训练权重，这里使用了 resnet18 的预训练权重
-    :param model: 模型
-    :param arch2d: 2D 网络的名字，resnet18、resnet34、resnet50
-    :param progress: 是否显示下载进度
-    """
+    """加载音频预训练权重，这里使用了 resnet18 的预训练权重"""
     # resnet_state_dict = load_state_dict_from_url(model_urls[arch2d], progress=progress)
     resnet_state_dict = torch.load(audio_pretrained_weights)
 
@@ -506,23 +573,47 @@ def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     return
 
 
-def R3D18_4lvlGCN(pretrained_weigths, audio_pretrained_weights, filter_size=128):
+def _load_vfal_weights_into_model(model: nn.Module, vfal_ecapa_pretrain_weights):
+    """加载音脸关系预训练权重"""
+    checkpoint = torch.load(vfal_ecapa_pretrain_weights)
+
+    model.vfal_ecapa.load_state_dict(checkpoint["model"], strict=True)
+    # 固定参数
+    model.vfal_ecapa.eval()
+
+    print("loaded vfal ws")
+    return
+
+
+def R3D18_4lvlGCN(
+    pretrained_weigths,
+    audio_pretrained_weights,
+    vfal_ecapa_pretrain_weights,
+    filter_size=128,
+):
     args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
     args_3d = BasicBlock3D, [2, 2, 2, 2], get_inplanes(), 3, 7, 1, False, "B", 1.0
     model = GraphTwoStreamResNet3DTwoGraphs4LVLRes(args_2d, args_3d, filter_size)
 
     _load_audio_weights_into_model(model, audio_pretrained_weights)
     _load_video_weights_into_model(model, pretrained_weigths)
+    _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
 
     return model
 
 
-def R3D50_4lvlGCN(pretrained_weigths, audio_pretrained_weights, filter_size=128):
+def R3D50_4lvlGCN(
+    pretrained_weigths,
+    audio_pretrained_weights,
+    vfal_ecapa_pretrain_weights,
+    filter_size=128,
+):
     args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
     args_3d = Bottleneck3D, [3, 4, 6, 3], get_inplanes(), 3, 7, 1, False, "B", 1.0
     model = GraphTwoStreamResNet3DTwoGraphs4LVLRes(args_2d, args_3d, filter_size)
 
     _load_audio_weights_into_model(model, audio_pretrained_weights)
     _load_video_weights_into_model(model, pretrained_weigths)
+    _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
 
     return model

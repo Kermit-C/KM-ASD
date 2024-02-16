@@ -46,10 +46,12 @@ def setup_optim_outputs(
                 "train_loss",
                 "train_audio_loss",
                 "train_video_loss",
+                "train_vfal_loss",
                 "train_map",
                 "val_loss",
                 "val_audio_loss",
                 "val_video_loss",
+                "val_vfal_loss",
                 "val_map",
             ]
         )

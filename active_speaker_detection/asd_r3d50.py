@@ -6,13 +6,8 @@
 @Date: 2024-02-10 15:46:54
 """
 
-import os
 
 import torch
-from models.graph_layouts import (
-    get_spatial_connection_pattern,
-    get_temporal_connection_pattern,
-)
 from torch.optim.lr_scheduler import MultiStepLR
 from torch_geometric.loader import DataLoader
 from torchvision import transforms
@@ -27,7 +22,13 @@ from active_speaker_detection.utils.command_line import (
 )
 from active_speaker_detection.utils.logging import setup_optim_outputs
 
-if __name__ == "__main__":
+from .models.graph_layouts import (
+    get_spatial_connection_pattern,
+    get_temporal_connection_pattern,
+)
+
+
+def train_asd_r3d50():
     # 解析命令行参数
     command_line_args = get_default_arg_parser().parse_args()
     lr_arg, frames_per_clip, ctx_size, n_clips, strd, img_size = (
@@ -69,19 +70,23 @@ if __name__ == "__main__":
     # 创建网络并转移到GPU
     pretrain_weightds_path = asd_config["video_pretrain_weights"]
     audio_pretrain_weightds_path = asd_config["audio_pretrain_weights"]
-    ez_net = asd_config["backbone"](
-        pretrain_weightds_path, audio_pretrain_weightds_path
+    vfal_ecapa_pretrain_weights = asd_config["vfal_ecapa_pretrain_weights"]
+    asd_net = asd_config["backbone"](
+        pretrain_weightds_path,
+        audio_pretrain_weightds_path,
+        vfal_ecapa_pretrain_weights,
     )
 
     has_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if has_cuda else "cpu")
     print("Cuda info ", has_cuda, device)
-    ez_net.to(device)
+    asd_net.to(device)
 
     # 优化配置
     criterion = asd_config["criterion"]
+    vfal_critierion = asd_config["vfal_criterion"]
     optimizer = asd_config["optimizer"](
-        ez_net.parameters(), lr=asd_config["learning_rate"]
+        asd_net.parameters(), lr=asd_config["learning_rate"]
     )
     scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
 
@@ -137,11 +142,12 @@ if __name__ == "__main__":
 
     # 优化循环
     model = optimize_asd(
-        ez_net,
+        asd_net,
         dl_train,
         dl_val,
         device,
         criterion,
+        vfal_critierion,
         optimizer,
         scheduler,
         num_epochs=opt_config["epochs"],

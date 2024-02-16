@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-@description: 
-@author: chenkeming
-@date: Do not edit
+@Description: 
+@Author: chenkeming
+@Date: 2024-02-10 15:46:54
 """
 
 import math
