@@ -273,6 +273,7 @@ def _test_model_graph_losses(
         graph_data = dl
         graph_data = graph_data.to(device)
         targets = graph_data.y
+        entities = graph_data.y2
 
         with torch.set_grad_enabled(False):
             # TODO inneficient here
@@ -292,7 +293,9 @@ def _test_model_graph_losses(
             aux_loss_v = criterion(video_out, targets[video_mask])
             aux_loss_vfal: torch.Tensor = vfal_critierion(
                 torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-                torch.cat([targets[vfal_mask], targets[vfal_mask]], dim=0).squeeze(),
+                torch.cat(
+                    [entities[audio_mask], entities[video_mask]], dim=0
+                ).squeeze(),
             )
 
             label_lst.extend(targets[video_mask].cpu().numpy().tolist())
