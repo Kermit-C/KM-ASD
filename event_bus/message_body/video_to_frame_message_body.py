@@ -12,6 +12,5 @@ from event_bus.event_message import EventMessageBody
 class VideoToFrameMessageBody(EventMessageBody):
 
     def __init__(self, video_path: str):
-        # TODO
         # 视频路径
         self.video_path = video_path

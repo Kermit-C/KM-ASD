@@ -17,12 +17,12 @@ class SpeakerVerificateMessageBody(EventMessageBody):
 
     def __init__(
         self,
-        audio_pcm: Optional[torch.Tensor] = None,
-        audio_sample_rate: Optional[int] = None,
-        audio_frame_length: Optional[int] = None,
-        audio_frame_step: Optional[int] = None,
-        audio_frame_count: Optional[int] = None,
-        audio_frame_timestamp: Optional[int] = None,
+        audio_pcm: torch.Tensor,
+        audio_sample_rate: int,
+        audio_frame_length: int,
+        audio_frame_step: int,
+        audio_frame_count: int,
+        audio_frame_timestamp: int,
     ):
         self.audio_pcm = audio_pcm
         self.audio_sample_rate = audio_sample_rate

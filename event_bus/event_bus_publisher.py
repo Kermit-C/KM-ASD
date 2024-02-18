@@ -23,7 +23,7 @@ class EventBusPublisher:
 
     def publish(self, topic: str, message: EventMessage):
         """发布消息"""
-        self.publisher.sendMessage(topic, message)
+        self.publisher.sendMessage(topic, message)  # type: ignore
 
     def publish_batch(self, topic: str, messages: list[EventMessage]):
         """批量发布消息"""

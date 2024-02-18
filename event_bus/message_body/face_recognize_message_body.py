@@ -18,6 +18,7 @@ class FaceRecognizeMessageBody(EventMessageBody):
         frame_count: int,
         frame_timestamp: int,
         frame: np.ndarray,
+        frame_face_idx: int,
         face_lmks: np.ndarray,
     ):
         # 帧数，代表第几帧
@@ -26,5 +27,7 @@ class FaceRecognizeMessageBody(EventMessageBody):
         self.frame_timestamp = frame_timestamp
         # 帧图像
         self.frame = frame
-        # 人脸关键点 (5, 2)
+        # 人脸索引
+        self.frame_face_idx = frame_face_idx
+        # 人脸关键点 (5, 2)，相对于人脸框的坐标
         self.face_lmks = face_lmks

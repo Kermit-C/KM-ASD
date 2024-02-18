@@ -6,19 +6,27 @@
 @Date: 2024-02-09 17:16:48
 """
 
+import time
+from typing import Callable
+
 
 class EventMessageBody:
-    def __init__(self, event_type: str, data: dict):
-        # TODO
-        self.event_type = event_type
-        self.data = data
+    pass
 
 
 class EventMessage:
-    def __init__(self, request_id: str, body: EventMessageBody):
-        # TODO
+
+    def __init__(
+        self,
+        request_id: str,
+        result_consumer: Callable[["EventMessage"], None],
+        body: EventMessageBody,
+    ):
         self.request_id = request_id
+        self.result_consumer = result_consumer
         self.body = body
+        # 时间戳，用于判断处理是否超时
+        self.timestamp = int(time.time() * 1000)
 
     def copy(self):
-        return EventMessage(self.request_id, self.body)
+        return EventMessage(self.request_id, self.result_consumer, self.body)

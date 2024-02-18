@@ -24,7 +24,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
         frame = event_message_body.frame
         face_dets = event_message_body.face_dets
 
-        for face_det in face_dets:
+        for face_idx, face_det in enumerate(face_dets):
             x1, y1, x2, y2 = face_det["bbox"]
             left_eye_x = face_det["landmarks"]["left_eye"]["x"]
             left_eye_y = face_det["landmarks"]["left_eye"]["y"]
@@ -56,6 +56,8 @@ class FaceCropProcessor(BaseEventBusProcessor):
                     frame_count=event_message_body.frame_count,
                     frame_timestamp=event_message_body.frame_timestamp,
                     frame=face,
+                    frame_face_idx=face_idx,
+                    frame_face_bbox=(x1, y1, x2, y2),  # type: ignore
                 ),
             )
             self.publish_next(
@@ -64,6 +66,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
                     event_message_body.frame_count,
                     event_message_body.frame_timestamp,
                     face,
+                    face_idx,
                     np.array(
                         [
                             [left_eye_x, left_eye_y],
@@ -72,6 +75,6 @@ class FaceCropProcessor(BaseEventBusProcessor):
                             [left_mouth_x, left_mouth_y],
                             [right_mouth_x, right_mouth_y],
                         ]
-                    ),
+                    ).astype(np.float32),
                 ),
             )

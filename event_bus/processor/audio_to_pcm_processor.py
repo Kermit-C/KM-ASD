@@ -45,7 +45,7 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
                 sample_rate, self.audio_to_pcm_sample_rate
             )(audio)
         # 取单声道 (num_samples,)
-        audio = audio[0]
+        audio = audio[0]  # 采样值在 -1 到 1 之间
 
         # 分帧
         for i in range(0, len(audio) - self.frame_length, self.frame_step):

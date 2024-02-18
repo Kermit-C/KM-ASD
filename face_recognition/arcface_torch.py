@@ -65,7 +65,7 @@ class ArcFaceRecognizer:
         # using skimage method
         tform = trans.SimilarityTransform()
         tform.estimate(src_lmk, dst_lmk)
-        t = tform.params[0:2, :]
+        t = tform.params[0:2, :]  # type: ignore
 
         assert image.shape[2] == 3
 
@@ -95,19 +95,26 @@ class ArcFaceRecognizer:
         """
         if img is None:
             img = np.random.randint(0, 255, size=(112, 112, 3), dtype=np.uint8)
-        else:
+        elif isinstance(img, str):
             img = cv2.imread(img)
-            img = cv2.resize(img, (112, 112))
+        elif isinstance(img, np.ndarray):
+            pass
+        else:
+            raise ValueError("img must be str or np.ndarray")
+
+        orig_h, orig_w = img.shape[:2]
+        img = cv2.resize(img, (112, 112))
 
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if face_lmks is not None:
+            face_lmks = face_lmks * [112 / orig_w, 112 / orig_h]
             img, _ = self._align_face(img, (112, 112), face_lmks)
             img = np.ascontiguousarray(img)
 
         img = np.transpose(img, (2, 0, 1))
-        img = torch.from_numpy(img).unsqueeze(0).float()
-        img.div_(255).sub_(0.5).div_(0.5)
-        img = img.to(self.device)
+        img = torch.from_numpy(img).unsqueeze(0).float()  # type: ignore
+        img.div_(255).sub_(0.5).div_(0.5)  # type: ignore
+        img = img.to(self.device)  # type: ignore
 
         start = timeit.default_timer()
         feat = self.net(img).detach().cpu().numpy()
@@ -120,3 +127,11 @@ class ArcFaceRecognizer:
     def calc_similarity(self, feat1: np.ndarray, feat2: np.ndarray) -> float:
         """计算两个特征的相似度，0 为最不相似，1 为最相似"""
         return np.dot(feat1[0], feat2[0])
+
+    def calc_similarity_batch(self, feat1: np.ndarray, feat2: np.ndarray) -> np.ndarray:
+        """计算两个特征的相似度，0 为最不相似，1 为最相似
+        :param feat1: shape=(n, 512)
+        :param feat2: shape=(m, 512)
+        :return: shape=(n, m)
+        """
+        return np.dot(feat1, feat2.T)

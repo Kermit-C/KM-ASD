@@ -30,6 +30,12 @@ class BaseEventBusProcessor:
         message.body = messageBody
         self._get_publisher().publish(topic, message)
 
+    def result(self, messageBody: EventMessageBody):
+        """输出消息"""
+        message = self._last_message.copy()
+        message.body = messageBody
+        self._last_message.result_consumer(message)
+
     def _handler(self, event_message: EventMessage):
         self._last_message = event_message
         return self.process(event_message.body)
