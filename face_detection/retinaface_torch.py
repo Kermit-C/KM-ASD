@@ -9,7 +9,7 @@
 from __future__ import print_function
 
 import os
-from typing import Union
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -46,7 +46,7 @@ class RetinaFaceDetector:
         self.vis_thres = vis_thres
 
         torch.set_grad_enabled(False)
-        self.cfg = None
+        self.cfg: dict
         if network == "mobile0.25":
             self.cfg = cfg_mnet
         elif network == "resnet50":
@@ -65,8 +65,28 @@ class RetinaFaceDetector:
     def detect_faces(
         self,
         image_or_image_path: Union[cv2.typing.MatLike, np.ndarray, str],
-        save_path: str = None,
-    ):
+        save_path: Optional[str] = None,
+    ) -> list[
+        tuple[
+            int,
+            int,
+            int,
+            int,
+            float,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+            int,
+        ]
+    ]:
         """
         :param image_or_image_path: 输入图片或图片路径
         :param save_path: 保存路径
@@ -77,12 +97,12 @@ class RetinaFaceDetector:
         if isinstance(image_or_image_path, str):
             img_raw = cv2.imread(image_or_image_path, cv2.IMREAD_COLOR)
         elif isinstance(image_or_image_path, np.ndarray):
-            img_raw = cv2.UMat(image_or_image_path)
+            img_raw = cv2.UMat(image_or_image_path)  # type: ignore
         else:
             img_raw = image_or_image_path
-        img = np.float32(img_raw)
-        im_height, im_width, _ = img.shape
-        img -= (104, 117, 123)
+        img = np.float32(img_raw)  # type: ignore
+        im_height, im_width, _ = img.shape  # type: ignore
+        img -= (104, 117, 123)  # type: ignore
         img = img.transpose(2, 0, 1)
         img = torch.from_numpy(img).unsqueeze(0)
         img = img.to(self.device)
@@ -162,10 +182,19 @@ class RetinaFaceDetector:
 
         # xmin, ymin, xmax, ymax, score, w, h, eye1_x, eye1_y, eye2_x, eye2_y, nose_x, nose_y, mouth1_x, mouth1_y, mouth2_x, mouth2_y
         results = [
-            (b[0], b[1], b[2], b[3], b[4], b[2] - b[0] + 1, b[3] - b[1] + 1, *b[5:15])
+            (
+                int(b[0]),
+                int(b[1]),
+                int(b[2]),
+                int(b[3]),
+                b[4],
+                int(b[2] - b[0] + 1),
+                int(b[3] - b[1] + 1),
+                *map(int, b[5:15]),
+            )
             for b in dets
         ]
-        return results
+        return results  # type: ignore
 
     def _check_keys(self, model, pretrained_state_dict):
         ckpt_keys = set(pretrained_state_dict.keys())
@@ -215,7 +244,7 @@ class RetinaFaceDetector:
                 b = list(map(int, b))
 
                 # Draw bounding box
-                cv2.rectangle(img_raw, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)
+                cv2.rectangle(img_raw, (b[0], b[1]), (b[2], b[3]), (0, 0, 255), 2)  # type: ignore
 
                 cx = b[0]
                 cy = b[1] + 12

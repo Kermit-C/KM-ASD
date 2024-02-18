@@ -75,6 +75,6 @@ def test_speaker_verification():
 
 
 if __name__ == "__main__":
-    # test_face_detector()
+    test_face_detector()
     # test_face_recognition()
-    test_speaker_verification()
+    # test_speaker_verification()

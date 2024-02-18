@@ -9,9 +9,9 @@
 from event_bus.event_message import EventMessageBody
 
 
-class VideoToImageMessageBody(EventMessageBody):
-    def __init__(self, video_path: str, output_dir: str, frame_rate: int = 1):
+class VideoToFrameMessageBody(EventMessageBody):
+
+    def __init__(self, video_path: str):
         # TODO
+        # 视频路径
         self.video_path = video_path
-        self.output_dir = output_dir
-        self.frame_rate = frame_rate

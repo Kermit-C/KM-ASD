@@ -6,6 +6,7 @@
 @Date: 2024-02-10 15:29:03
 """
 
+from config import event_bus
 from event_bus.event_bus_publisher import EventBusPublisher
 from event_bus.event_message import EventMessage, EventMessageBody
 
@@ -14,9 +15,12 @@ class BaseEventBusProcessor:
     """事件总线处理器基类"""
 
     def __init__(self, processor_name: str):
-        self.processor_name = processor_name
+        self.processor_name: str = processor_name
+        self.processor_properties: dict = event_bus["processors"][self.__class__][
+            "properties"
+        ]
 
-    def process(self, event_message: EventMessage):
+    def process(self, event_message_body: EventMessageBody):
         """处理消息，需要重写"""
         raise NotImplementedError("process method must be implemented")
 
@@ -28,7 +32,7 @@ class BaseEventBusProcessor:
 
     def _handler(self, event_message: EventMessage):
         self._last_message = event_message
-        return self.process(event_message)
+        return self.process(event_message.body)
 
     def _get_publisher(self) -> EventBusPublisher:
         """获取发布者"""
