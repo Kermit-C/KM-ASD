@@ -22,6 +22,7 @@ from event_bus.message_body.result_message_body import ResultMessageBody
 from event_bus.message_body.video_to_frame_message_body import VideoToFrameMessageBody
 from event_bus.processor.audio_to_pcm_processor import AudioToPcmProcessor
 from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
+from utils.io_util import render_video
 
 _consume_cache = {}
 
@@ -56,7 +57,7 @@ def process(
             == _consume_cache[request_id]["video_frame_count"]
         ):
             # 完成了视频帧的处理就渲染视频
-            result_video_path = _render_video(
+            result_video_path = render_video(
                 request_id,
                 render_video_path,
                 _consume_cache[request_id]["video_frames"],
@@ -77,25 +78,6 @@ def process(
     )
 
     return result_future.result(timeout=timeout_second)
-
-
-def _render_video(
-    request_id: str,
-    render_video_path: str,
-    video_frames: list[np.ndarray],
-    audio_path: str,
-) -> str:
-    output_path = os.path.join(render_video_path, f"{request_id}.mp4")
-    frame_height, frame_width, _ = video_frames[0].shape
-    # mp4v: MPEG-4 Part 2 video codec
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
-    video_writer = cv2.VideoWriter(output_path, fourcc, 30, (frame_width, frame_height))
-
-    for frame in video_frames:
-        video_writer.write(frame)
-
-    video_writer.release()
-    return output_path
 
 
 def call_face_detection(frame: np.ndarray) -> list[dict[str, Any]]:

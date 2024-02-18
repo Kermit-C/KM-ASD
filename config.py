@@ -16,6 +16,9 @@ from event_bus.processor.speaker_verificate_processor import SpeakerVerificatePr
 from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
+extract_audio_track_sample_rate = 16000
+render_video_path = "tmp/render"
+
 face_detection_model = "face_detection/retinaface_weights/mobilenet0.25_Final.pth"
 face_detection_network = "mobile0.25"
 face_detection_cpu = False
