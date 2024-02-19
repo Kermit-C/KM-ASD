@@ -20,6 +20,9 @@ class BaseEventBusProcessor:
         self.processor_properties: dict = event_bus["processors"][
             self.__class__.__name__
         ]["properties"]
+        self.processor_timeout: float = event_bus["processors"][
+            self.__class__.__name__
+        ]["timeout"]
         self.last_message: threading.local = threading.local()
 
     def process(self, event_message_body: EventMessageBody):

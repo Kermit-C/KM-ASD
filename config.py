@@ -36,6 +36,7 @@ event_bus = {
         "VideoToFrameProcessor": {
             "processor_name": "video_to_frame_processor",
             "topic": "video_to_frame_topic",
+            "timeout": 60,  # 暂未使用
             "properties": {
                 "target_video_fps": 30,
             },
@@ -43,6 +44,7 @@ event_bus = {
         "AudioToPcmProcessor": {
             "processor_name": "audio_to_pcm_processor",
             "topic": "audio_to_pcm_topic",
+            "timeout": 60,  # 暂未使用
             "properties": {
                 "audio_to_pcm_sample_rate": 16000,
                 "frame_length": 400,  # 25ms
@@ -52,6 +54,7 @@ event_bus = {
         "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
+            "timeout": 2 * (1 / 30),  # 2帧时间
             "properties": {
                 # "face_detect_model_path": "models/face_detect_model",
             },
@@ -59,6 +62,7 @@ event_bus = {
         "FaceCropProcessor": {
             "processor_name": "face_crop_processor",
             "topic": "face_crop_topic",
+            "timeout": 1,
             "properties": {
                 "face_crop_size": 112,
             },
@@ -66,6 +70,7 @@ event_bus = {
         "FaceRecognizeProcessor": {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
+            "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "face_recognize_model_path": "models/face_recognize_model",
             },
@@ -73,6 +78,7 @@ event_bus = {
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
+            "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "asd_model_path": "models/asd_model",
             },
@@ -80,6 +86,7 @@ event_bus = {
         "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
+            "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "speaker_verificate_model_path": "models/speaker_verificate_model",
             },
@@ -87,6 +94,7 @@ event_bus = {
         "ReduceProcessor": {
             "processor_name": "reduce_processor",
             "topic": "reduce_topic",
+            "timeout": 1 / 30,  # 1帧时间 暂未使用
             "properties": {
                 # "output_path": "output",
             },

@@ -84,7 +84,7 @@ def process(
     return result_future.result(timeout=timeout_second)
 
 
-def call_face_detection(frame: np.ndarray) -> list[dict[str, Any]]:
+def call_face_detection(frame: np.ndarray, timeout: float) -> list[dict[str, Any]]:
     # 调用人脸检测服务
     # TODO: 实现负载均衡
     server_host = "localhost:50051"
@@ -97,7 +97,8 @@ def call_face_detection(frame: np.ndarray) -> list[dict[str, Any]]:
             model_service_pb2.FaceDetectionRequest(
                 meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
                 face_image=frame_bytes,
-            )
+            ),
+            timeout=timeout,
         )
         face_dets_json: str = response.face_dets_json  # type: ignore
         face_dets: list[dict[str, Any]] = json.loads(face_dets_json)
@@ -105,7 +106,9 @@ def call_face_detection(frame: np.ndarray) -> list[dict[str, Any]]:
         return face_dets
 
 
-def call_face_recognition(face: np.ndarray, face_lmks: np.ndarray) -> str:
+def call_face_recognition(
+    face: np.ndarray, face_lmks: np.ndarray, timeout: float
+) -> str:
     # 调用人脸识别服务
     # TODO: 实现负载均衡
     server_host = "localhost:50051"
@@ -121,7 +124,8 @@ def call_face_recognition(face: np.ndarray, face_lmks: np.ndarray) -> str:
                     meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
                     face_image=face_bytes,
                     face_lmks=face_lmks_bytes,
-                )
+                ),
+                timeout=timeout,
             )
         )
         label: str = response.label  # type: ignore
@@ -129,7 +133,7 @@ def call_face_recognition(face: np.ndarray, face_lmks: np.ndarray) -> str:
         return label
 
 
-def call_speaker_verification(audio: torch.Tensor) -> str:
+def call_speaker_verification(audio: torch.Tensor, timeout: float) -> str:
     # 调用说话人验证服务
     # TODO: 实现负载均衡
     server_host = "localhost:50051"
@@ -143,7 +147,8 @@ def call_speaker_verification(audio: torch.Tensor) -> str:
                 model_service_pb2.SpeakerVerificationRequest(
                     meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
                     voice_data=audio_bytes,
-                )
+                ),
+                timeout=timeout,
             )
         )
         label: str = response.label  # type: ignore

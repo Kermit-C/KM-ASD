@@ -23,7 +23,9 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
 
     def process(self, event_message_body: SpeakerVerificateMessageBody):
         # TODO: 考虑聚合多个音频帧再进行验证
-        label = call_speaker_verification(event_message_body.audio_pcm)
+        label = call_speaker_verification(
+            event_message_body.audio_pcm, self.processor_timeout
+        )
         self.publish_next(
             "reduce_topic",
             ReduceMessageBody(

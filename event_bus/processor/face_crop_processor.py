@@ -51,7 +51,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
         while last_frame_faces is None:
             if retry_count > 0:
                 time.sleep(0.1)
-            if retry_count > 10:
+            if retry_count > (self.processor_timeout / 0.1):
                 last_frame_faces = []
                 break
             last_frame_faces = self.store.get_faces(

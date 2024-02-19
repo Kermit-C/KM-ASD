@@ -19,7 +19,9 @@ class FaceDetectProcessor(BaseEventBusProcessor):
         super().__init__(processor_name)
 
     def process(self, event_message_body: FaceDetectMessageBody):
-        face_dets = call_face_detection(event_message_body.frame)
+        face_dets = call_face_detection(
+            event_message_body.frame, self.processor_timeout
+        )
         self.publish_next(
             "face_crop_topic",
             FaceCropMessageBody(
