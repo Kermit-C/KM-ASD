@@ -13,10 +13,10 @@ from utils.io_util import extract_audio_track
 from utils.uuid_util import get_uuid
 
 initializer.init_event_bus()
-initializer.initialize_model_service(wait_for_termination=False)
 initializer.initialize_models("face_detection")
 initializer.initialize_models("face_recognition")
 initializer.initialize_models("speaker_verification")
+initializer.initialize_model_service(wait_for_termination=False)
 
 
 def process_fn(

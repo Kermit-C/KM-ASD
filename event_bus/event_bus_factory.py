@@ -30,3 +30,8 @@ def create_processor(processor: BaseEventBusProcessor, publisher_name: str, topi
     processor._set_publisher(publisher)
     processor_map[processor.processor_name] = processor
     return processor
+
+
+def get_processor(processor_name: str) -> BaseEventBusProcessor:
+    """获取处理器"""
+    return processor_map[processor_name]

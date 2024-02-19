@@ -18,6 +18,8 @@ from event_bus.message_body.audio_to_pcm_message_body import AudioToPcmMessageBo
 from event_bus.message_body.speaker_verificate_message_body import (
     SpeakerVerificateMessageBody,
 )
+from event_bus.store.audio_to_pcm_store import AudioToPcmStore
+from store.local_store import LocalStore
 
 
 class AudioToPcmProcessor(BaseEventBusProcessor):
@@ -30,6 +32,7 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
         ]
         self.frame_length: int = self.processor_properties["frame_length"]
         self.frame_step: int = self.processor_properties["frame_step"]
+        self.store = AudioToPcmStore(LocalStore.create)
 
     def _capture(
         self, audio_path: str
@@ -53,7 +56,7 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
                 i : i + self.frame_length
             ], self.audio_to_pcm_sample_rate, self.frame_length, int(
                 i / self.frame_step
-            ), int(
+            ) + 1, int(
                 ((i + self.frame_length) / self.audio_to_pcm_sample_rate) * 1000
             )
 
@@ -66,6 +69,15 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
             frame_count,
             frame_timestamp,
         ) in self._capture(event_message_body.audio_path):
+            self.store.save_frame(
+                self.get_request_id(),
+                pcm,
+                sample_rate,
+                frame_length,
+                self.frame_step,
+                frame_count,
+                frame_timestamp,
+            )
             self.publish_next(
                 "asd_topic",
                 AsdMessageBody(

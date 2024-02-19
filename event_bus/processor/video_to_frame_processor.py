@@ -14,6 +14,8 @@ import numpy as np
 from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.message_body.face_detect_message_body import FaceDetectMessageBody
 from event_bus.message_body.video_to_frame_message_body import VideoToFrameMessageBody
+from event_bus.store.video_to_frame_store import VideoToFrameStore
+from store.local_store import LocalStore
 
 
 class VideoToFrameProcessor(BaseEventBusProcessor):
@@ -21,6 +23,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
 
     def __init__(self, processor_name: str):
         super().__init__(processor_name)
+        self.store = VideoToFrameStore(LocalStore.create)
 
     def _capture(
         self, video_path: str
@@ -43,6 +46,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
 
     def process(self, event_message_body: VideoToFrameMessageBody):
         skipped_frame = 0
+        video_frame_count = 0
         for frame, frame_count, frame_timestamp, video_fps in self._capture(
             event_message_body.video_path
         ):
@@ -64,7 +68,20 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                     continue
 
             frame_count -= skipped_frame
+            video_frame_count = frame_count
 
+            self.store.save_frame(
+                self.get_request_id(), frame_count, frame_timestamp, frame
+            )
+            self.store.save_info(
+                self.get_request_id(),
+                (
+                    source_video_fps
+                    if skipped_frame == 0
+                    else self.processor_properties["target_video_fps"]
+                ),
+                video_frame_count,
+            )
             self.publish_next(
                 "face_detect_topic",
                 FaceDetectMessageBody(frame_count, frame_timestamp, frame),

@@ -7,9 +7,15 @@
 """
 
 
+from typing import Any
+
+
 class LocalCache:
     def __init__(self) -> None:
         self.cache = {}
+
+    def has(self, key):
+        return key in self.cache
 
     def get(self, key):
         return self.cache.get(key)
@@ -17,12 +23,18 @@ class LocalCache:
     def put(self, key, value):
         self.cache[key] = value
 
+    def get_all_entries(self) -> list[tuple[Any, Any]]:
+        return list(self.cache.items())
+
 
 class LocalLruCache:
     def __init__(self, capacity):
         self.capacity = capacity
         self.cache = {}
         self.order = []
+
+    def has(self, key):
+        return key in self.cache
 
     def get(self, key):
         if key in self.cache:
@@ -44,3 +56,6 @@ class LocalLruCache:
 
         self.cache[key] = value
         self.order.insert(0, key)
+
+    def get_all_entries(self) -> list[tuple[Any, Any]]:
+        return list(self.cache.items())

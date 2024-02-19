@@ -1,7 +1,6 @@
 # Require python == 3.9
 
 # tools
-algospace
 certifi==2022.12.7
 numpy==1.26.4
 Pillow==9.5.0
@@ -10,6 +9,9 @@ soundfile==0.12.1
 wandb==0.16.3
 speechbrain==0.5.16
 pytorch_metric_learning==2.4.1
+
+# algospace
+algospace
 
 # grpc
 grpcio==1.48.2

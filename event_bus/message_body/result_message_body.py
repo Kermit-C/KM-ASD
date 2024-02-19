@@ -21,9 +21,11 @@ class ResultMessageBody(EventMessageBody):
         frame: np.ndarray,
         video_fps: float,
         video_frame_count: int,
-        speaker_face_bbox: list[tuple[int, int]],
+        speaker_face_bbox: list[tuple[int, int, int, int]],
         speaker_face_label: list[str],
         speaker_offscreen_voice_label: list[str],
+        non_speaker_face_bbox: list[tuple[int, int, int, int]],
+        non_speaker_face_label: list[str],
     ):
         # 帧数，代表第几帧
         self.frame_count = frame_count
@@ -41,3 +43,7 @@ class ResultMessageBody(EventMessageBody):
         self.speaker_face_label = speaker_face_label
         # 画面外说话人声音标签
         self.speaker_voice_label = speaker_offscreen_voice_label
+        # 未说话人人脸框
+        self.non_speaker_face_bbox = non_speaker_face_bbox
+        # 未说话人人脸标签
+        self.non_speaker_face_label = non_speaker_face_label

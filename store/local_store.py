@@ -19,11 +19,17 @@ class LocalStore(Store):
         else:
             self.store = LocalCache()
 
+    def has(self, key):
+        return self.store.has(key)
+
     def get(self, key):
         return self.store.get(key)
 
     def put(self, key, value):
         self.store.put(key, value)
+
+    def get_all_entries(self):
+        return self.store.get_all_entries()
 
     @staticmethod
     def create(lru: bool = True, lru_capacity: int = 1000):

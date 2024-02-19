@@ -9,16 +9,24 @@
 import config
 from manager.grpc_server_manager import start_server
 from service.face_detection_service import load_detector
-from service.face_recognition_service import load_recognizer
-from service.speaker_verification_service import load_verificator
+from service.face_recognition_service import (
+    load_face_recognition_store,
+    load_recognizer,
+)
+from service.speaker_verification_service import (
+    load_speaker_verification_store,
+    load_verificator,
+)
 
 
 def initialize_models(model_type: str):
     if model_type == "face_detection":
         return load_detector()
     elif model_type == "face_recognition":
+        load_face_recognition_store()
         return load_recognizer()
     elif model_type == "speaker_verification":
+        load_speaker_verification_store()
         return load_verificator()
     else:
         raise ValueError(f"Invalid model type: {model_type}")

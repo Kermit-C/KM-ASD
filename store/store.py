@@ -7,9 +7,19 @@
 """
 
 
+from typing import Any
+
+
 class Store:
+
+    def has(self, key: str) -> bool:
+        raise NotImplementedError
+
     def get(self, key: str):
         raise NotImplementedError
 
     def put(self, key: str, value):
+        raise NotImplementedError
+
+    def get_all_entries(self) -> list[tuple[Any, Any]]:
         raise NotImplementedError

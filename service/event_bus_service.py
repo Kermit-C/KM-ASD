@@ -66,6 +66,7 @@ def process(
                 _consume_cache[request_id]["video_frames"],
                 audio_path,
             )
+            del _consume_cache[request_id]
             result_future.set_result(result_video_path)
 
     result_consumer = _consume_result
