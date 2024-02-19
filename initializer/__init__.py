@@ -7,3 +7,4 @@
 """
 
 from event_bus_initializer import init_event_bus
+from model_initializer import initialize_model_service, initialize_models

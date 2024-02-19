@@ -7,13 +7,17 @@
 """
 
 
+from typing import Any
+
 import numpy as np
 
 import config
 from face_detection.retinaface_torch import RetinaFaceDetector
 
+detector: RetinaFaceDetector
 
 def load_detector():
+    global detector
     detector = RetinaFaceDetector(
         trained_model=config.face_detection_model,
         network=config.face_detection_network,
@@ -22,7 +26,7 @@ def load_detector():
     return detector
 
 
-def detect_faces(detector: RetinaFaceDetector, image: np.ndarray):
+def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
     face_dets = detector.detect_faces(
         image_or_image_path=image,
     )

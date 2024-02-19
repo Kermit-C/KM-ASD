@@ -16,6 +16,9 @@ from event_bus.processor.speaker_verificate_processor import SpeakerVerificatePr
 from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
+model_service_server_grpc_port = 50051
+model_service_server_max_workers = 10
+
 extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
 

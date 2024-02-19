@@ -13,8 +13,10 @@ import numpy as np
 import config
 from face_recognition import ArcFaceRecognizer
 
+recognizer: ArcFaceRecognizer
 
 def load_recognizer():
+    global recognizer
     recognizer = ArcFaceRecognizer(
         trained_model=config.face_recognize_model,
         network=config.face_recognize_network,
@@ -24,7 +26,6 @@ def load_recognizer():
 
 
 def recognize_faces(
-    recognizer: ArcFaceRecognizer,
     face: np.ndarray,
     face_lmks: np.ndarray,
 ) -> str:

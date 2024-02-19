@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+option cc_generic_services = true; // 生成 service 服务类和 rpc 方法描述
+
+service ModelService {
+    // 人脸检测
+    rpc call_face_detection (FaceDetectionRequest) returns (FaceDetectionResponse) {}
+    // 人脸识别
+    rpc call_face_recognition (FaceRecognitionRequest) returns (FaceRecognitionResponse) {}
+    // 说话人验证
+    rpc call_speaker_verification (SpeakerVerificationRequest) returns (SpeakerVerificationResponse) {}
+};
+
+message RequestMetaData {
+    string request_id = 1;
+};
+
+message ResponseMetaData {
+    string response_id = 1;
+    string request_id = 2;
+};
+
+message FaceDetectionRequest {
+    RequestMetaData meta = 1;
+    // np.ndarray (x, y, 3) 的 pkl 序列化后的数据
+    bytes face_image = 10;
+};
+
+message FaceDetectionResponse {
+    ResponseMetaData meta = 1;
+    string face_dets_json = 10;
+};
+
+message FaceRecognitionRequest {
+    RequestMetaData meta = 1;
+    // np.ndarray (x, y, 3) 的 pkl 序列化后的数据
+    bytes face_image = 10;
+    // np.ndarray (5, 2) 的 pkl 序列化后的数据
+    bytes face_lmks = 11;
+};
+
+message FaceRecognitionResponse {
+    ResponseMetaData meta = 1;
+    string label = 10;
+};
+
+message SpeakerVerificationRequest {
+    RequestMetaData meta = 1;
+    // np.ndarray (s,) 的 pkl 序列化后的数据
+    bytes voice_data = 10;
+};
+
+message SpeakerVerificationResponse {
+    ResponseMetaData meta = 1;
+    string label = 10;
+};

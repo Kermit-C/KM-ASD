@@ -11,6 +11,11 @@ wandb==0.16.3
 speechbrain==0.5.16
 pytorch_metric_learning==2.4.1
 
+# grpc
+grpcio==1.48.2
+grpcio-tools==1.48.2
+protobuf==3.19.6
+
 # opencv
 opencv-python==4.9.0.80
 

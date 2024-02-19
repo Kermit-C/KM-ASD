@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-@Description: 
+@Description: 训练 ASD 模型
 @Author: chenkeming
 @Date: 2024-02-16 20:48:53
 """

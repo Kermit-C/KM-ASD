@@ -12,14 +12,15 @@ import torch
 import config
 from speaker_verification import EcapaTdnnVerificator
 
+verificator: EcapaTdnnVerificator
 
 def load_verificator():
+    global verificator
     verificator = EcapaTdnnVerificator(cpu=config.speaker_verificate_cpu)
     return verificator
 
 
 def verify_speakers(
-    verificator: EcapaTdnnVerificator,
     audio: np.ndarray,
 ) -> str:
     lib_feat, lib_labels = get_lib_feat_and_labels()

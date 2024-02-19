@@ -6,11 +6,12 @@
 @Date: 2024-02-18 17:16:07
 """
 
-import os
+import json
+import pickle
 from concurrent import futures
 from typing import Any, Optional
 
-import cv2
+import grpc
 import numpy as np
 import torch
 
@@ -22,7 +23,9 @@ from event_bus.message_body.result_message_body import ResultMessageBody
 from event_bus.message_body.video_to_frame_message_body import VideoToFrameMessageBody
 from event_bus.processor.audio_to_pcm_processor import AudioToPcmProcessor
 from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
+from grpc_service import model_service_pb2, model_service_pb2_grpc
 from utils.io_util import render_video
+from utils.uuid_util import get_uuid
 
 _consume_cache = {}
 
@@ -81,15 +84,67 @@ def process(
 
 
 def call_face_detection(frame: np.ndarray) -> list[dict[str, Any]]:
-    # TODO: 调用人脸检测服务
-    return []
+    # 调用人脸检测服务
+    # TODO: 实现负载均衡
+    server_host = "localhost:50051"
+
+    with grpc.insecure_channel(server_host) as channel:
+        stub = model_service_pb2_grpc.ModelServiceStub(channel)
+
+        frame_bytes = pickle.dumps(frame)
+        response: model_service_pb2.FaceDetectionResponse = stub.call_face_detection(
+            model_service_pb2.FaceDetectionRequest(
+                meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                face_image=frame_bytes,
+            )
+        )
+        face_dets_json: str = response.face_dets_json  # type: ignore
+        face_dets: list[dict[str, Any]] = json.loads(face_dets_json)
+
+        return face_dets
 
 
 def call_face_recognition(face: np.ndarray, face_lmks: np.ndarray) -> str:
-    # TODO: 调用人脸识别服务
-    return "label"
+    # 调用人脸识别服务
+    # TODO: 实现负载均衡
+    server_host = "localhost:50051"
+
+    with grpc.insecure_channel(server_host) as channel:
+        stub = model_service_pb2_grpc.ModelServiceStub(channel)
+
+        face_bytes = pickle.dumps(face)
+        face_lmks_bytes = pickle.dumps(face_lmks)
+        response: model_service_pb2.FaceRecognitionResponse = (
+            stub.call_face_recognition(
+                model_service_pb2.FaceRecognitionRequest(
+                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                    face_image=face_bytes,
+                    face_lmks=face_lmks_bytes,
+                )
+            )
+        )
+        label: str = response.label  # type: ignore
+
+        return label
 
 
 def call_speaker_verification(audio: torch.Tensor) -> str:
-    # TODO: 调用说话人验证服务
-    return "label"
+    # 调用说话人验证服务
+    # TODO: 实现负载均衡
+    server_host = "localhost:50051"
+
+    with grpc.insecure_channel(server_host) as channel:
+        stub = model_service_pb2_grpc.ModelServiceStub(channel)
+
+        audio_bytes = pickle.dumps(audio.numpy())
+        response: model_service_pb2.SpeakerVerificationResponse = (
+            stub.call_speaker_verification(
+                model_service_pb2.SpeakerVerificationRequest(
+                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                    voice_data=audio_bytes,
+                )
+            )
+        )
+        label: str = response.label  # type: ignore
+
+        return label
