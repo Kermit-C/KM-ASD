@@ -68,6 +68,7 @@ def process(
                 render_video_path,
                 _consume_cache[request_id]["video_frames"],
                 audio_path,
+                _consume_cache[request_id]["video_fps"],
             )
             del _consume_cache[request_id]
             result_future.set_result(result_video_path)

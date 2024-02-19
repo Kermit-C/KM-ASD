@@ -52,12 +52,14 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
 
         # 分帧
         for i in range(0, len(audio) - self.frame_length, self.frame_step):
-            yield audio[
-                i : i + self.frame_length
-            ], self.audio_to_pcm_sample_rate, self.frame_length, int(
-                i / self.frame_step
-            ) + 1, int(
-                ((i + self.frame_length) / self.audio_to_pcm_sample_rate) * 1000
+            yield (
+                audio[i : i + self.frame_length],  # pcm
+                self.audio_to_pcm_sample_rate,  # sample_rate
+                self.frame_length,  # frame_length
+                int(i / self.frame_step) + 1,  # frame_count
+                int(
+                    ((i + self.frame_length) / self.audio_to_pcm_sample_rate) * 1000
+                ),  # frame_timestamp
             )
 
     def process(self, event_message_body: AudioToPcmMessageBody):

@@ -20,19 +20,46 @@ def render_video(
     render_video_path: str,
     video_frames: list[np.ndarray],
     audio_path: str,
+    video_fps: int,
 ) -> str:
-    # TODO: 把声音也渲染进去
-    output_path = os.path.join(render_video_path, f"{request_id}.mp4")
+    # 设置输出视频路径
+    output_path = os.path.join(render_video_path, f"{request_id}_no_audio.mp4")
     frame_height, frame_width, _ = video_frames[0].shape
-    # mp4v: MPEG-4 Part 2 video codec
+    # 创建视频编写器
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
-    video_writer = cv2.VideoWriter(output_path, fourcc, 30, (frame_width, frame_height))
-
+    video_writer = cv2.VideoWriter(
+        output_path, fourcc, video_fps, (frame_width, frame_height)
+    )
+    # 写入视频帧
     for frame in video_frames:
         video_writer.write(frame)
 
     video_writer.release()
-    return output_path
+
+    # 使用FFmpeg合并音频和视频
+    merged_path = os.path.join(render_video_path, f"{request_id}.mp4")
+    return_code = subprocess.call(
+        [
+            "ffmpeg",
+            "-i",
+            output_path,
+            "-i",
+            audio_path,
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-shortest",
+            merged_path,
+        ]
+    )
+    if return_code != 0:
+        raise Exception("Merge audio and video failed")
+
+    # 删除原始视频文件
+    os.remove(output_path)
+
+    return merged_path
 
 
 def extract_audio_track(video_path: str) -> str:
