@@ -29,6 +29,13 @@ class BaseEventBusProcessor:
         """处理消息，需要重写"""
         raise NotImplementedError("process method must be implemented")
 
+    def process_exception(
+        self, event_message_body: EventMessageBody, exception: Exception
+    ):
+        """处理异常，需要重写
+        如果不重写或方法里也抛出，则向整个 request 抛出异常"""
+        raise exception
+
     def publish_next(self, topic: str, messageBody: EventMessageBody):
         """发布下一个消息"""
         message = self.last_message.value.copy()
@@ -41,6 +48,12 @@ class BaseEventBusProcessor:
         message.body = messageBody
         self.last_message.value.result_consumer(message)
 
+    def result_exception(self, exception: Exception):
+        """输出异常"""
+        message = self.last_message.value.copy()
+        message.body = exception
+        self.last_message.value.result_consumer(message)
+
     def get_request_id(self) -> str:
         return self.last_message.value.request_id
 
@@ -51,8 +64,16 @@ class BaseEventBusProcessor:
         return self.last_message.value.is_real_time
 
     def _handler(self, event_message: EventMessage):
-        self.last_message.value = event_message
-        return self.process(event_message.body)
+        try:
+            self.last_message.value = event_message
+            assert isinstance(event_message.body, EventMessageBody)
+            return self.process(event_message.body)
+        except Exception as e:
+            try:
+                assert isinstance(event_message.body, EventMessageBody)
+                self.process_exception(event_message.body, e)
+            except Exception as ee:
+                self.result_exception(ee)
 
     def _get_publisher(self):
         """获取发布者"""

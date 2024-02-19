@@ -9,7 +9,7 @@
 import json
 import pickle
 from concurrent import futures
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import grpc
 import numpy as np
@@ -46,6 +46,9 @@ def process(
     def _consume_result(message: EventMessage):
         request_id = message.request_id
         message_body = message.body
+        if isinstance(message_body, Exception):
+            result_future.set_exception(message_body)
+            return
         assert isinstance(message_body, ResultMessageBody)
         if request_id not in _consume_cache.keys():
             _consume_cache[request_id] = {

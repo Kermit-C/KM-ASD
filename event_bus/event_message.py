@@ -7,7 +7,7 @@
 """
 
 import time
-from typing import Callable
+from typing import Callable, Union
 
 
 class EventMessageBody:
@@ -20,7 +20,7 @@ class EventMessage:
         self,
         request_id: str,
         result_consumer: Callable[["EventMessage"], None],
-        body: EventMessageBody,
+        body: Union[EventMessageBody, Exception],
         is_real_time: bool = False,
     ):
         self.request_id = request_id

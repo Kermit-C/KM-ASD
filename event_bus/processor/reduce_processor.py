@@ -44,6 +44,11 @@ class ReduceProcessor(BaseEventBusProcessor):
             raise ValueError(f"Unknown output message type: {event_message_body.type}")
         self._process_result(event_message_body)
 
+    def process_exception(
+        self, event_message_body: ReduceMessageBody, exception: Exception
+    ):
+        raise Exception("ReduceProcessor process_exception", exception)
+
     def _process_asd(self, event_message_body: ReduceMessageBody):
         frame_count: int = event_message_body.frame_count  # type: ignore
         frame_face_count: int = event_message_body.frame_face_count  # type: ignore

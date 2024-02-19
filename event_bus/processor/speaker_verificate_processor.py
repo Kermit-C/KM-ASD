@@ -7,6 +7,8 @@
 """
 
 
+import logging
+
 from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.message_body.reduce_message_body import ReduceMessageBody
 from event_bus.message_body.speaker_verificate_message_body import (
@@ -36,5 +38,22 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
                 audio_frame_count=event_message_body.audio_frame_count,
                 audio_frame_timestamp=event_message_body.audio_frame_timestamp,
                 frame_voice_label=label,
+            ),
+        )
+
+    def process_exception(
+        self, event_message_body: SpeakerVerificateMessageBody, exception: Exception
+    ):
+        logging.error("FaceRecognizeProcessor process_exception", exception)
+        self.publish_next(
+            "reduce_topic",
+            ReduceMessageBody(
+                type="SPEAKER_VERIFICATE",
+                audio_sample_rate=event_message_body.audio_sample_rate,
+                audio_frame_length=event_message_body.audio_frame_length,
+                audio_frame_step=event_message_body.audio_frame_step,
+                audio_frame_count=event_message_body.audio_frame_count,
+                audio_frame_timestamp=event_message_body.audio_frame_timestamp,
+                frame_voice_label="Unknown",
             ),
         )

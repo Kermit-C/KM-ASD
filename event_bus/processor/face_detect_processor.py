@@ -6,6 +6,8 @@
 @Date: 2024-02-18 15:51:15
 """
 
+import logging
+
 from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.message_body.face_crop_message_body import FaceCropMessageBody
 from event_bus.message_body.face_detect_message_body import FaceDetectMessageBody
@@ -29,5 +31,19 @@ class FaceDetectProcessor(BaseEventBusProcessor):
                 event_message_body.frame_timestamp,
                 event_message_body.frame,
                 face_dets,
+            ),
+        )
+
+    def process_exception(
+        self, event_message_body: FaceCropMessageBody, exception: Exception
+    ):
+        logging.error("FaceDetectProcessor process_exception", exception)
+        self.publish_next(
+            "face_crop_topic",
+            FaceCropMessageBody(
+                event_message_body.frame_count,
+                event_message_body.frame_timestamp,
+                event_message_body.frame,
+                [],
             ),
         )

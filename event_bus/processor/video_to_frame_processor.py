@@ -86,3 +86,8 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                 "face_detect_topic",
                 FaceDetectMessageBody(frame_count, frame_timestamp, frame),
             )
+
+    def process_exception(
+        self, event_message_body: VideoToFrameMessageBody, exception: Exception
+    ):
+        raise Exception("VideoToFrameProcessor process_exception", exception)

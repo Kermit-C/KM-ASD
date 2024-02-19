@@ -32,3 +32,9 @@ class AsdProcessor(BaseEventBusProcessor):
                 frame_asd_status=asd_status,
             ),
         )
+
+    def process_exception(
+        self, event_message_body: AsdMessageBody, exception: Exception
+    ):
+        # TODO: 待实现
+        pass

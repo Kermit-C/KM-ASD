@@ -6,6 +6,7 @@
 @Date: 2024-02-18 15:51:15
 """
 
+import logging
 import time
 
 import numpy as np
@@ -146,6 +147,21 @@ class FaceCropProcessor(BaseEventBusProcessor):
                     ).astype(np.float32),
                 ),
             )
+
+    def process_exception(
+        self, event_message_body: FaceCropMessageBody, exception: Exception
+    ):
+        logging.error("FaceCropProcessor process_exception", exception)
+        # 直接到 reduce
+        self.publish_next(
+            "reduce_topic",
+            ReduceMessageBody(
+                type="ASD",
+                frame_count=event_message_body.frame_count,
+                frame_timestamp=event_message_body.frame_timestamp,
+                frame_face_count=0,
+            ),
+        )
 
     def get_face_idx_from_last_frame(
         self, last_frame_faces: list[dict], face_bbox: tuple[int, int, int, int]

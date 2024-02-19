@@ -101,3 +101,8 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
                     audio_frame_timestamp=frame_timestamp,
                 ),
             )
+
+    def process_exception(
+        self, event_message_body: AudioToPcmMessageBody, exception: Exception
+    ):
+        raise Exception("AudioToPcmProcessor process_exception", exception)

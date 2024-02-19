@@ -6,6 +6,8 @@
 @Date: 2024-02-18 15:51:15
 """
 
+import logging
+
 from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.message_body.face_recognize_message_body import FaceRecognizeMessageBody
 from event_bus.message_body.reduce_message_body import ReduceMessageBody
@@ -33,5 +35,20 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
                 frame_timestamp=event_message_body.frame_timestamp,
                 frame_face_idx=event_message_body.frame_face_idx,
                 frame_face_label=label,
+            ),
+        )
+
+    def process_exception(
+        self, event_message_body: FaceRecognizeMessageBody, exception: Exception
+    ):
+        logging.error("FaceRecognizeProcessor process_exception", exception)
+        self.publish_next(
+            "reduce_topic",
+            ReduceMessageBody(
+                type="FACE_RECOGNIZE",
+                frame_count=event_message_body.frame_count,
+                frame_timestamp=event_message_body.frame_timestamp,
+                frame_face_idx=event_message_body.frame_face_idx,
+                frame_face_label="Unknown",
             ),
         )
