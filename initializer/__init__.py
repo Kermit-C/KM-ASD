@@ -6,5 +6,5 @@
 @Date: 2024-02-10 15:51:57
 """
 
-from event_bus_initializer import init_event_bus
-from model_initializer import initialize_model_service, initialize_models
+from .event_bus_initializer import init_event_bus
+from .model_initializer import initialize_model_service, initialize_models

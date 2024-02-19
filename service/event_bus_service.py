@@ -75,10 +75,10 @@ def process(
 
     publisher = get_publisher(config.event_bus["publisher"]["name"])
     publisher.publish(
-        config.event_bus["processors"][VideoToFrameProcessor]["topic"], v_message
+        config.event_bus["processors"]["VideoToFrameProcessor"]["topic"], v_message
     )
     publisher.publish(
-        config.event_bus["processors"][AudioToPcmProcessor]["topic"], a_message
+        config.event_bus["processors"]["AudioToPcmProcessor"]["topic"], a_message
     )
 
     return result_future.result(timeout=timeout_second)

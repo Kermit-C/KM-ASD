@@ -162,7 +162,7 @@ class ReduceProcessor(BaseEventBusProcessor):
     def _get_video_to_frame_store(self) -> VideoToFrameStore:
         """获取视频帧存储器"""
         video_to_frame_store = get_processor(
-            config.event_bus["processors"][VideoToFrameProcessor]["processor_name"]
+            config.event_bus["processors"]["VideoToFrameProcessor"]["processor_name"]
         )
         assert isinstance(video_to_frame_store, VideoToFrameProcessor)
         return video_to_frame_store.store
@@ -170,7 +170,7 @@ class ReduceProcessor(BaseEventBusProcessor):
     def _get_audio_to_pcm_store(self) -> AudioToPcmStore:
         """获取音频存储器"""
         audio_to_pcm_store = get_processor(
-            config.event_bus["processors"][AudioToPcmProcessor]["processor_name"]
+            config.event_bus["processors"]["AudioToPcmProcessor"]["processor_name"]
         )
         assert isinstance(audio_to_pcm_store, AudioToPcmProcessor)
         return audio_to_pcm_store.store

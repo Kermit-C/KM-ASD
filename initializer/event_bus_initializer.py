@@ -22,51 +22,53 @@ def init_event_bus():
     """初始化事件总线"""
     create_processor(
         VideoToFrameProcessor(
-            event_bus["processors"][VideoToFrameProcessor]["processor_name"]
+            event_bus["processors"]["VideoToFrameProcessor"]["processor_name"]
         ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][VideoToFrameProcessor]["topic"],
+        event_bus["processors"]["VideoToFrameProcessor"]["topic"],
     )
     create_processor(
         AudioToPcmProcessor(
-            event_bus["processors"][AudioToPcmProcessor]["processor_name"]
+            event_bus["processors"]["AudioToPcmProcessor"]["processor_name"]
         ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][AudioToPcmProcessor]["topic"],
+        event_bus["processors"]["AudioToPcmProcessor"]["topic"],
     )
     create_processor(
         FaceDetectProcessor(
-            event_bus["processors"][FaceDetectProcessor]["processor_name"]
+            event_bus["processors"]["FaceDetectProcessor"]["processor_name"]
         ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][FaceDetectProcessor]["topic"],
+        event_bus["processors"]["FaceDetectProcessor"]["topic"],
     )
     create_processor(
-        FaceCropProcessor(event_bus["processors"][FaceCropProcessor]["processor_name"]),
+        FaceCropProcessor(
+            event_bus["processors"]["FaceCropProcessor"]["processor_name"]
+        ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][FaceCropProcessor]["topic"],
+        event_bus["processors"]["FaceCropProcessor"]["topic"],
     )
     create_processor(
         FaceRecognizeProcessor(
-            event_bus["processors"][FaceRecognizeProcessor]["processor_name"]
+            event_bus["processors"]["FaceRecognizeProcessor"]["processor_name"]
         ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][FaceRecognizeProcessor]["topic"],
+        event_bus["processors"]["FaceRecognizeProcessor"]["topic"],
     )
     create_processor(
-        AsdProcessor(event_bus["processors"][AsdProcessor]["processor_name"]),
+        AsdProcessor(event_bus["processors"]["AsdProcessor"]["processor_name"]),
         event_bus["publisher"]["name"],
-        event_bus["processors"][AsdProcessor]["topic"],
+        event_bus["processors"]["AsdProcessor"]["topic"],
     )
     create_processor(
         SpeakerVerificateProcessor(
-            event_bus["processors"][SpeakerVerificateProcessor]["processor_name"]
+            event_bus["processors"]["SpeakerVerificateProcessor"]["processor_name"]
         ),
         event_bus["publisher"]["name"],
-        event_bus["processors"][SpeakerVerificateProcessor]["topic"],
+        event_bus["processors"]["SpeakerVerificateProcessor"]["topic"],
     )
     create_processor(
-        ReduceProcessor(event_bus["processors"][ReduceProcessor]["processor_name"]),
+        ReduceProcessor(event_bus["processors"]["ReduceProcessor"]["processor_name"]),
         event_bus["publisher"]["name"],
-        event_bus["processors"][ReduceProcessor]["topic"],
+        event_bus["processors"]["ReduceProcessor"]["topic"],
     )

@@ -6,14 +6,6 @@
 @Date: 2024-02-10 15:46:54
 """
 
-from event_bus.processor.asd_processor import AsdProcessor
-from event_bus.processor.audio_to_pcm_processor import AudioToPcmProcessor
-from event_bus.processor.face_crop_processor import FaceCropProcessor
-from event_bus.processor.face_detect_processor import FaceDetectProcessor
-from event_bus.processor.face_recognize_processor import FaceRecognizeProcessor
-from event_bus.processor.reduce_processor import ReduceProcessor
-from event_bus.processor.speaker_verificate_processor import SpeakerVerificateProcessor
-from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
 model_service_server_grpc_port = 50051
@@ -41,14 +33,14 @@ event_bus = {
         "name": "default_event_bus_publisher",
     },
     "processors": {
-        VideoToFrameProcessor: {
+        "VideoToFrameProcessor": {
             "processor_name": "video_to_frame_processor",
             "topic": "video_to_frame_topic",
             "properties": {
                 "target_video_fps": 30,
             },
         },
-        AudioToPcmProcessor: {
+        "AudioToPcmProcessor": {
             "processor_name": "audio_to_pcm_processor",
             "topic": "audio_to_pcm_topic",
             "properties": {
@@ -57,42 +49,42 @@ event_bus = {
                 "frame_step": 160,  # 10ms
             },
         },
-        FaceDetectProcessor: {
+        "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
             "properties": {
                 "face_detect_model_path": "models/face_detect_model",
             },
         },
-        FaceCropProcessor: {
+        "FaceCropProcessor": {
             "processor_name": "face_crop_processor",
             "topic": "face_crop_topic",
             "properties": {
                 "face_crop_size": 112,
             },
         },
-        FaceRecognizeProcessor: {
+        "FaceRecognizeProcessor": {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
             "properties": {
                 "face_recognize_model_path": "models/face_recognize_model",
             },
         },
-        AsdProcessor: {
+        "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
             "properties": {
                 "asd_model_path": "models/asd_model",
             },
         },
-        SpeakerVerificateProcessor: {
+        "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
             "properties": {
                 "speaker_verificate_model_path": "models/speaker_verificate_model",
             },
         },
-        ReduceProcessor: {
+        "ReduceProcessor": {
             "processor_name": "reduce_processor",
             "topic": "reduce_topic",
             "properties": {

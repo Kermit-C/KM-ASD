@@ -9,7 +9,6 @@
 import threading
 
 from config import event_bus
-from event_bus.event_bus_publisher import EventBusPublisher
 from event_bus.event_message import EventMessage, EventMessageBody
 
 
@@ -18,9 +17,9 @@ class BaseEventBusProcessor:
 
     def __init__(self, processor_name: str):
         self.processor_name: str = processor_name
-        self.processor_properties: dict = event_bus["processors"][self.__class__][
-            "properties"
-        ]
+        self.processor_properties: dict = event_bus["processors"][
+            self.__class__.__name__
+        ]["properties"]
         self.last_message: threading.local = threading.local()
 
     def process(self, event_message_body: EventMessageBody):
@@ -49,12 +48,12 @@ class BaseEventBusProcessor:
         self.last_message.value = event_message
         return self.process(event_message.body)
 
-    def _get_publisher(self) -> EventBusPublisher:
+    def _get_publisher(self):
         """获取发布者"""
         if self._publisher is None:
             raise Exception("publisher is not set")
         return self._publisher
 
-    def _set_publisher(self, publisher: EventBusPublisher):
+    def _set_publisher(self, publisher):
         """设置发布者"""
         self._publisher = publisher

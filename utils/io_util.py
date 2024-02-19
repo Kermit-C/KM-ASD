@@ -42,5 +42,7 @@ def extract_audio_track(video_path: str) -> str:
         config.extract_audio_track_sample_rate,
         audio_path,
     )
-    subprocess.call(command, shell=True, stdout=None)
+    command_code = subprocess.call(command, shell=True, stdout=None)
+    if command_code != 0:
+        raise Exception("提取音频失败")
     return audio_path
