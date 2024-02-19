@@ -38,7 +38,7 @@ def render_video(
 
     # 使用FFmpeg合并音频和视频
     merged_path = os.path.join(render_video_path, f"{request_id}.mp4")
-    return_code = subprocess.call(
+    command_code = subprocess.call(
         [
             "ffmpeg",
             "-i",
@@ -53,7 +53,7 @@ def render_video(
             merged_path,
         ]
     )
-    if return_code != 0:
+    if command_code != 0:
         raise Exception("Merge audio and video failed")
 
     # 删除原始视频文件
@@ -71,5 +71,5 @@ def extract_audio_track(video_path: str) -> str:
     )
     command_code = subprocess.call(command, shell=True, stdout=None)
     if command_code != 0:
-        raise Exception("提取音频失败")
+        raise Exception("Extract audio track failed")
     return audio_path
