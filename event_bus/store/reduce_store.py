@@ -90,14 +90,17 @@ class ReduceStore:
             frame_results["frame_voice_label"].append(frame_voice_label)
 
     def is_frame_result_complete(self, request_id: str, frame_count: int) -> bool:
-        """判断帧结果是否完整"""
+        """判断帧结果是否完整（只要人脸结果完成了就行，不管 FACE_RECOGNIZE、SPEAKER_VERIFICATE）"""
         if not self.store_of_request.has(request_id):
             return False
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frame_results"]) < frame_count:
             return False
         frame_results = request_store["frame_results"][frame_count - 1]
-        return len(frame_results["frame_face_idx"]) >= frame_results["frame_face_count"]
+        # 人脸索引数量等于人脸数量，且人脸框都齐了，就是完整的
+        return len(frame_results["frame_face_idx"]) >= frame_results[
+            "frame_face_count"
+        ] and any(map(lambda x: x is not None, frame_results["frame_face_bbox"]))
 
     def get_frame_result(self, request_id: str, frame_count: int) -> dict:
         """获取帧结果"""

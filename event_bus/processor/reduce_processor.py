@@ -99,6 +99,10 @@ class ReduceProcessor(BaseEventBusProcessor):
         is_frame_result_complete = self.store.is_frame_result_complete(
             self.get_request_id(), event_message_body.frame_count
         )
+        if not is_frame_result_complete:
+            # 未收集到所有结果，不输出
+            # TODO: 实现实时后，需要考虑超时，超时不管是否收集到所有结果都输出
+            return
         frame_result = self.store.get_frame_result(
             self.get_request_id(), event_message_body.frame_count
         )

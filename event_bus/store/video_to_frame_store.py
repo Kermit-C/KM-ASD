@@ -51,9 +51,9 @@ class VideoToFrameStore:
             request_id, {"video_fps": video_fps, "video_frame_count": video_frame_count}
         )
 
-    def get_frames(self, request_id: str) -> list[np.ndarray]:
+    def get_frames(self, request_id: str) -> Optional[list[np.ndarray]]:
         if not self.frame_store_of_request.has(request_id):
-            return []
+            return None
         return self.frame_store_of_request.get(request_id)["frames"]
 
     def get_frame_from_timestamp(

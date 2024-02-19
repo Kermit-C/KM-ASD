@@ -19,6 +19,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
         super().__init__(processor_name)
 
     def process(self, event_message_body: FaceRecognizeMessageBody):
+        # TODO: 考虑使用前面帧的结果来发消息，节约计算资源
         label = call_face_recognition(
             event_message_body.frame, event_message_body.face_lmks
         )

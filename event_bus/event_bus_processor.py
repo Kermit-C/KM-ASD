@@ -38,11 +38,14 @@ class BaseEventBusProcessor:
         message.body = messageBody
         self.last_message.value.result_consumer(message)
 
-    def get_request_id(self):
+    def get_request_id(self) -> str:
         return self.last_message.value.request_id
 
-    def get_request_timestamp(self):
+    def get_request_timestamp(self) -> int:
         return self.last_message.value.timestamp
+
+    def is_real_time(self) -> bool:
+        return self.last_message.value.is_real_time
 
     def _handler(self, event_message: EventMessage):
         self.last_message.value = event_message

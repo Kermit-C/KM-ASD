@@ -52,9 +52,9 @@ class AudioToPcmStore:
             audio_frame_timestamp
         ] = audio_frame_count
 
-    def get_frames(self, request_id: str) -> list[np.ndarray]:
+    def get_frames(self, request_id: str) -> Optional[list[np.ndarray]]:
         if not self.store_of_request.has(request_id):
-            return []
+            return None
         return self.store_of_request.get(request_id)["frames"]
 
     def get_frame_from_timestamp(

@@ -56,13 +56,13 @@ class FaceCropStore:
         # 保留的最大帧数
         request_store["faces"][: -self.max_frame_count] = None
 
-    def get_faces(self, request_id: str, frame_count: int) -> list[dict]:
+    def get_faces(self, request_id: str, frame_count: int) -> Optional[list[dict]]:
         if frame_count < 1:
-            return []
+            return None
         if not self.store_of_request.has(request_id):
-            return []
+            return None
         if len(self.store_of_request.get(request_id)["frames"]) < frame_count:
-            return []
+            return None
         return self.store_of_request.get(request_id)["frames"][frame_count - 1]["faces"]
 
     def get_face_from_idx(

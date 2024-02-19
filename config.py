@@ -53,7 +53,7 @@ event_bus = {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
             "properties": {
-                "face_detect_model_path": "models/face_detect_model",
+                # "face_detect_model_path": "models/face_detect_model",
             },
         },
         "FaceCropProcessor": {
@@ -67,28 +67,28 @@ event_bus = {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
             "properties": {
-                "face_recognize_model_path": "models/face_recognize_model",
+                # "face_recognize_model_path": "models/face_recognize_model",
             },
         },
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
             "properties": {
-                "asd_model_path": "models/asd_model",
+                # "asd_model_path": "models/asd_model",
             },
         },
         "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
             "properties": {
-                "speaker_verificate_model_path": "models/speaker_verificate_model",
+                # "speaker_verificate_model_path": "models/speaker_verificate_model",
             },
         },
         "ReduceProcessor": {
             "processor_name": "reduce_processor",
             "topic": "reduce_topic",
             "properties": {
-                "output_path": "output",
+                # "output_path": "output",
             },
         },
     },

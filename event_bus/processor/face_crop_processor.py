@@ -6,12 +6,15 @@
 @Date: 2024-02-18 15:51:15
 """
 
+import time
+
 import numpy as np
 
 from event_bus.event_bus_processor import BaseEventBusProcessor
 from event_bus.message_body.asd_message_body import AsdMessageBody
 from event_bus.message_body.face_crop_message_body import FaceCropMessageBody
 from event_bus.message_body.face_recognize_message_body import FaceRecognizeMessageBody
+from event_bus.message_body.reduce_message_body import ReduceMessageBody
 from event_bus.store.face_crop_store import FaceCropStore
 from store.local_store import LocalStore
 
@@ -28,10 +31,33 @@ class FaceCropProcessor(BaseEventBusProcessor):
         frame = event_message_body.frame
         face_dets = event_message_body.face_dets
 
-        # TODO: 上一帧还没处理完的情况
-        last_frame_faces = self.store.get_faces(
-            self.get_request_id(), event_message_body.frame_count - 1
-        )
+        if len(face_dets) == 0:
+            # 如果没有检测到人脸，就直接到 reduce
+            self.publish_next(
+                "reduce_topic",
+                ReduceMessageBody(
+                    type="ASD",
+                    frame_count=event_message_body.frame_count,
+                    frame_timestamp=event_message_body.frame_timestamp,
+                    frame_face_count=0,
+                ),
+            )
+            return
+
+        # 获取上一帧的人脸
+        # 重试获取上一帧的人脸，解决乱序问题
+        last_frame_faces = None
+        retry_count = 0
+        while last_frame_faces is None:
+            if retry_count > 0:
+                time.sleep(0.1)
+            if retry_count > 10:
+                last_frame_faces = []
+                break
+            last_frame_faces = self.store.get_faces(
+                self.get_request_id(), event_message_body.frame_count - 1
+            )
+            retry_count += 1
 
         # 可用的人脸索引
         face_idx_list = list(range(len(face_dets)))

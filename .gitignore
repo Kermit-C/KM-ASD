@@ -166,3 +166,7 @@ cython_debug/
 # IDE
 /.vscode
 /tmp
+
+# AlgoSpace
+/tmp
+/flagged
