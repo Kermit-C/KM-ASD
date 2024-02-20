@@ -22,6 +22,8 @@ def render_video(
     audio_path: str,
     video_fps: int,
 ) -> str:
+    if not os.path.exists(render_video_path):
+        os.makedirs(render_video_path)
     # 设置输出视频路径
     output_path = os.path.join(render_video_path, f"{request_id}_no_audio.mp4")
     frame_height, frame_width, _ = video_frames[0].shape

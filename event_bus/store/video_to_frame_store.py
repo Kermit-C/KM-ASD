@@ -97,5 +97,8 @@ class VideoToFrameStore:
 
     def get_info(self, request_id: str) -> dict:
         if not self.info_store_of_request.has(request_id):
-            return {}
+            return {
+                "video_fps": -1,
+                "video_frame_count": -1,
+            }
         return self.info_store_of_request.get(request_id)

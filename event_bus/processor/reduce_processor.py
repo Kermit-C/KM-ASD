@@ -50,12 +50,15 @@ class ReduceProcessor(BaseEventBusProcessor):
         raise Exception("ReduceProcessor process_exception", exception)
 
     def _process_asd(self, event_message_body: ReduceMessageBody):
-        frame_count: int = event_message_body.frame_count  # type: ignore
-        frame_face_count: int = event_message_body.frame_face_count  # type: ignore
-        frame_timestamp: int = event_message_body.frame_timestamp  # type: ignore
-        frame_face_idx: int = event_message_body.frame_face_idx  # type: ignore
-        frame_face_bbox: tuple[int, int, int, int] = event_message_body.frame_face_bbox  # type: ignore
-        frame_asd_status: int = event_message_body.frame_asd_status  # type: ignore
+        frame_count = event_message_body.frame_count
+        frame_face_count = event_message_body.frame_face_count
+        frame_timestamp = event_message_body.frame_timestamp
+        assert frame_count is not None
+        assert frame_face_count is not None
+        assert frame_timestamp is not None
+        frame_face_idx = event_message_body.frame_face_idx
+        frame_face_bbox = event_message_body.frame_face_bbox
+        frame_asd_status = event_message_body.frame_asd_status
 
         self.store.save_frame_result(
             self.get_request_id(),
@@ -243,13 +246,14 @@ class ReduceProcessor(BaseEventBusProcessor):
                 2,
             )
         # 给 frame 下方写声音标签
-        cv2.putText(
-            frame,
-            "Offscreen speaker: " + ", ".join(speaker_offscreen_voice_label),
-            (10, frame.shape[0] - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            (0, 255, 0),
-            2,
-        )
+        if len(speaker_offscreen_voice_label) > 0:
+            cv2.putText(
+                frame,
+                "Offscreen speaker: " + ", ".join(speaker_offscreen_voice_label),
+                (10, frame.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.9,
+                (0, 255, 0),
+                2,
+            )
         return frame

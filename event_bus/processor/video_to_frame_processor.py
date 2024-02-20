@@ -27,10 +27,11 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
 
     def _capture(
         self, video_path: str
-    ) -> Generator[tuple[np.ndarray, int, int, float], None, None]:
+    ) -> Generator[tuple[np.ndarray, int, int, float, int], None, None]:
         # 打开视频流
         video_capture = cv2.VideoCapture(video_path)
         video_fps = video_capture.get(cv2.CAP_PROP_FPS)
+        video_frame_count = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
         # 用于计数帧数
         frame_count = 0
         while True:
@@ -39,19 +40,21 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                 break
             frame_count += 1
             frame_timestamp = int((frame_count / video_fps) * 1000)
-            yield frame, frame_count, frame_timestamp, video_fps
+            yield frame, frame_count, frame_timestamp, video_fps, video_frame_count
 
         # 释放资源
         video_capture.release()
 
     def process(self, event_message_body: VideoToFrameMessageBody):
         skipped_frame = 0
-        video_frame_count = 0
-        for frame, frame_count, frame_timestamp, video_fps in self._capture(
-            event_message_body.video_path
-        ):
+        for (
+            frame,
+            frame_count,
+            frame_timestamp,
+            source_video_fps,
+            video_frame_count,
+        ) in self._capture(event_message_body.video_path):
             # 按帧率缩放
-            source_video_fps = video_fps
             self.processor_properties["target_video_fps"] = float(
                 self.processor_properties["target_video_fps"]
             )
@@ -68,7 +71,6 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                     continue
 
             frame_count -= skipped_frame
-            video_frame_count = frame_count
 
             self.store.save_frame(
                 self.get_request_id(), frame_count, frame_timestamp, frame

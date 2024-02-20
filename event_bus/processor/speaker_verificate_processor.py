@@ -44,7 +44,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
     def process_exception(
         self, event_message_body: SpeakerVerificateMessageBody, exception: Exception
     ):
-        logging.error("FaceRecognizeProcessor process_exception", exception)
+        # logging.error("FaceRecognizeProcessor process_exception", exception)
         self.publish_next(
             "reduce_topic",
             ReduceMessageBody(

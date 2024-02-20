@@ -20,18 +20,19 @@ class AsdProcessor(BaseEventBusProcessor):
 
     def process(self, event_message_body: AsdMessageBody):
         # TODO: 待实现
-        asd_status = 0
-        self.publish_next(
-            "reduce_topic",
-            ReduceMessageBody(
-                type="ASD",
-                frame_count=event_message_body.frame_count,
-                frame_timestamp=event_message_body.frame_timestamp,
-                frame_face_idx=event_message_body.frame_face_idx,
-                frame_face_bbox=event_message_body.frame_face_bbox,
-                frame_asd_status=asd_status,
-            ),
-        )
+        if event_message_body.type == "V":
+            asd_status = 0
+            self.publish_next(
+                "reduce_topic",
+                ReduceMessageBody(
+                    type="ASD",
+                    frame_count=event_message_body.frame_count,
+                    frame_timestamp=event_message_body.frame_timestamp,
+                    frame_face_idx=event_message_body.frame_face_idx,
+                    frame_face_bbox=event_message_body.frame_face_bbox,
+                    frame_asd_status=asd_status,
+                ),
+            )
 
     def process_exception(
         self, event_message_body: AsdMessageBody, exception: Exception

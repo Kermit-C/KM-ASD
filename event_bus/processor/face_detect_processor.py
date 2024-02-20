@@ -37,7 +37,7 @@ class FaceDetectProcessor(BaseEventBusProcessor):
     def process_exception(
         self, event_message_body: FaceCropMessageBody, exception: Exception
     ):
-        logging.error("FaceDetectProcessor process_exception", exception)
+        # logging.error("FaceDetectProcessor process_exception", exception)
         self.publish_next(
             "face_crop_topic",
             FaceCropMessageBody(

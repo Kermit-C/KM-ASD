@@ -151,7 +151,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
     def process_exception(
         self, event_message_body: FaceCropMessageBody, exception: Exception
     ):
-        logging.error("FaceCropProcessor process_exception", exception)
+        # logging.error("FaceCropProcessor process_exception", exception)
         # 直接到 reduce
         self.publish_next(
             "reduce_topic",

@@ -41,9 +41,7 @@ class ReduceStore:
     ):
         """保存帧结果"""
         if not self.store_of_request.has(request_id):
-            self.store_of_request.put(
-                request_id, {"frame_results": [], "frames_ts_to_cnt_dict": {}}
-            )
+            self.store_of_request.put(request_id, {"frame_results": []})
         request_store = self.store_of_request.get(request_id)
 
         while len(request_store["frame_results"]) <= frame_count - 1:
@@ -100,13 +98,22 @@ class ReduceStore:
         # 人脸索引数量等于人脸数量，且人脸框都齐了，就是完整的
         return len(frame_results["frame_face_idx"]) >= frame_results[
             "frame_face_count"
-        ] and any(map(lambda x: x is not None, frame_results["frame_face_bbox"]))
+        ] and all(map(lambda x: x is not None, frame_results["frame_face_bbox"]))
 
     def get_frame_result(self, request_id: str, frame_count: int) -> dict:
         """获取帧结果"""
+        empty_result = {
+            "frame_timestamp": -1,
+            "frame_face_count": -1,
+            "frame_face_idx": [],
+            "frame_face_bbox": [],
+            "frame_face_asd_status": [],
+            "frame_face_label": [],
+            "frame_voice_label": [],
+        }
         if not self.store_of_request.has(request_id):
-            return {}
+            return empty_result
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frame_results"]) < frame_count:
-            return {}
+            return empty_result
         return request_store["frame_results"][frame_count - 1]

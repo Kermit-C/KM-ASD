@@ -58,6 +58,16 @@ def process(
             }
 
         _consume_cache[request_id]["video_frames"].append(message_body.frame)
+        if _consume_cache[request_id]["video_fps"] < 0 and message_body.video_fps > 0:
+            _consume_cache[request_id]["video_fps"] = message_body.video_fps
+        if (
+            _consume_cache[request_id]["video_frame_count"] < 0
+            and message_body.video_frame_count > 0
+        ):
+            _consume_cache[request_id][
+                "video_frame_count"
+            ] = message_body.video_frame_count
+
         if (
             len(_consume_cache[request_id]["video_frames"])
             == _consume_cache[request_id]["video_frame_count"]
@@ -86,7 +96,6 @@ def process(
     )
 
     return result_future.result(timeout=timeout_second)
-
 
 def call_face_detection(frame: np.ndarray, timeout: float) -> list[dict[str, Any]]:
     # 调用人脸检测服务
