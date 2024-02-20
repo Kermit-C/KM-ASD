@@ -49,6 +49,8 @@ def recognize_faces(
         face_lmks=face_lmks,
     )
     lib_feat, lib_labels = get_lib_feat_and_labels()
+    if lib_feat.shape[0] == 0:
+        return create_new_label(feat)
     sim = recognizer.calc_similarity_batch(np.expand_dims(feat, axis=0), lib_feat)
     sim = sim[0]
     max_idx = np.argmax(sim)

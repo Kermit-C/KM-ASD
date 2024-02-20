@@ -41,6 +41,8 @@ def verify_speakers(
 ) -> str:
     lib_feat, lib_labels = get_lib_feat_and_labels()
     feat = verificator.gen_feat(audio)
+    if lib_feat.size(0) == 0:
+        return create_new_label(feat)
     score = verificator.calc_score_batch(feat.unsqueeze(0), lib_feat)
     score = score[0]
     max_idx = torch.argmax(score)
