@@ -97,7 +97,7 @@ class RetinaFaceDetector:
         if isinstance(image_or_image_path, str):
             img_raw = cv2.imread(image_or_image_path, cv2.IMREAD_COLOR)
         elif isinstance(image_or_image_path, np.ndarray):
-            img_raw = cv2.UMat(image_or_image_path)  # type: ignore
+            img_raw = image_or_image_path
         else:
             img_raw = image_or_image_path
         img = np.float32(img_raw)  # type: ignore
@@ -187,7 +187,7 @@ class RetinaFaceDetector:
                 int(b[1]),
                 int(b[2]),
                 int(b[3]),
-                b[4],
+                float(b[4]),
                 int(b[2] - b[0] + 1),
                 int(b[3] - b[1] + 1),
                 *map(int, b[5:15]),

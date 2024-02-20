@@ -54,7 +54,7 @@ class FaceCropStore:
             }
         )
         # 保留的最大帧数
-        request_store["faces"][: -self.max_frame_count] = None
+        request_store["frames"][: -self.max_frame_count] = []
 
     def get_faces(self, request_id: str, frame_count: int) -> Optional[list[dict]]:
         if frame_count < 1:

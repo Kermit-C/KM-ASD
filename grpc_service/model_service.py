@@ -26,7 +26,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         request: model_service_pb2.FaceDetectionRequest,
         context: grpc.aio.ServicerContext,
     ) -> model_service_pb2.FaceDetectionResponse:
-        request_id = request.meta.name  # type: ignore
+        request_id = request.meta.request_id  # type: ignore
         face_image = request.face_image  # type: ignore
         face_image_np: np.ndarray = pickle.loads(face_image)
 
@@ -44,7 +44,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         request: model_service_pb2.FaceRecognitionRequest,
         context: grpc.aio.ServicerContext,
     ) -> model_service_pb2.FaceRecognitionResponse:
-        request_id = request.meta.name  # type: ignore
+        request_id = request.meta.request_id  # type: ignore
         face_image = request.face_image  # type: ignore
         face_lmks = request.face_lmks  # type: ignore
         face_image_np: np.ndarray = pickle.loads(face_image)
@@ -64,7 +64,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         request: model_service_pb2.SpeakerVerificationRequest,
         context: grpc.aio.ServicerContext,
     ) -> model_service_pb2.SpeakerVerificationResponse:
-        request_id = request.meta.name  # type: ignore
+        request_id = request.meta.request_id  # type: ignore
         voice_data = request.voice_data  # type: ignore
         voice_data_np: np.ndarray = pickle.loads(voice_data)
 

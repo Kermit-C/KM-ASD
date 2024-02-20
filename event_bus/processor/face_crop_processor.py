@@ -65,7 +65,10 @@ class FaceCropProcessor(BaseEventBusProcessor):
         # 已经分配的人脸索引
         face_idx_alloc_list = []
         for face_det in face_dets:
-            x1, y1, x2, y2 = face_det["bbox"]
+            x1 = face_det["bbox"]["x1"]
+            y1 = face_det["bbox"]["y1"]
+            x2 = face_det["bbox"]["x2"]
+            y2 = face_det["bbox"]["y2"]
             face_bbox: tuple[int, int, int, int] = (x1, y1, x2, y2)  # type: ignore
 
             # 从上一帧人脸中找到最接近的人脸
@@ -83,7 +86,10 @@ class FaceCropProcessor(BaseEventBusProcessor):
             face_idx_alloc_list.append(face_idx)
 
         for face_idx, face_det in zip(face_idx_alloc_list, face_dets):
-            x1, y1, x2, y2 = face_det["bbox"]
+            x1 = face_det["bbox"]["x1"]
+            y1 = face_det["bbox"]["y1"]
+            x2 = face_det["bbox"]["x2"]
+            y2 = face_det["bbox"]["y2"]
             face_bbox: tuple[int, int, int, int] = (x1, y1, x2, y2)  # type: ignore
 
             left_eye_x = face_det["landmarks"]["left_eye"]["x"]
