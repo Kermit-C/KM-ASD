@@ -172,7 +172,7 @@ class RetinaFaceDetector:
 
         _t["misc"].toc()
         print(
-            "forward_pass_time: {:.4f}s misc: {:.4f}s".format(
+            "Retinaface forward time: {:.4f}s misc: {:.4f}s".format(
                 _t["forward_pass"].average_time, _t["misc"].average_time
             )
         )

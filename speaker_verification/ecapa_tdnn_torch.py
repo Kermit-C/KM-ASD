@@ -71,11 +71,11 @@ class EcapaTdnnVerificator:
             )
         else:
             raise ValueError("Invalid input type!")
-        inp = torch.FloatTensor(inp)  # (split_num, samples)
+        inp = torch.FloatTensor(inp).to(self.device)  # (split_num, samples)
         start = timeit.default_timer()
         emb = self.model(inp).detach().cpu()
         stop = timeit.default_timer()
-        print("Time: %.2f s. " % (stop - start))
+        print("Ecapa forward time: %.2f s. " % (stop - start))
         emb = F.normalize(emb, p=2, dim=1)
         return emb  # (split_num, 192)
 
@@ -105,7 +105,12 @@ class EcapaTdnnVerificator:
         # dist (batch1, split_num, batch2, split_num)
         dist = dist.reshape(emb1.size(0), emb1.size(1), emb2.size(0), emb2.size(1))
         # dist (batch1, batch2)
-        dist = dist.mean(dim=1, keepdim=True).mean(dim=3, keepdim=True).squeeze()
+        dist = (
+            dist.mean(dim=1, keepdim=True)
+            .mean(dim=3, keepdim=True)
+            .squeeze(1)
+            .squeeze(2)
+        )
         return dist.numpy()
 
     def verify(self, path1: str, path2: str) -> bool:
