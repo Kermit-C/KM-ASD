@@ -7,6 +7,7 @@
 """
 
 from config import event_bus
+from event_bus.event_bus_excecutor import init as init_event_bus_executor
 from event_bus.event_bus_factory import create_processor
 from event_bus.processor.asd_processor import AsdProcessor
 from event_bus.processor.audio_to_pcm_processor import AudioToPcmProcessor
@@ -20,6 +21,7 @@ from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
 
 def init_event_bus():
     """初始化事件总线"""
+    init_event_bus_executor()
     create_processor(
         VideoToFrameProcessor(
             event_bus["processors"]["VideoToFrameProcessor"]["processor_name"]

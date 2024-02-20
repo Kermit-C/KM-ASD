@@ -9,7 +9,8 @@
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
 model_service_server_grpc_port = 50051
-model_service_server_max_workers = 200
+model_service_server_max_workers = 5
+model_service_server_thread_name_prefix = "model_service_server"
 
 extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
@@ -29,6 +30,8 @@ speaker_verificate_score_threshold = SpeakerVerificationArgs.threshold
 
 
 # 事件总线配置
+event_bus_executor_max_workers = 200
+event_bus_executor_thread_name_prefix = "event_bus_executor"
 event_bus = {
     "publisher": {
         "name": "default_event_bus_publisher",
@@ -55,7 +58,7 @@ event_bus = {
         "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
-            "timeout": 2 * (1 / 30),  # 2帧时间
+            "timeout": 10,  # 2 * (1 / 30),  # 2帧时间
             "properties": {
                 # "face_detect_model_path": "models/face_detect_model",
             },
@@ -63,7 +66,7 @@ event_bus = {
         "FaceCropProcessor": {
             "processor_name": "face_crop_processor",
             "topic": "face_crop_topic",
-            "timeout": 1,
+            "timeout": 10,
             "properties": {
                 "face_crop_size": 112,
             },
@@ -71,7 +74,7 @@ event_bus = {
         "FaceRecognizeProcessor": {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
-            "timeout": 5 * (1 / 30),  # 5帧时间
+            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "face_recognize_model_path": "models/face_recognize_model",
             },
@@ -79,7 +82,7 @@ event_bus = {
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
-            "timeout": 5 * (1 / 30),  # 5帧时间
+            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "asd_model_path": "models/asd_model",
             },
@@ -87,7 +90,7 @@ event_bus = {
         "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
-            "timeout": 5 * (1 / 30),  # 5帧时间
+            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "speaker_verificate_model_path": "models/speaker_verificate_model",
             },

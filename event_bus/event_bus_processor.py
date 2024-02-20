@@ -9,7 +9,9 @@
 import threading
 
 from config import event_bus
-from event_bus.event_message import EventMessage, EventMessageBody
+
+from .event_bus_excecutor import submit as submit_executor
+from .event_message import EventMessage, EventMessageBody
 
 
 class BaseEventBusProcessor:
@@ -36,10 +38,13 @@ class BaseEventBusProcessor:
         如果不重写或方法里也抛出，则向整个 request 抛出异常"""
         raise exception
 
-    def publish_next(self, topic: str, messageBody: EventMessageBody):
+    def publish_next(
+        self, topic: str, messageBody: EventMessageBody, is_async: bool = True
+    ):
         """发布下一个消息"""
         message = self.last_message.value.copy()
         message.body = messageBody
+        message.is_async = is_async
         self._get_publisher().publish(topic, message)
 
     def result(self, messageBody: EventMessageBody):
@@ -64,6 +69,7 @@ class BaseEventBusProcessor:
         return self.last_message.value.is_real_time
 
     def _handler(self, event_message: EventMessage):
+        """处理消息"""
         try:
             self.last_message.value = event_message
             assert isinstance(event_message.body, EventMessageBody)
@@ -74,6 +80,15 @@ class BaseEventBusProcessor:
                 self.process_exception(event_message.body, e)
             except Exception as ee:
                 self.result_exception(ee)
+
+    def _listener(self, event_message: EventMessage):
+        """监听消息"""
+        if event_message.is_async:
+            # 异步处理
+            submit_executor(self._handler, event_message)
+        else:
+            # 同步处理
+            self._handler(event_message)
 
     def _get_publisher(self):
         """获取发布者"""

@@ -32,5 +32,5 @@ class EventBusPublisher:
 
     def _subscribe(self, processor: BaseEventBusProcessor, topic: str):
         """订阅 processor"""
-        self.publisher.subscribe(processor._handler, topic)
+        self.publisher.subscribe(processor._listener, topic)
         self.processor_list.append((topic, processor))
