@@ -47,8 +47,8 @@ event_bus = {
             "timeout": 60,  # 暂未使用
             "properties": {
                 "audio_to_pcm_sample_rate": 16000,
-                "frame_length": 400,  # 25ms
-                "frame_step": 160,  # 10ms
+                "frame_length": 8000,  # 500ms
+                "frame_step": 480,  # 30ms
             },
         },
         "FaceDetectProcessor": {

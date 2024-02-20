@@ -89,10 +89,18 @@ class ReduceProcessor(BaseEventBusProcessor):
         audio_frame_timestamp: int = event_message_body.audio_frame_timestamp  # type: ignore
         frame_voice_label: str = event_message_body.frame_voice_label  # type: ignore
 
+        frame_count, frame_timestamp = (
+            self._get_video_frame_count_timestamp_from_near_timestamp(
+                self.get_request_id(), audio_frame_timestamp
+            )
+        )
+        if frame_count is None or frame_timestamp is None:
+            return
+
         self.store.save_frame_result(
             self.get_request_id(),
-            audio_frame_count,  # TODO: 转换成视频帧数
-            audio_frame_timestamp,  # TODO: 转换成视频帧时间戳
+            frame_count,
+            frame_timestamp,
             frame_voice_label=frame_voice_label,
         )
 
@@ -162,6 +170,21 @@ class ReduceProcessor(BaseEventBusProcessor):
         """获取视频帧图像"""
         video_to_frame_store = self._get_video_to_frame_store()
         return video_to_frame_store.get_frame_from_timestamp(request_id, timestamp)
+
+    def _get_video_frame_count_timestamp_from_near_timestamp(
+        self, request_id: str, timestamp: int
+    ) -> tuple[Optional[int], Optional[int]]:
+        """根据时间戳获取最近的视频帧序号和时间戳"""
+        video_to_frame_store = self._get_video_to_frame_store()
+        frame_timestamp = video_to_frame_store.get_frame_timestamp_from_near_timestamp(
+            request_id, timestamp
+        )
+        if frame_timestamp is None:
+            return None, None
+        frame_count = video_to_frame_store.get_frame_count_from_timestamp(
+            request_id, frame_timestamp
+        )
+        return frame_count, frame_timestamp
 
     def _get_video_info(self, request_id: str) -> dict:
         """获取视频信息"""

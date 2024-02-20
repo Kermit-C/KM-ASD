@@ -27,7 +27,7 @@ class ReduceStore:
         self,
         request_id: str,
         frame_count: int,
-        frame_timestamp: float,
+        frame_timestamp: int,
         # ASD & FACE_RECOGNIZE COMMON
         frame_face_idx: Optional[int] = None,  # 人脸索引，一个视频帧中可能有多个人脸
         # ASD

@@ -26,7 +26,7 @@ class VideoToFrameStore:
         self,
         request_id: str,
         frame_count: int,
-        frame_timestamp: float,
+        frame_timestamp: int,
         frame: np.ndarray,
     ):
         if not self.frame_store_of_request.has(request_id):
@@ -65,6 +65,35 @@ class VideoToFrameStore:
             "frames_ts_to_cnt_dict"
         ][timestamp]
         return self.frame_store_of_request.get(request_id)["frames"][frame_count - 1]
+
+    def get_frame_count_from_timestamp(
+        self, request_id: str, timestamp: float
+    ) -> Optional[int]:
+        if not self.frame_store_of_request.has(request_id):
+            return None
+        return self.frame_store_of_request.get(request_id)["frames_ts_to_cnt_dict"][
+            timestamp
+        ]
+
+    def get_frame_timestamp_from_near_timestamp(
+        self, request_id: str, timestamp: int
+    ) -> Optional[int]:
+        """获取最接近的帧时间戳"""
+        if not self.frame_store_of_request.has(request_id):
+            return None
+        frame_timestamps = list(
+            self.frame_store_of_request.get(request_id)["frames_ts_to_cnt_dict"].keys()
+        )
+        frame_timestamps.sort()
+        for i in range(len(frame_timestamps) - 1):
+            if frame_timestamps[i] <= timestamp < frame_timestamps[i + 1]:
+                return (
+                    frame_timestamps[i]
+                    if abs(frame_timestamps[i] - timestamp)
+                    < abs(frame_timestamps[i + 1] - timestamp)
+                    else frame_timestamps[i + 1]
+                )
+        return None
 
     def get_info(self, request_id: str) -> dict:
         if not self.info_store_of_request.has(request_id):
