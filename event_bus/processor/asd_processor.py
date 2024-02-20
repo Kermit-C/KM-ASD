@@ -29,6 +29,7 @@ class AsdProcessor(BaseEventBusProcessor):
                     frame_count=event_message_body.frame_count,
                     frame_timestamp=event_message_body.frame_timestamp,
                     frame_face_idx=event_message_body.frame_face_idx,
+                    frame_face_count=event_message_body.frame_face_count,
                     frame_face_bbox=event_message_body.frame_face_bbox,
                     frame_asd_status=asd_status,
                 ),

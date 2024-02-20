@@ -122,11 +122,11 @@ class ArcFaceRecognizer:
         print("Time: %.2f s. " % (stop - start))
         feat /= np.sqrt(np.sum(feat**2, -1, keepdims=True))  # l2 norm
 
-        return feat
+        return np.squeeze(feat)
 
     def calc_similarity(self, feat1: np.ndarray, feat2: np.ndarray) -> float:
         """计算两个特征的相似度，0 为最不相似，1 为最相似"""
-        return np.dot(feat1[0], feat2[0])
+        return np.dot(feat1, feat2)
 
     def calc_similarity_batch(self, feat1: np.ndarray, feat2: np.ndarray) -> np.ndarray:
         """计算两个特征的相似度，0 为最不相似，1 为最相似

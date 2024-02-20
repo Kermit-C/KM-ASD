@@ -17,6 +17,7 @@ render_video_path = "tmp/render"
 face_detection_model = "face_detection/retinaface_weights/mobilenet0.25_Final.pth"
 face_detection_network = "mobile0.25"
 face_detection_cpu = False
+face_detection_confidence_threshold = 0.5
 
 face_recognize_model = "face_recognition/arcface_weights/ms1mv3_r18_backbone.pth"
 face_recognize_network = "r18"

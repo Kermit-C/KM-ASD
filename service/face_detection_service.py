@@ -30,6 +30,9 @@ def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
     face_dets = detector.detect_faces(
         image_or_image_path=image,
     )
+    face_dets = filter(
+        lambda x: x[4] > config.face_detection_confidence_threshold, face_dets
+    )
     return [
         {
             "bbox": {

@@ -49,8 +49,12 @@ class ReduceStore:
             request_store["frame_results"].append(None)
         if request_store["frame_results"][frame_count - 1] is None:
             request_store["frame_results"][frame_count - 1] = {
-                "frame_timestamp": frame_timestamp,
-                "frame_face_count": frame_face_count,
+                "frame_timestamp": (
+                    frame_timestamp if frame_face_count is not None else -1
+                ),
+                "frame_face_count": (
+                    frame_face_count if frame_face_count is not None else -1
+                ),
                 "frame_face_idx": [],
                 "frame_face_bbox": [],
                 "frame_face_asd_status": [],
