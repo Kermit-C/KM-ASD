@@ -71,25 +71,39 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                     continue
 
             frame_count -= skipped_frame
+            video_fps = (
+                source_video_fps
+                if skipped_frame == 0
+                else self.processor_properties["target_video_fps"]
+            )
 
             self.store.save_frame(
                 self.get_request_id(), frame_count, frame_timestamp, frame
             )
             self.store.save_info(
                 self.get_request_id(),
-                (
-                    source_video_fps
-                    if skipped_frame == 0
-                    else self.processor_properties["target_video_fps"]
-                ),
+                video_fps,
                 video_frame_count,
             )
-            self.publish_next(
-                "face_detect_topic",
-                FaceDetectMessageBody(frame_count, frame_timestamp, frame),
-                # TODO: 需要放开
-                # is_async=False,
-            )
+            # TODO: 最终需要去掉 or True
+            if self.is_real_time() or True:
+                # 实时处理
+                # 等待人脸检测结果，最大等待是帧间隔
+                self.publish_next(
+                    "face_detect_topic",
+                    FaceDetectMessageBody(frame_count, frame_timestamp, frame),
+                    is_async=True,
+                    is_wait_async=True,
+                    wait_async_timeout=(1 / video_fps),
+                )
+            else:
+                # 非实时处理
+                # 同步等待
+                self.publish_next(
+                    "face_detect_topic",
+                    FaceDetectMessageBody(frame_count, frame_timestamp, frame),
+                    is_async=False,
+                )
 
     def process_exception(
         self, event_message_body: VideoToFrameMessageBody, exception: Exception

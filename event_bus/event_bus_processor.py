@@ -39,12 +39,19 @@ class BaseEventBusProcessor:
         raise exception
 
     def publish_next(
-        self, topic: str, messageBody: EventMessageBody, is_async: bool = True
+        self,
+        topic: str,
+        messageBody: EventMessageBody,
+        is_async: bool = True,
+        is_wait_async: bool = False,
+        wait_async_timeout: float = 0.0,
     ):
         """发布下一个消息"""
         message = self.last_message.value.copy()
         message.body = messageBody
         message.is_async = is_async
+        message.is_wait_async = is_wait_async
+        message.wait_async_timeout = wait_async_timeout
         self._get_publisher().publish(topic, message)
 
     def result(self, messageBody: EventMessageBody):
@@ -85,7 +92,13 @@ class BaseEventBusProcessor:
         """监听消息"""
         if event_message.is_async:
             # 异步处理
-            submit_executor(self._handler, event_message)
+            handle_future = submit_executor(self._handler, event_message)
+            if event_message.is_wait_async:
+                # 等待异步处理
+                try:
+                    handle_future.result(event_message.wait_async_timeout)
+                except:
+                    pass
         else:
             # 同步处理
             self._handler(event_message)
