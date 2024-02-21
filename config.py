@@ -85,6 +85,7 @@ event_bus = {
             "timeout": 10,
             "properties": {
                 "face_crop_size": 112,
+                "same_face_between_frames_iou_threshold": 0.5,
             },
         },
         "FaceRecognizeProcessor": {
@@ -93,6 +94,7 @@ event_bus = {
             "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "face_recognize_model_path": "models/face_recognize_model",
+                "same_face_between_frames_iou_threshold": 0.5,
             },
         },
         "AsdProcessor": {
@@ -109,6 +111,7 @@ event_bus = {
             "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "speaker_verificate_model_path": "models/speaker_verificate_model",
+                "aggregate_frame_length": 24000,  # 1500ms
             },
         },
         "ReduceProcessor": {

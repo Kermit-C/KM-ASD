@@ -47,7 +47,7 @@ from algospace import InputType, OutputType
 name = "active_speaker_detection"
 version = "v1.0"
 secret = "****"
-service_filepath = "./main.py"
+service_filepath = "./main_event_bus.py"
 service_function = "process_fn"
 service_input = {
     "video_path": InputType.VideoPath(describe="输入一段视频"),

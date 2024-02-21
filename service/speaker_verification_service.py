@@ -71,21 +71,20 @@ def verify_speakers(
     if verificator is None:
         raise ValueError("Verificator is not loaded")
     lib_feat, lib_labels = get_lib_feat_and_labels()
-    feat = verificator.gen_feat(audio)
     if lib_feat.size(0) == 0:
-        return create_new_label(feat)
+        return ""
+    feat = verificator.gen_feat(audio)
     score = verificator.calc_score_batch(feat.unsqueeze(0), lib_feat)
     score = score[0]
     max_idx = np.argmax(score)
     max_score = score[max_idx]
     if max_score < config.speaker_verificate_score_threshold:
-        return create_new_label(feat)
+        return ""
     label = lib_labels[max_idx]
     return label
 
 
 def get_lib_feat_and_labels() -> tuple[torch.Tensor, list[str]]:
-    # TODO: 存在上一次的新 label 未保存完，这里又存了新的 label 的问题，考虑用 label 关联解决
     labels, feats = speaker_verification_store.get_all_feats()
     lib_labels = labels
     lib_feat = torch.stack(feats) if len(feats) > 0 else torch.Tensor()

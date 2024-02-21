@@ -22,7 +22,9 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
     def __init__(self, processor_name: str):
         super().__init__(processor_name)
         self.store = FaceRecognizeStore(LocalStore.create)
-        self.same_face_between_frames_iou_threshold = 0.5
+        self.same_face_between_frames_iou_threshold: float = self.processor_properties[
+            "same_face_between_frames_iou_threshold"
+        ]
 
     def process(self, event_message_body: FaceRecognizeMessageBody):
         # 获取最近 10 帧最接近的人脸的标签

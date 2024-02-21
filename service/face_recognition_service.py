@@ -104,7 +104,6 @@ def recognize_faces(
     max_idx = np.argmax(sim)
     max_sim = sim[max_idx]
     if max_sim < config.face_recognize_sim_threshold:
-        # TODO: 存在上一次的新 label 未保存完，这里又存了新的 label 的问题，考虑用 label 关联解决
         return create_new_label(feat)
     label = lib_labels[max_idx]
     return label

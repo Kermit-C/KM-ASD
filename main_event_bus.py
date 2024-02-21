@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-@Description: 主入口
+@Description: 接入服务入口（事件总线）
 @Author: chenkeming
 @Date: 2024-02-10 15:51:57
 """
@@ -26,6 +26,7 @@ if (
     initializer.initialize_model_service(wait_for_termination=False)
 
 initializer.init_event_bus()
+
 
 def process_fn(
     video_path: str,

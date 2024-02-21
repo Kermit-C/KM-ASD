@@ -9,6 +9,7 @@ service ModelService {
     rpc call_face_recognition (FaceRecognitionRequest) returns (FaceRecognitionResponse) {}
     // 说话人验证
     rpc call_speaker_verification (SpeakerVerificationRequest) returns (SpeakerVerificationResponse) {}
+    // TODO: 说话人声纹注册
 };
 
 message RequestMetaData {
