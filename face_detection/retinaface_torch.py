@@ -66,26 +66,29 @@ class RetinaFaceDetector:
         self,
         image_or_image_path: Union[cv2.typing.MatLike, np.ndarray, str],
         save_path: Optional[str] = None,
-    ) -> list[
-        tuple[
-            int,
-            int,
-            int,
-            int,
-            float,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-            int,
-        ]
+    ) -> tuple[
+        list[
+            tuple[
+                int,
+                int,
+                int,
+                int,
+                float,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+                int,
+            ]
+        ],
+        np.ndarray,
     ]:
         """
         :param image_or_image_path: 输入图片或图片路径
@@ -194,7 +197,7 @@ class RetinaFaceDetector:
             )
             for b in dets
         ]
-        return results  # type: ignore
+        return results, img_raw  # type: ignore
 
     def _check_keys(self, model, pretrained_state_dict):
         ckpt_keys = set(pretrained_state_dict.keys())

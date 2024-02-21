@@ -7,17 +7,19 @@
 """
 
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
 import config
 from face_detection.retinaface_torch import RetinaFaceDetector
 
-detector: RetinaFaceDetector
+detector: Optional[RetinaFaceDetector] = None
 
 def load_detector():
     global detector
+    if detector is not None:
+        return detector
     detector = RetinaFaceDetector(
         trained_model=config.face_detection_model,
         network=config.face_detection_network,
@@ -26,8 +28,15 @@ def load_detector():
     return detector
 
 
+def destroy_detector():
+    # TODO
+    pass
+
+
 def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
-    face_dets = detector.detect_faces(
+    if detector is None:
+        raise ValueError("Detector is not loaded")
+    face_dets, _ = detector.detect_faces(
         image_or_image_path=image,
     )
     face_dets = filter(

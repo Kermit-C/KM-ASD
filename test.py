@@ -24,7 +24,7 @@ def test_face_detector():
         network="mobile0.25",
         cpu=False,
     )
-    dets = detector.detect_faces(
+    dets, _ = detector.detect_faces(
         image_or_image_path="/hdd1/ckm/asd/face_detection/retinaface/curve/test.jpg",
         save_path="./tmp/test-face-detector.jpg",
     )
@@ -46,10 +46,10 @@ def test_face_recognition():
     face1 = "/hdd1/ckm/asd/tmp/tmp_faces/900.0.jpg"
     face2 = "/hdd1/ckm/asd/tmp/tmp_faces/901.91.jpg"
 
-    [dets1, *_] = detector.detect_faces(
+    [dets1, *_], _ = detector.detect_faces(
         image_or_image_path=face1,
     )
-    [dets2, *_] = detector.detect_faces(
+    [dets2, *_], _ = detector.detect_faces(
         image_or_image_path=face2,
     )
     if dets1 is None or dets2 is None:

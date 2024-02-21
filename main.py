@@ -12,12 +12,20 @@ from service.event_bus_service import process
 from utils.io_util import extract_audio_track
 from utils.uuid_util import get_uuid
 
-initializer.init_event_bus()
-initializer.initialize_models("face_detection")
-initializer.initialize_models("face_recognition")
-initializer.initialize_models("speaker_verification")
-initializer.initialize_model_service(wait_for_termination=False)
+if config.face_detection_enabled:
+    initializer.initialize_models("face_detection")
+if config.face_recognize_enabled:
+    initializer.initialize_models("face_recognition")
+if config.speaker_verificate_enabled:
+    initializer.initialize_models("speaker_verification")
+if (
+    config.face_detection_enabled
+    or config.face_recognize_enabled
+    or config.speaker_verificate_enabled
+):
+    initializer.initialize_model_service(wait_for_termination=False)
 
+initializer.init_event_bus()
 
 def process_fn(
     video_path: str,

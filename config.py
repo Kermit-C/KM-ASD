@@ -8,6 +8,8 @@
 
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
+########## 模型服务配置 ##########
+
 model_service_server_grpc_port = 50051
 model_service_server_max_workers = 200
 model_service_server_face_detection_max_workers = 10
@@ -21,19 +23,27 @@ model_service_server_thread_name_prefix = "model_service_server"
 extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
 
+face_detection_enabled = True
 face_detection_model = "face_detection/retinaface_weights/mobilenet0.25_Final.pth"
 face_detection_network = "mobile0.25"
 face_detection_cpu = False
 face_detection_confidence_threshold = 0.5
 
+face_recognize_enabled = True
 face_recognize_model = "face_recognition/arcface_weights/ms1mv3_r18_backbone.pth"
 face_recognize_network = "r18"
 face_recognize_cpu = False
 face_recognize_sim_threshold = 0.5
+face_recognize_register_path = "tmp/register/faces"
 
+speaker_verificate_enabled = True
 speaker_verificate_cpu = False
+speaker_verificate_sample_rate = 16000
 speaker_verificate_score_threshold = SpeakerVerificationArgs.threshold
+speaker_verificate_register_path = "tmp/register/speakers"
 
+
+########## 接入服务配置 ##########
 
 # 事件总线配置
 event_bus_executor_max_workers = 200
