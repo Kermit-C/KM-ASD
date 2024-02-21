@@ -87,6 +87,8 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
             self.publish_next(
                 "face_detect_topic",
                 FaceDetectMessageBody(frame_count, frame_timestamp, frame),
+                # TODO: 需要放开
+                # is_async=False,
             )
 
     def process_exception(

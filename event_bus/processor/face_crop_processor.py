@@ -142,6 +142,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
                     event_message_body.frame_timestamp,
                     face,
                     face_idx,
+                    face_bbox,
                     np.array(
                         [
                             [left_eye_x, left_eye_y],
