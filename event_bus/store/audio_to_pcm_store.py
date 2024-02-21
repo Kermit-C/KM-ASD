@@ -6,6 +6,7 @@
 @Date: 2024-02-19 14:54:10
 """
 
+from threading import Lock
 from typing import Callable, Optional
 
 import numpy as np
@@ -21,6 +22,7 @@ class AudioToPcmStore:
     ):
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
+        self.save_frame_lock = Lock()
 
     def save_frame(
         self,
@@ -32,21 +34,22 @@ class AudioToPcmStore:
         audio_frame_count: int,
         audio_frame_timestamp: int,
     ):
-        if not self.store_of_request.has(request_id):
-            self.store_of_request.put(
-                request_id,
-                {
-                    "frames": [],
-                    "frames_ts_to_cnt_dict": {},
-                    "audio_sample_rate": audio_sample_rate,
-                    "audio_frame_length": audio_frame_length,
-                    "audio_frame_step": audio_frame_step,
-                },
-            )
-        request_store = self.store_of_request.get(request_id)
-        while len(request_store["frames"]) <= audio_frame_count - 1:
-            # 补充空帧
-            request_store["frames"].append(None)
+        with self.save_frame_lock:
+            if not self.store_of_request.has(request_id):
+                self.store_of_request.put(
+                    request_id,
+                    {
+                        "frames": [],
+                        "frames_ts_to_cnt_dict": {},
+                        "audio_sample_rate": audio_sample_rate,
+                        "audio_frame_length": audio_frame_length,
+                        "audio_frame_step": audio_frame_step,
+                    },
+                )
+            request_store = self.store_of_request.get(request_id)
+            while len(request_store["frames"]) <= audio_frame_count - 1:
+                # 补充空帧
+                request_store["frames"].append(None)
         request_store["frames"][audio_frame_count - 1] = audio_pcm
         request_store["frames_ts_to_cnt_dict"][
             audio_frame_timestamp

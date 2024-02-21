@@ -9,6 +9,7 @@
 import json
 import pickle
 from concurrent import futures
+from threading import Lock
 from typing import Any, Optional, Union
 
 import grpc
@@ -28,6 +29,8 @@ from utils.io_util import render_video
 from utils.uuid_util import get_uuid
 
 _consume_cache = {}
+_consume_lock = {}
+_consume_create_lock_lock = Lock()
 
 
 def process(
@@ -50,23 +53,32 @@ def process(
             result_future.set_exception(message_body)
             return
         assert isinstance(message_body, ResultMessageBody)
-        if request_id not in _consume_cache.keys():
-            _consume_cache[request_id] = {
-                "video_frames": [],
-                "video_fps": message_body.video_fps,
-                "video_frame_count": message_body.video_frame_count,
-            }
 
-        _consume_cache[request_id]["video_frames"].append(message_body.frame)
-        if _consume_cache[request_id]["video_fps"] < 0 and message_body.video_fps > 0:
-            _consume_cache[request_id]["video_fps"] = message_body.video_fps
-        if (
-            _consume_cache[request_id]["video_frame_count"] < 0
-            and message_body.video_frame_count > 0
-        ):
-            _consume_cache[request_id][
-                "video_frame_count"
-            ] = message_body.video_frame_count
+        with _consume_create_lock_lock:
+            if request_id not in _consume_lock.keys():
+                _consume_lock[request_id] = Lock()
+
+        with _consume_lock[request_id]:
+            if request_id not in _consume_cache.keys():
+                _consume_cache[request_id] = {
+                    "video_frames": [],
+                    "video_fps": message_body.video_fps,
+                    "video_frame_count": message_body.video_frame_count,
+                }
+
+            _consume_cache[request_id]["video_frames"].append(message_body.frame)
+            if (
+                _consume_cache[request_id]["video_fps"] < 0
+                and message_body.video_fps > 0
+            ):
+                _consume_cache[request_id]["video_fps"] = message_body.video_fps
+            if (
+                _consume_cache[request_id]["video_frame_count"] < 0
+                and message_body.video_frame_count > 0
+            ):
+                _consume_cache[request_id][
+                    "video_frame_count"
+                ] = message_body.video_frame_count
 
         if (
             len(_consume_cache[request_id]["video_frames"])
@@ -81,6 +93,7 @@ def process(
                 _consume_cache[request_id]["video_fps"],
             )
             del _consume_cache[request_id]
+            del _consume_lock[request_id]
             result_future.set_result(result_video_path)
 
     result_consumer = _consume_result

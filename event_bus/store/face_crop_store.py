@@ -6,10 +6,10 @@
 @Date: 2024-02-19 15:50:28
 """
 
+from threading import Lock
 from typing import Callable, Optional
 
 import numpy as np
-import torch
 
 from store.store import Store
 
@@ -25,6 +25,7 @@ class FaceCropStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
+        self.save_face_lock = Lock()
 
     def save_face(
         self,
@@ -35,26 +36,27 @@ class FaceCropStore:
         frame_face_idx: int,
         frame_face_bbox: tuple[int, int, int, int],
     ):
-        if not self.store_of_request.has(request_id):
-            self.store_of_request.put(request_id, {"frames": []})
-        request_store = self.store_of_request.get(request_id)
-        while len(request_store["frames"]) <= frame_count - 1:
-            # 补充空帧
-            request_store["frames"].append(None)
-        if request_store["frames"][frame_count - 1] is None:
-            request_store["frames"][frame_count - 1] = {
-                "frame_timestamp": frame_timestamp,
-                "faces": [],
-            }
-        request_store["frames"][frame_count - 1]["faces"].append(
-            {
-                "face_frame": face_frame,
-                "frame_face_idx": frame_face_idx,
-                "frame_face_bbox": frame_face_bbox,
-            }
-        )
-        # 保留的最大帧数
-        request_store["frames"][: -self.max_frame_count] = []
+        with self.save_face_lock:
+            if not self.store_of_request.has(request_id):
+                self.store_of_request.put(request_id, {"frames": []})
+            request_store = self.store_of_request.get(request_id)
+            while len(request_store["frames"]) <= frame_count - 1:
+                # 补充空帧
+                request_store["frames"].append(None)
+            if request_store["frames"][frame_count - 1] is None:
+                request_store["frames"][frame_count - 1] = {
+                    "frame_timestamp": frame_timestamp,
+                    "faces": [],
+                }
+            request_store["frames"][frame_count - 1]["faces"].append(
+                {
+                    "face_frame": face_frame,
+                    "frame_face_idx": frame_face_idx,
+                    "frame_face_bbox": frame_face_bbox,
+                }
+            )
+            # 保留的最大帧数
+            request_store["frames"][: -self.max_frame_count] = []
 
     def get_faces(self, request_id: str, frame_count: int) -> Optional[list[dict]]:
         if frame_count < 1:

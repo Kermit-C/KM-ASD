@@ -10,6 +10,9 @@ from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationAr
 
 model_service_server_grpc_port = 50051
 model_service_server_max_workers = 5
+model_service_server_face_detection_max_workers = 5  # TODO
+model_service_server_face_recognize_max_workers = 5  # TODO
+model_service_server_speaker_verificate_max_workers = 5  # TODO
 model_service_server_thread_name_prefix = "model_service_server"
 
 extract_audio_track_sample_rate = 16000

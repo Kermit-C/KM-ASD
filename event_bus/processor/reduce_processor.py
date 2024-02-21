@@ -7,6 +7,7 @@
 """
 
 
+from threading import Lock
 from typing import Optional
 
 import cv2
@@ -32,6 +33,7 @@ class ReduceProcessor(BaseEventBusProcessor):
     def __init__(self, processor_name: str):
         super().__init__(processor_name)
         self.store = ReduceStore(LocalStore.create)
+        self.result_lock = Lock()
 
     def process(self, event_message_body: ReduceMessageBody):
         if event_message_body.type == "ASD":
@@ -110,18 +112,40 @@ class ReduceProcessor(BaseEventBusProcessor):
     def _process_result(self, event_message_body: ReduceMessageBody):
         if event_message_body.type == "SPEAKER_VERIFICATE":
             return
-        assert event_message_body.frame_count is not None
-        assert event_message_body.frame_timestamp is not None
-        is_frame_result_complete = self.store.is_frame_result_complete(
-            self.get_request_id(), event_message_body.frame_count
-        )
-        if not is_frame_result_complete:
-            # 未收集到所有结果，不输出
-            # TODO: 实现实时后，需要考虑超时，超时不管是否收集到所有结果都输出
-            return
-        frame_result = self.store.get_frame_result(
-            self.get_request_id(), event_message_body.frame_count
-        )
+        # 保证结果输出的顺序
+        with self.result_lock:
+            assert event_message_body.frame_count is not None
+            assert event_message_body.frame_timestamp is not None
+            is_frame_result_complete = self.store.is_frame_result_complete(
+                self.get_request_id(), event_message_body.frame_count
+            )
+            is_frame_resulted = self.store.is_frame_resulted(
+                self.get_request_id(), event_message_body.frame_count
+            )
+            is_frame_before_all_resulted = self.store.is_frame_before_all_resulted(
+                self.get_request_id(), event_message_body.frame_count
+            )
+            if (
+                not is_frame_result_complete
+                or is_frame_resulted
+                or not is_frame_before_all_resulted
+            ):
+                # 未收集到所有结果，或者已经输出过，或之前的帧还没输出，不输出
+                # TODO: 实现实时后，需要考虑超时，超时不管是否收集到所有结果都输出
+                return
+
+            wait_result_frame_count_list: list[int] = [event_message_body.frame_count]
+            wait_result_frame_count_list += (
+                self.store.get_frame_after_all_complete_but_not_resulted(
+                    self.get_request_id(), event_message_body.frame_count
+                )
+            )
+            for frame_count in wait_result_frame_count_list:
+                self._process_frame_result(frame_count)
+
+    def _process_frame_result(self, frame_count: int):
+        frame_result = self.store.get_frame_result(self.get_request_id(), frame_count)
+        frame_timestamp = frame_result["frame_timestamp"]
 
         speaker_face_bbox = []
         speaker_face_label = []
@@ -137,7 +161,7 @@ class ReduceProcessor(BaseEventBusProcessor):
                 non_speaker_face_label.append(frame_result["frame_face_label"][i])
 
         frame = self._get_video_frame_from_timestamp(
-            self.get_request_id(), event_message_body.frame_timestamp
+            self.get_request_id(), frame_timestamp
         )
         if frame is None:
             return
@@ -154,8 +178,8 @@ class ReduceProcessor(BaseEventBusProcessor):
 
         self.result(
             ResultMessageBody(
-                frame_count=event_message_body.frame_count,
-                frame_timestamp=event_message_body.frame_timestamp,
+                frame_count=frame_count,
+                frame_timestamp=frame_timestamp,
                 frame=frame,
                 video_fps=info["video_fps"],
                 video_frame_count=info["video_frame_count"],
@@ -166,6 +190,7 @@ class ReduceProcessor(BaseEventBusProcessor):
                 non_speaker_face_label=non_speaker_face_label,
             )
         )
+        self.store.set_frame_resulted(self.get_request_id(), frame_count)
 
     def _get_video_frame_from_timestamp(
         self, request_id: str, timestamp: int

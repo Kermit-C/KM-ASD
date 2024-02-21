@@ -6,6 +6,7 @@
 @Date: 2024-02-19 14:54:10
 """
 
+from threading import Lock
 from typing import Callable, Optional
 
 import numpy as np
@@ -21,6 +22,7 @@ class VideoToFrameStore:
         self.store_creater = store_creater
         self.frame_store_of_request = store_creater(True, max_request_count)
         self.info_store_of_request = store_creater(True, max_request_count * 2)
+        self.save_frame_lock = Lock()
 
     def save_frame(
         self,
@@ -29,14 +31,15 @@ class VideoToFrameStore:
         frame_timestamp: int,
         frame: np.ndarray,
     ):
-        if not self.frame_store_of_request.has(request_id):
-            self.frame_store_of_request.put(
-                request_id, {"frames": [], "frames_ts_to_cnt_dict": {}}
-            )
-        request_store = self.frame_store_of_request.get(request_id)
-        while len(request_store["frames"]) <= frame_count - 1:
-            # 补充空帧
-            request_store["frames"].append(None)
+        with self.save_frame_lock:
+            if not self.frame_store_of_request.has(request_id):
+                self.frame_store_of_request.put(
+                    request_id, {"frames": [], "frames_ts_to_cnt_dict": {}}
+                )
+            request_store = self.frame_store_of_request.get(request_id)
+            while len(request_store["frames"]) <= frame_count - 1:
+                # 补充空帧
+                request_store["frames"].append(None)
         request_store["frames"][frame_count - 1] = frame
         request_store["frames_ts_to_cnt_dict"][frame_timestamp] = frame_count
         # TODO: 实现实时检测后需要考虑删除过期帧
