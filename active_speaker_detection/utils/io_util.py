@@ -37,7 +37,7 @@ def _cached_pil_loader(path, cache):
 
 
 def _fit_audio_clip(audio_clip: np.ndarray, sample_rate: int, video_clip_lenght):
-    # TODO: 为啥是27？不应该是帧率25吗？
+    # 1 / 27 表示数据集里的每个 clip 是多少秒，数据集是 25fps，这里略小于一点
     target_audio_length = int((1.0 / 27.0) * sample_rate * video_clip_lenght)
     pad_required = int((target_audio_length - len(audio_clip)) / 2)
     if pad_required > 0:

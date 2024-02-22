@@ -53,7 +53,9 @@ ASD_R3D_18_4lvl_params = {
     # 优化配置
     "optimizer": optim.Adam,
     "criterion": nn.CrossEntropyLoss(),
-    "vfal_criterion": losses.LiftedStructureLoss(neg_margin=1, pos_margin=0),
+    "vfal_criterion": losses.MultiSimilarityLoss(
+        alpha=2.0, beta=50.0, base=1.0
+    ),  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0),
     "learning_rate": 3e-4,
     "epochs": 15,
     "gamma": 0.1,
@@ -69,7 +71,9 @@ ASD_R3D_50_4lvl_params = {
     # 优化配置
     "optimizer": optim.Adam,
     "criterion": nn.CrossEntropyLoss(),
-    "vfal_criterion": losses.LiftedStructureLoss(neg_margin=1, pos_margin=0),
+    "vfal_criterion": losses.MultiSimilarityLoss(
+        alpha=2.0, beta=50.0, base=1.0
+    ),  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0),
     "learning_rate": 3e-4,
     "epochs": 15,
     "gamma": 0.1,

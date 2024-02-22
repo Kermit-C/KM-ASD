@@ -152,7 +152,7 @@ class GraphTwoStreamResNet3D(nn.Module):
             dilate=replace_stride_with_dilation[2],
         )
         self.a_avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc_128_a = nn.Linear(512 * block_2d.expansion, 128)
+        # self.fc_128_a = nn.Linear(512 * block_2d.expansion, 128)
 
         # Video Stream
 
@@ -186,7 +186,7 @@ class GraphTwoStreamResNet3D(nn.Module):
         )
 
         self.v_avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        self.fc_128_v = nn.Linear(512 * block_3d.expansion, 128)
+        # self.fc_128_v = nn.Linear(512 * block_3d.expansion, 128)
 
         # VFAL Audio
         self.vfal_ecapa = get_ecapa_model()
@@ -451,12 +451,6 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
 
         self.fc = nn.Linear(filter_size, 2)
 
-        # IS this necessary?
-        # self.edge1 = None
-        # self.edge2 = None
-        # self.edge3 = None
-        # self.edge4 = None
-
     def forward(
         self,
         data,
@@ -480,29 +474,29 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
         # 降维，降到节点特征的维度 128，同 GraphTwoStreamResNet3D
         audio_feats = self.relu(self.reduction_a(audio_feats))
         video_feats = self.relu(self.reduction_v(video_feats))
-        video_feats = self.relu(
-            self.reduction_v_vfal(
-                torch.cat(
-                    [
-                        video_feats,
-                        # 重复 vfal_a_feats，使得 batch 维度相同
-                        torch.cat(
-                            [
-                                torch.stack(
-                                    [vfal_a]
-                                    * (video_feats.size(0) // vfal_a_feats.size(0)),
-                                    dim=0,
-                                )
-                                for vfal_a in vfal_a_feats
-                            ],
-                            dim=0,
-                        ),
-                        vfal_v_feats,
-                    ],
-                    dim=1,
-                )
-            )
-        )
+        # video_feats = self.relu(
+        #     self.reduction_v_vfal(
+        #         torch.cat(
+        #             [
+        #                 video_feats,
+        #                 # 重复 vfal_a_feats，使得 batch 维度相同
+        #                 torch.cat(
+        #                     [
+        #                         torch.stack(
+        #                             [vfal_a]
+        #                             * (video_feats.size(0) // vfal_a_feats.size(0)),
+        #                             dim=0,
+        #                         )
+        #                         for vfal_a in vfal_a_feats
+        #                     ],
+        #                     dim=0,
+        #                 ),
+        #                 vfal_v_feats,
+        #             ],
+        #             dim=1,
+        #         )
+        #     )
+        # )
 
         # 重建交错张量，同 GraphTwoStreamResNet3D
         graph_feats = torch.zeros(
@@ -551,6 +545,12 @@ def _load_video_weights_into_model(model: nn.Module, ws_file):
         else:
             print("No video assignation for ", name)
 
+    model.v_conv1.eval()
+    model.v_layer1.eval()
+    model.v_layer2.eval()
+    model.v_layer3.eval()
+    model.v_layer4.eval()
+
     print("loaded video ws")
     return
 
@@ -572,6 +572,12 @@ def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     avgWs = torch.mean(conv1_weights, dim=1, keepdim=True)
     own_state["audio_conv1.weight"].copy_(avgWs)
 
+    model.audio_conv1.eval()
+    model.a_layer1.eval()
+    model.a_layer2.eval()
+    model.a_layer3.eval()
+    model.a_layer4.eval()
+
     print("loaded audio ws")
     return
 
@@ -583,6 +589,13 @@ def _load_vfal_weights_into_model(model: nn.Module, vfal_ecapa_pretrain_weights)
     model.vfal_ecapa.load_state_dict(checkpoint["model"], strict=True)
     # 固定参数
     model.vfal_ecapa.eval()
+
+    # TMP: 加载 vfal encoder 的预训练权重
+    vfal_encoder_checkpoint = torch.load(
+        "/hdd1/ckm/tools/sl_icmr2022/outputs/sl_project/SL/auc[86.91,86.66]_ms[86.43,86.59]_map[7.09,7.90].pkl"
+    )
+    model.vfal_encoder.load_state_dict(vfal_encoder_checkpoint["model"], strict=True)
+    model.vfal_encoder.eval()
 
     print("loaded vfal ws")
     return

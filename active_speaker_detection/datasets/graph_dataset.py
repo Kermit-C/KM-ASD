@@ -109,9 +109,9 @@ class GraphContextualDataset(Dataset):
         csv_data.pop(0)  # CSV header
         # csv_data 是一个二维列表，每一行是一个列表，每一行的元素是一个字符串
         for csv_row in csv_data:
-            # TEMP: 限制实体数量，Debug 用
-            if len(entity_set) > 50:
-                break
+            # TMP: 限制实体数量，Debug 用
+            # if len(entity_set) > 50:
+            #     break
             if len(csv_row) != 10:
                 # 如果不是 10 个元素，就跳过
                 continue
@@ -223,7 +223,9 @@ class GraphDatasetETE(GraphContextualDataset):
 
         # 图节点的配置
         self.norm_audio = norm_audio  # 是否归一化音频
-        self.half_clip_length = math.floor(clip_lenght / 2)  # 一半的片段长度
+        self.half_clip_length = math.floor(
+            clip_lenght / 2
+        )  # 每刻计算特征的帧数一半的长度
 
         # 读取并处理标签文件到 cache
         entity_set = self._cache_entity_data(csv_file_path)
@@ -263,7 +265,7 @@ class GraphDatasetETE(GraphContextualDataset):
 
     def _get_scene_video_data(
         self, video_id: str, entity_id: str, mid_index: int
-    ) -> Tuple[List[torch.Tensor], List[int], List[int]]:
+    ) -> Tuple[List[torch.Tensor], List[int], List[str]]:
         """根据实体 ID 和中间某刻时间戳索引，获取所有人视频画面 List(人数) tensor((clip数 * 通道数) * 高度 * 宽度) 和这一刻所有实体的标签
         :param video_id: 视频 id
         :param entity_id: 实体 id
@@ -282,7 +284,7 @@ class GraphDatasetETE(GraphContextualDataset):
         # 标签，索引和 video_data 对应
         targets: List[int] = []
         # 实体
-        entities: List[int] = []
+        entities: List[str] = []
         for ctx_entity in context:
             # 查找时间戳在 entity_metadata 中的索引
             entity_metadata = self.entity_data[video_id][ctx_entity]
@@ -300,7 +302,7 @@ class GraphDatasetETE(GraphContextualDataset):
                 io.load_v_clip_from_metadata(clip_meta_data, self.video_root)
             )
             targets.append(target_ctx)
-            entities.append(calculate_md5(ctx_entity))
+            entities.append(ctx_entity)
 
         if self.do_video_augment:
             # 随机视频增强
@@ -317,7 +319,7 @@ class GraphDatasetETE(GraphContextualDataset):
 
     def _get_audio_data(
         self, video_id: str, entity_id: str, mid_index: int
-    ) -> Tuple[np.ndarray, np.ndarray, int, int]:
+    ) -> Tuple[np.ndarray, np.ndarray, int, str]:
         """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, 13, T)、fbank(1, 80, T)和标签"""
         entity_metadata = self.entity_data[video_id][entity_id]
         # 获取这个实体的音频偏移
@@ -326,7 +328,7 @@ class GraphDatasetETE(GraphContextualDataset):
         # 获取目标时刻是否说话
         target_audio = self.speech_data[video_id][midone[1]]
         # 获取目标时刻谁说话，计算 md5 作为 int 编号
-        target_entity = 0
+        target_entity = ""
         if target_audio == 1:
             # 获取包含自己的上下文实体列表
             mid_ts = self.entity_data[video_id][entity_id][mid_index][1]
@@ -336,7 +338,7 @@ class GraphDatasetETE(GraphContextualDataset):
                 ctx_entity_metadata = self.entity_data[video_id][ctx_entity]
                 ctx_mid_index = self.search_ts_in_meta_data(ctx_entity_metadata, mid_ts)
                 if self.entity_data[video_id][ctx_entity][ctx_mid_index][-1] == 1:
-                    target_entity = calculate_md5(ctx_entity)
+                    target_entity = ctx_entity
                     break
 
         # 生成一个长度为 half_clip_size*2+1 的单人时间片段
@@ -353,6 +355,12 @@ class GraphDatasetETE(GraphContextualDataset):
             target_audio,
             target_entity,
         )
+
+    def _parse_entities_to_int(self, entities: List[str]) -> List[int]:
+        """将实体列表转换为 int"""
+        entities_set: set[str] = set(entities)
+        entities_list: list[str] = list(entities_set)
+        return [entities_list.index(e) for e in entities]
 
     def __getitem__(self, index):
         """根据 entity_list 的索引，获取数据集中的一个数据
@@ -383,7 +391,7 @@ class GraphDatasetETE(GraphContextualDataset):
         for tv in target_v:
             target_set.append(tv)
         # 填充实体
-        entities_set: List[int] = []
+        entities_set: List[str] = []
         entities_set.append(entity_a)
         for ev in entities_v:
             entities_set.append(ev)
@@ -415,7 +423,7 @@ class GraphDatasetETE(GraphContextualDataset):
             x2=vfal_feature_set,
             edge_index=self.batch_edges,
             y=torch.tensor(target_set),
-            y2=torch.tensor([e % int(math.pow(2, 31)) for e in entities_set]),
+            y2=torch.tensor(self._parse_entities_to_int(entities_set)),
         )
 
 
@@ -471,7 +479,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
 
     def _get_scene_video_data(
         self, video_id: str, entity_id: str, mid_index: int, cache: dict
-    ) -> Tuple[List[torch.Tensor], List[int], List[int]]:
+    ) -> Tuple[List[torch.Tensor], List[int], List[str]]:
         """父类方案的改进，加了 cache
         根据实体 ID 和中间某刻时间戳索引，获取所有人视频画面 List(人数) tensor(通道数 * clip数 * 高度 * 宽度) 和这一刻所有实体的标签
         """
@@ -488,7 +496,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
         # 标签，索引和 video_data 对应
         targets: list[int] = []
         # 实体
-        entities: list[int] = []
+        entities: list[str] = []
         for ctx_entity in context:
             # 查找时间戳在 entity_metadata 中的索引
             entity_metadata = self.entity_data[video_id][ctx_entity]
@@ -508,7 +516,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
                 )
             )
             targets.append(target_ctx)
-            entities.append(calculate_md5(ctx_entity))
+            entities.append(ctx_entity)
 
         if self.do_video_augment:
             # 视频角落增强，但这里没给具体实现
@@ -571,7 +579,7 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
         # 图节点的标签数据
         target_set: List[int] = []
         # 图节点的实体数据
-        entities_set: List[int] = []
+        entities_set: List[str] = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
@@ -639,5 +647,5 @@ class IndependentGraphDatasetETE3D(GraphDatasetETE):
             x2=vfal_feature_set,
             edge_index=(self.spatial_batch_edges, self.temporal_batch_edges),
             y=torch.tensor(target_set),
-            y2=torch.tensor([e % int(math.pow(2, 31)) for e in entities_set]),
+            y2=torch.tensor(self._parse_entities_to_int(entities_set)),
         )
