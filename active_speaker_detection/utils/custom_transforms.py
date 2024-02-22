@@ -11,7 +11,7 @@ from torchvision import transforms
 # 视频训练集的数据增强，包括转换为张量和归一化
 video_train = transforms.Compose(
     [
-        transforms.ToTensor(),
+        transforms.ToTensor(),  # 会将通道维度放在第一个维度
         transforms.Normalize((0.3729, 0.2850, 0.2439), (0.2286, 0.2008, 0.1911)),
     ]
 )
@@ -19,7 +19,7 @@ video_train = transforms.Compose(
 # 视频验证集的数据增强，包括转换为张量和归一化
 video_val = transforms.Compose(
     [
-        transforms.ToTensor(),
+        transforms.ToTensor(),  # 会将通道维度放在第一个维度
         transforms.Normalize((0.3729, 0.2850, 0.2439), (0.2286, 0.2008, 0.1911)),
     ]
 )

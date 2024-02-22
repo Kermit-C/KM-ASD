@@ -3,13 +3,16 @@ syntax = "proto3";
 option cc_generic_services = true; // 生成 service 服务类和 rpc 方法描述
 
 service ModelService {
+    // 说话人检测
+    rpc call_asd (AsdRequest) returns (AsdResponse) {}
     // 人脸检测
     rpc call_face_detection (FaceDetectionRequest) returns (FaceDetectionResponse) {}
     // 人脸识别
     rpc call_face_recognition (FaceRecognitionRequest) returns (FaceRecognitionResponse) {}
     // 说话人验证
     rpc call_speaker_verification (SpeakerVerificationRequest) returns (SpeakerVerificationResponse) {}
-    // TODO: 说话人声纹注册
+    // 说话人声纹注册
+    rpc register_speaker (RegisterSpeakerRequest) returns (RegisterSpeakerResponse) {}
 };
 
 message RequestMetaData {
@@ -19,6 +22,26 @@ message RequestMetaData {
 message ResponseMetaData {
     string response_id = 1;
     string request_id = 2;
+};
+
+message AsdRequest {
+    RequestMetaData meta = 1;
+    // 视频请求 ID，用于标识视频的唯一性
+    string request_id = 10;
+    // 帧计数，编号作用
+    int32 frame_count = 11;
+    // 某刻画面中的人脸列表 list(np.ndarray (x, y, 3)) BRG 的 pkl 序列化后的数据
+    bytes faces = 12;
+    // 人脸列表对应的人脸框列表 list[tuple[int, int, int, int]] 的 pkl 序列化后的数据
+    bytes face_bboxes = 13;
+    // 音频数据 np.ndarray (s,) float32 pcm 的 pkl 序列化后的数据
+    bytes audio = 14;
+};
+
+message AsdResponse {
+    ResponseMetaData meta = 1;
+    // 人脸列表对应的说话状态
+    repeated bool is_active = 10;
 };
 
 message FaceDetectionRequest {
@@ -54,4 +77,16 @@ message SpeakerVerificationRequest {
 message SpeakerVerificationResponse {
     ResponseMetaData meta = 1;
     string label = 10;
+};
+
+
+message RegisterSpeakerRequest {
+    RequestMetaData meta = 1;
+    // np.ndarray (s,) 的 pkl 序列化后的数据
+    bytes voice_data = 10;
+    string label = 11;
+};
+
+message RegisterSpeakerResponse {
+    ResponseMetaData meta = 1;
 };

@@ -29,13 +29,6 @@ except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
 
-model_urls = {
-    "resnet18": "https://download.pytorch.org/models/resnet18-5c106cde.pth",
-    "resnet34": "https://download.pytorch.org/models/resnet34-333f7ec4.pth",
-    "resnet50": "https://download.pytorch.org/models/resnet50-19c8e357.pth",
-}
-
-
 class LinearPathPreact(nn.Module):
     """EdgeConv 的线性路径预激活模块"""
 
@@ -539,6 +532,7 @@ class GraphTwoStreamResNet3DTwoGraphs4LVLRes(GraphTwoStreamResNet3D):
             vfal_v_feats,
         )
 
+############### 以下是模型的加载权重 ###############
 
 def _load_video_weights_into_model(model: nn.Module, ws_file):
     """加载视频预训练权重"""
@@ -588,35 +582,54 @@ def _load_vfal_weights_into_model(model: nn.Module, vfal_ecapa_pretrain_weights)
     return
 
 
+def _load_weights_into_model(model: nn.Module, ws_file):
+    """加载训练权重"""
+    model.load_state_dict(torch.load(ws_file))
+    return
+
+############### 以下是模型的工厂函数 ###############
+
 def R3D18_4lvlGCN(
-    pretrained_weigths,
-    audio_pretrained_weights,
-    vfal_ecapa_pretrain_weights,
+    pretrained_weigths=None,
+    audio_pretrained_weights=None,
+    vfal_ecapa_pretrain_weights=None,
+    train_weights=None,
     filter_size=128,
 ):
     args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
     args_3d = BasicBlock3D, [2, 2, 2, 2], get_inplanes(), 3, 7, 1, False, "B", 1.0
     model = GraphTwoStreamResNet3DTwoGraphs4LVLRes(args_2d, args_3d, filter_size)
 
-    _load_audio_weights_into_model(model, audio_pretrained_weights)
-    _load_video_weights_into_model(model, pretrained_weigths)
-    _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
+    if pretrained_weigths is not None:
+        _load_video_weights_into_model(model, pretrained_weigths)
+    if audio_pretrained_weights is not None:
+        _load_video_weights_into_model(model, pretrained_weigths)
+    if vfal_ecapa_pretrain_weights is not None:
+        _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
+    if train_weights is not None:
+        _load_weights_into_model(model, train_weights)
 
     return model
 
 
 def R3D50_4lvlGCN(
-    pretrained_weigths,
-    audio_pretrained_weights,
-    vfal_ecapa_pretrain_weights,
+    pretrained_weigths=None,
+    audio_pretrained_weights=None,
+    vfal_ecapa_pretrain_weights=None,
+    train_weights=None,
     filter_size=128,
 ):
     args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
     args_3d = Bottleneck3D, [3, 4, 6, 3], get_inplanes(), 3, 7, 1, False, "B", 1.0
     model = GraphTwoStreamResNet3DTwoGraphs4LVLRes(args_2d, args_3d, filter_size)
 
-    _load_audio_weights_into_model(model, audio_pretrained_weights)
-    _load_video_weights_into_model(model, pretrained_weigths)
-    _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
+    if pretrained_weigths is not None:
+        _load_video_weights_into_model(model, pretrained_weigths)
+    if audio_pretrained_weights is not None:
+        _load_video_weights_into_model(model, pretrained_weigths)
+    if vfal_ecapa_pretrain_weights is not None:
+        _load_vfal_weights_into_model(model, vfal_ecapa_pretrain_weights)
+    if train_weights is not None:
+        _load_weights_into_model(model, train_weights)
 
     return model

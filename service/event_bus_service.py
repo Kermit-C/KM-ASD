@@ -110,6 +110,38 @@ def process(
 
     return result_future.result(timeout=timeout_second)
 
+
+def call_asd(
+    request_id: str,
+    frame_count: int,
+    faces: list[np.ndarray],
+    face_bboxes: list[tuple[int, int, int, int]],
+    audio: np.ndarray,
+    timeout: float,
+) -> list[bool]:
+    # 调用说话人检测服务
+    # TODO: 实现负载均衡
+    server_host = "localhost:50051"
+
+    with grpc.insecure_channel(server_host) as channel:
+        stub = model_service_pb2_grpc.ModelServiceStub(channel)
+
+        response: model_service_pb2.AsdResponse = stub.call_asd(
+            model_service_pb2.AsdRequest(
+                meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                request_id=request_id,
+                frame_count=frame_count,
+                faces=pickle.dumps(faces),
+                face_bboxes=pickle.dumps(face_bboxes),
+                audio=pickle.dumps(audio),
+            ),
+            timeout=timeout,
+        )
+        is_active_list: list[bool] = response.is_active  # type: ignore
+
+        return is_active_list
+
+
 def call_face_detection(frame: np.ndarray, timeout: float) -> list[dict[str, Any]]:
     # 调用人脸检测服务
     # TODO: 实现负载均衡

@@ -12,6 +12,8 @@ from service.event_bus_service import process
 from utils.io_util import extract_audio_track
 from utils.uuid_util import get_uuid
 
+if config.asd_enabled:
+    initializer.initialize_models("asd")
 if config.face_detection_enabled:
     initializer.initialize_models("face_detection")
 if config.face_recognize_enabled:

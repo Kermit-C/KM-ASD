@@ -12,6 +12,8 @@ from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationAr
 
 model_service_server_grpc_port = 50051
 model_service_server_max_workers = 200
+model_service_server_asd_max_workers = 10
+model_service_server_asd_worker_wait_timeout = 10
 model_service_server_face_detection_max_workers = 10
 model_service_server_face_detection_worker_wait_timeout = 10
 model_service_server_face_recognize_max_workers = 2
@@ -22,6 +24,12 @@ model_service_server_thread_name_prefix = "model_service_server"
 
 extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
+
+asd_enabled = True
+asd_model = "active_speaker_detection/models/ASD_R3D_18_4lvl_160x160.pth"
+asd_cpu = False
+asd_p_threshold = 0.5
+asd_same_face_between_frames_iou_threshold = 0.5
 
 face_detection_enabled = True
 face_detection_model = "face_detection/retinaface_weights/mobilenet0.25_Final.pth"

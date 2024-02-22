@@ -35,6 +35,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
         # 用于计数帧数
         frame_count = 0
         while True:
+            # 读取的 frame 是 BGR 格式
             ret, frame = video_capture.read()
             if not ret:
                 break
