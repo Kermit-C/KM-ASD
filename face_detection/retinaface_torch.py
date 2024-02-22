@@ -91,13 +91,14 @@ class RetinaFaceDetector:
         np.ndarray,
     ]:
         """
-        :param image_or_image_path: 输入图片或图片路径
+        :param image_or_image_path: 输入图片或图片路径，BGR
         :param save_path: 保存路径
         :return: 返回检测到的人脸信息，一个 list，每个元素是一个 tuple，包含以下信息：
             (xmin, ymin, xmax, ymax, score, w, h, eye1_x, eye1_y, eye2_x, eye2_y, nose_x, nose_y, mouth1_x, mouth1_y, mouth2_x, mouth2_y)
         """
         # 图片读取
         if isinstance(image_or_image_path, str):
+            # 按照 BRG 读取图片
             img_raw = cv2.imread(image_or_image_path, cv2.IMREAD_COLOR)
         elif isinstance(image_or_image_path, np.ndarray):
             img_raw = image_or_image_path

@@ -9,6 +9,8 @@
 import config
 import initializer
 
+if config.asd_enabled:
+    initializer.initialize_models("asd")
 if config.face_detection_enabled:
     initializer.initialize_models("face_detection")
 if config.face_recognize_enabled:

@@ -14,6 +14,11 @@ class ModelServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.call_asd = channel.unary_unary(
+            "/ModelService/call_asd",
+            request_serializer=model__service__pb2.AsdRequest.SerializeToString,
+            response_deserializer=model__service__pb2.AsdResponse.FromString,
+        )
         self.call_face_detection = channel.unary_unary(
             "/ModelService/call_face_detection",
             request_serializer=model__service__pb2.FaceDetectionRequest.SerializeToString,
@@ -29,10 +34,21 @@ class ModelServiceStub(object):
             request_serializer=model__service__pb2.SpeakerVerificationRequest.SerializeToString,
             response_deserializer=model__service__pb2.SpeakerVerificationResponse.FromString,
         )
+        self.register_speaker = channel.unary_unary(
+            "/ModelService/register_speaker",
+            request_serializer=model__service__pb2.RegisterSpeakerRequest.SerializeToString,
+            response_deserializer=model__service__pb2.RegisterSpeakerResponse.FromString,
+        )
 
 
 class ModelServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
+
+    def call_asd(self, request, context):
+        """说话人检测"""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def call_face_detection(self, request, context):
         """人脸检测"""
@@ -52,9 +68,20 @@ class ModelServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def register_speaker(self, request, context):
+        """说话人声纹注册"""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_ModelServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+        "call_asd": grpc.unary_unary_rpc_method_handler(
+            servicer.call_asd,
+            request_deserializer=model__service__pb2.AsdRequest.FromString,
+            response_serializer=model__service__pb2.AsdResponse.SerializeToString,
+        ),
         "call_face_detection": grpc.unary_unary_rpc_method_handler(
             servicer.call_face_detection,
             request_deserializer=model__service__pb2.FaceDetectionRequest.FromString,
@@ -70,6 +97,11 @@ def add_ModelServiceServicer_to_server(servicer, server):
             request_deserializer=model__service__pb2.SpeakerVerificationRequest.FromString,
             response_serializer=model__service__pb2.SpeakerVerificationResponse.SerializeToString,
         ),
+        "register_speaker": grpc.unary_unary_rpc_method_handler(
+            servicer.register_speaker,
+            request_deserializer=model__service__pb2.RegisterSpeakerRequest.FromString,
+            response_serializer=model__service__pb2.RegisterSpeakerResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
         "ModelService", rpc_method_handlers
@@ -80,6 +112,35 @@ def add_ModelServiceServicer_to_server(servicer, server):
 # This class is part of an EXPERIMENTAL API.
 class ModelService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def call_asd(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/ModelService/call_asd",
+            model__service__pb2.AsdRequest.SerializeToString,
+            model__service__pb2.AsdResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
     def call_face_detection(
@@ -158,6 +219,35 @@ class ModelService(object):
             "/ModelService/call_speaker_verification",
             model__service__pb2.SpeakerVerificationRequest.SerializeToString,
             model__service__pb2.SpeakerVerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def register_speaker(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/ModelService/register_speaker",
+            model__service__pb2.RegisterSpeakerRequest.SerializeToString,
+            model__service__pb2.RegisterSpeakerResponse.FromString,
             options,
             channel_credentials,
             insecure,

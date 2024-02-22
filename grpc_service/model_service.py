@@ -14,9 +14,10 @@ import grpc
 import numpy as np
 
 import config
+from service.asd_service import detect_active_speaker
 from service.face_detection_service import detect_faces
 from service.face_recognition_service import recognize_faces
-from service.speaker_verification_service import verify_speakers
+from service.speaker_verification_service import register_speaker, verify_speakers
 from utils.uuid_util import get_uuid
 
 from . import model_service_pb2, model_service_pb2_grpc
@@ -25,6 +26,7 @@ from . import model_service_pb2, model_service_pb2_grpc
 class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
 
     def __init__(self):
+        self.asd_semaphore = Semaphore(config.model_service_server_asd_max_workers)
         self.face_detection_semaphore = Semaphore(
             config.model_service_server_face_detection_max_workers
         )
@@ -33,6 +35,38 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         self.speaker_verification_semaphore = Semaphore(
             config.model_service_server_speaker_verificate_max_workers
+        )
+
+    def call_asd(
+        self,
+        request: model_service_pb2.AsdRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> model_service_pb2.AsdResponse:
+        request_id = request.meta.request_id  # type: ignore
+        video_id = request.request_id  # type: ignore
+        frame_count = request.frame_count  # type: ignore
+        faces = pickle.loads(request.faces)  # type: ignore
+        face_bboxes = pickle.loads(request.face_bboxes)  # type: ignore
+        audio = pickle.loads(request.audio)  # type: ignore
+
+        is_acquired = self.asd_semaphore.acquire(
+            blocking=True,
+            timeout=config.model_service_server_asd_worker_wait_timeout,
+        )
+        if not is_acquired:
+            raise Exception("Active speaker detection worker is busy")
+        try:
+            is_active_list = detect_active_speaker(
+                video_id, frame_count, faces, face_bboxes, audio
+            )
+        finally:
+            self.asd_semaphore.release()
+
+        return model_service_pb2.AsdResponse(
+            meta=model_service_pb2.ResponseMetaData(
+                response_id=get_uuid(), request_id=request_id
+            ),  # type: ignore
+            is_active=is_active_list,
         )
 
     def call_face_detection(
@@ -116,4 +150,31 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                 response_id=get_uuid(), request_id=request_id
             ),  # type: ignore
             label=label,
+        )
+
+    def register_speaker(
+        self,
+        request: model_service_pb2.RegisterSpeakerRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> model_service_pb2.RegisterSpeakerResponse:
+        request_id = request.meta.request_id  # type: ignore
+        voice_data = request.voice_data  # type: ignore
+        label = request.label  # type: ignore
+        voice_data_np: np.ndarray = pickle.loads(voice_data)
+
+        is_acquired = self.speaker_verification_semaphore.acquire(
+            blocking=True,
+            timeout=config.model_service_server_speaker_verificate_worker_wait_timeout,
+        )
+        if not is_acquired:
+            raise Exception("Speaker verification worker is busy")
+        try:
+            label = register_speaker(voice_data_np, label)
+        finally:
+            self.speaker_verification_semaphore.release()
+
+        return model_service_pb2.RegisterSpeakerResponse(
+            meta=model_service_pb2.ResponseMetaData(
+                response_id=get_uuid(), request_id=request_id
+            ),  # type: ignore
         )

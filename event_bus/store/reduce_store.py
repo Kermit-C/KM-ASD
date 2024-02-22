@@ -148,14 +148,12 @@ class ReduceStore:
         request_store = self.store_of_request.get(request_id)
         result = []
         for i in range(frame_count, len(request_store["frame_results"])):
-            if len(request_store["frame_results"]) < i + 1:
-                return result
             frame_result = request_store["frame_results"][i]
             if frame_result is None:
                 return result
             if not frame_result["is_complete"]:
                 return result
-            result.append(i)
+            result.append(i + 1)
         return result
 
     def set_frame_resulted(self, request_id: str, frame_count: int):

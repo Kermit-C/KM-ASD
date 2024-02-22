@@ -90,12 +90,13 @@ class ArcFaceRecognizer:
         self, img: Union[str, np.ndarray], face_lmks: Optional[np.ndarray] = None
     ) -> np.ndarray:
         """生成 l2 归一化后的特征
-        :param img: 图片路径或者图片数据
+        :param img: 图片路径或者图片数据，BGR
         :param face_lmks: 人脸关键点，shape=(5, 2)，关键点定位+人脸对齐转为标准脸
         """
         if img is None:
             img = np.random.randint(0, 255, size=(112, 112, 3), dtype=np.uint8)
         elif isinstance(img, str):
+            # 按照 BRG 读取图片
             img = cv2.imread(img)
         elif isinstance(img, np.ndarray):
             pass
@@ -104,7 +105,7 @@ class ArcFaceRecognizer:
 
         orig_h, orig_w = img.shape[:2]
         img = cv2.resize(img, (112, 112))
-
+        # BGR -> RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         if face_lmks is not None:
             face_lmks = face_lmks * [112 / orig_w, 112 / orig_h]

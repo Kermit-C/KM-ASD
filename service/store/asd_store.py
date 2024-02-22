@@ -3,7 +3,7 @@
 """
 @Description: 
 @Author: Kermit
-@Date: 2024-02-19 15:50:28
+@Date: 2024-02-22 10:49:23
 """
 
 from threading import Lock
@@ -14,7 +14,9 @@ import numpy as np
 from store.store import Store
 
 
-class FaceCropStore:
+class ActiveSpeakerDetectionStore:
+    """说话人检测存储"""
+
     def __init__(
         self,
         store_creater: Callable[[bool, int], Store],
@@ -25,18 +27,17 @@ class FaceCropStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
-        self.save_face_lock = Lock()
+        self.save_frame_lock = Lock()
 
-    def save_face(
+    def save_frame(
         self,
         request_id: str,
         frame_count: int,
-        frame_timestamp: int,
         face_frame: np.ndarray,
-        frame_face_idx: int,
-        frame_face_bbox: tuple[int, int, int, int],
+        face_bbox: tuple[int, int, int, int],
+        audio_frame: np.ndarray,
     ):
-        with self.save_face_lock:
+        with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
                 self.store_of_request.put(request_id, {"frames": []})
             request_store = self.store_of_request.get(request_id)
@@ -45,14 +46,13 @@ class FaceCropStore:
                 request_store["frames"].append(None)
             if request_store["frames"][frame_count - 1] is None:
                 request_store["frames"][frame_count - 1] = {
-                    "frame_timestamp": frame_timestamp,
                     "faces": [],
+                    "audio_frame": audio_frame,
                 }
             request_store["frames"][frame_count - 1]["faces"].append(
                 {
                     "face_frame": face_frame,
-                    "frame_face_idx": frame_face_idx,
-                    "frame_face_bbox": frame_face_bbox,
+                    "face_bbox": face_bbox,
                 }
             )
             # 保留的最大帧数
@@ -61,26 +61,24 @@ class FaceCropStore:
                     len(request_store["frames"]) - self.max_frame_count
                 )
 
-    def get_faces(self, request_id: str, frame_count: int) -> Optional[list[dict]]:
+    def get_frame_faces(self, request_id: str, frame_count: int) -> list[dict]:
         if frame_count < 1:
-            return None
+            return []
         if not self.store_of_request.has(request_id):
-            return None
-        if len(self.store_of_request.get(request_id)["frames"]) < frame_count:
-            return None
-        return self.store_of_request.get(request_id)["frames"][frame_count - 1]["faces"]
+            return []
+        request_store = self.store_of_request.get(request_id)
+        if len(request_store["frames"]) < frame_count:
+            return []
+        return request_store["frames"][frame_count - 1]["faces"]
 
-    def get_face_from_idx(
-        self, request_id: str, frame_count: int, face_idx: int
-    ) -> Optional[dict]:
+    def get_frame_audio(
+        self, request_id: str, frame_count: int
+    ) -> Optional[np.ndarray]:
         if frame_count < 1:
             return None
         if not self.store_of_request.has(request_id):
             return None
-        if len(self.store_of_request.get(request_id)["frames"]) < frame_count:
+        request_store = self.store_of_request.get(request_id)
+        if len(request_store["frames"]) < frame_count:
             return None
-        faces: list[dict] = self.store_of_request.get(request_id)["frames"][
-            frame_count - 1
-        ]["faces"]
-        real_idx = list(map(lambda x: x["frame_face_idx"], faces)).index(face_idx)
-        return faces[real_idx] if real_idx != -1 else None
+        return request_store["frames"][frame_count - 1]["audio_frame"]

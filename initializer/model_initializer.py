@@ -8,7 +8,9 @@
 
 import config
 from manager.grpc_server_manager import start_server
-from service.face_detection_service import load_detector
+from service.asd_service import load_asd_store
+from service.asd_service import load_detector as load_asd_detector
+from service.face_detection_service import load_detector as load_face_detector
 from service.face_recognition_service import (
     load_face_recognition_store,
     load_recognizer,
@@ -20,8 +22,11 @@ from service.speaker_verification_service import (
 
 
 def initialize_models(model_type: str):
-    if model_type == "face_detection":
-        return load_detector()
+    if model_type == "asd":
+        load_asd_store()
+        return load_asd_detector()
+    elif model_type == "face_detection":
+        return load_face_detector()
     elif model_type == "face_recognition":
         load_face_recognition_store()
         return load_recognizer()

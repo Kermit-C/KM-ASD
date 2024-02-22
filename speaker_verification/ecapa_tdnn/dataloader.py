@@ -23,7 +23,7 @@ def loadWAV(filename, max_frames, segment=1, evalmode=False, num_eval=10):
     # Maximun audio length
     max_audio = (max_frames - 2) * 160 + 240  # 160 是帧长，240 是帧移
 
-    # Read wav file and convert to torch tensor
+    # Read wav file and convert to torch tensor(float)
     audio, sample_rate = soundfile.read(filename)
     audio = np.array(audio)
     if len(audio.shape) == 2:
