@@ -6,6 +6,7 @@
 @Date: 2024-02-10 15:46:54
 """
 
+from active_speaker_detection.asd_config import inference_params as AsdInferenceParams
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
 ########## 模型服务配置 ##########
@@ -111,6 +112,7 @@ event_bus = {
             "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
                 # "asd_model_path": "models/asd_model",
+                "frmc": AsdInferenceParams["frmc"],
             },
         },
         "SpeakerVerificateProcessor": {

@@ -134,14 +134,23 @@ class ReduceProcessor(BaseEventBusProcessor):
                 # TODO: 实现实时后，需要考虑超时，超时不管是否收集到所有结果都输出
                 return
 
-            wait_result_frame_count_list: list[int] = [event_message_body.frame_count]
-            wait_result_frame_count_list += (
-                self.store.get_frame_after_all_complete_but_not_resulted(
-                    self.get_request_id(), event_message_body.frame_count
+            frame_count = event_message_body.frame_count
+            while True:
+                wait_result_frame_count_list: list[int] = [frame_count]
+                wait_result_frame_count_list += (
+                    self.store.get_frame_after_all_complete_but_not_resulted(
+                        self.get_request_id(), frame_count
+                    )
                 )
-            )
-            for frame_count in wait_result_frame_count_list:
-                self._process_frame_result(frame_count)
+                for frame_count in wait_result_frame_count_list:
+                    self._process_frame_result(frame_count)
+
+                # 判断一下下一个帧是否已经完整，以防处理上面的时候有新的帧进来，导致卡死
+                frame_count = wait_result_frame_count_list[-1] + 1
+                if not self.store.is_frame_result_complete(
+                    self.get_request_id(), frame_count
+                ):
+                    break
 
     def _process_frame_result(self, frame_count: int):
         frame_result = self.store.get_frame_result(self.get_request_id(), frame_count)
@@ -221,11 +230,11 @@ class ReduceProcessor(BaseEventBusProcessor):
 
     def _get_video_to_frame_store(self) -> VideoToFrameStore:
         """获取视频帧存储器"""
-        video_to_frame_store = get_processor(
+        video_to_frame_processor = get_processor(
             config.event_bus["processors"]["VideoToFrameProcessor"]["processor_name"]
         )
-        assert isinstance(video_to_frame_store, VideoToFrameProcessor)
-        return video_to_frame_store.store
+        assert isinstance(video_to_frame_processor, VideoToFrameProcessor)
+        return video_to_frame_processor.store
 
     def _get_audio_to_pcm_store(self) -> AudioToPcmStore:
         """获取音频存储器"""
