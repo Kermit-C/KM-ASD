@@ -11,7 +11,7 @@ import os
 import torch
 import torch.nn as nn
 from sklearn.metrics import average_precision_score
-from torch.cuda.amp import autocast
+from torch.cuda.amp.autocast_mode import autocast
 
 from active_speaker_detection.models.graph_layouts import (
     generate_av_mask,
@@ -131,7 +131,7 @@ def _train_model_amp_avl(
     running_loss_vfal = 0.0
 
     audio_size, vfal_size = dataloader.dataset.get_audio_size()
-    scaler = torch.cuda.amp.GradScaler(enabled=True)
+    scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
     # Iterate over data
     for idx, dl in enumerate(dataloader):
@@ -168,20 +168,21 @@ def _train_model_amp_avl(
                 # 单独音频和视频的损失
                 aux_loss_a: torch.Tensor = criterion(audio_out, targets[audio_mask])
                 aux_loss_v: torch.Tensor = criterion(video_out, targets[video_mask])
-                aux_loss_vfal: torch.Tensor = vfal_critierion(
-                    torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-                    torch.cat([entities[audio_mask], entities[video_mask]], dim=0),
-                )
+                # aux_loss_vfal: torch.Tensor = vfal_critierion(
+                #     torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
+                #     torch.cat([entities[audio_mask], entities[video_mask]], dim=0),
+                # )
                 # 图的损失
                 loss_graph: torch.Tensor = criterion(outputs, targets)
                 loss = (
                     a_weight * aux_loss_a
                     + v_weight * aux_loss_v
-                    + vfal_weight * aux_loss_vfal
+                    # + vfal_weight * aux_loss_vfal
                     + loss_graph
                 )
 
-            scaler.scale(loss).backward()
+            optimizer.zero_grad()  # 重置梯度，不加会爆显存
+            scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
             scaler.update()
 
@@ -205,7 +206,7 @@ def _train_model_amp_avl(
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()
-        running_loss_vfal += aux_loss_vfal.item()
+        # running_loss_vfal += aux_loss_vfal.item()
         if idx == len(dataloader) - 2:
             break
 
@@ -289,12 +290,12 @@ def _test_model_graph_losses(
             loss_graph = criterion(outputs, targets)
             aux_loss_a = criterion(audio_out, targets[audio_mask])
             aux_loss_v = criterion(video_out, targets[video_mask])
-            aux_loss_vfal: torch.Tensor = vfal_critierion(
-                torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-                torch.cat(
-                    [entities[audio_mask], entities[video_mask]], dim=0
-                ).squeeze(),
-            )
+            # aux_loss_vfal: torch.Tensor = vfal_critierion(
+            #     torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
+            #     torch.cat(
+            #         [entities[audio_mask], entities[video_mask]], dim=0
+            #     ).squeeze(),
+            # )
 
             label_lst.extend(targets[video_mask].cpu().numpy().tolist())
             pred_lst.extend(
@@ -315,7 +316,7 @@ def _test_model_graph_losses(
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()
-        running_loss_vfal += aux_loss_vfal.item()
+        # running_loss_vfal += aux_loss_vfal.item()
 
         if idx == len(dataloader) - 2:
             break

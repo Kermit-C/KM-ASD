@@ -10,8 +10,8 @@ from typing import List, Tuple
 
 
 def generate_clip_meta(
-    entity_meta_data: List[Tuple[str, int, int]], midone: int, half_clip_size: int
-) -> List[Tuple[str, int, int]]:
+    entity_meta_data: List[Tuple[str, str, int]], midone: int, half_clip_size: int
+) -> List[Tuple[str, str, int]]:
     """生成一个长度为 half_clip_size*2+1 的单人时间片段
     :param entity_meta_data: 实体元数据
     :param midone: 中心时间戳，entity_meta_data 中的索引
@@ -29,7 +29,7 @@ def generate_clip_meta(
 
 
 def _get_clip_max_span(
-    entity_meta_data: List[Tuple[str, int, int]], midone: int, direction: int, max: int
+    entity_meta_data: List[Tuple[str, str, int]], midone: int, direction: int, max: int
 ):
     idx = 0
     for idx in range(0, max):

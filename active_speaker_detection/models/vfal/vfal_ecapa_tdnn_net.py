@@ -10,7 +10,7 @@ import torch
 from speechbrain.lobes.models.ECAPA_TDNN import ECAPA_TDNN
 
 
-def get_ecapa_model(
+def get_ecapa_net(
     n_mels=80,
     channels=[1024, 1024, 1024, 1024, 3072],
     kernel_sizes=[5, 3, 3, 3, 1],

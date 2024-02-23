@@ -8,7 +8,7 @@
 
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Logger:
@@ -30,7 +30,10 @@ class Logger:
 
 
 def setup_optim_outputs(
-    models_out: str, opt_config: Dict, experiment_name: str, headers: List[str] = None
+    models_out: str,
+    opt_config: Dict,
+    experiment_name: str,
+    headers: Optional[List[str]] = None,
 ):
     target_logs = os.path.join(models_out, experiment_name + "/logs.csv")
     target_models = os.path.join(models_out, experiment_name)

@@ -65,7 +65,7 @@ def load_v_clip_from_metadata(clip_meta_data, frames_source) -> List[Image.Image
 
 
 def load_v_clip_from_metadata_cache(
-    clip_meta_data: List[Tuple[str, int, int]],
+    clip_meta_data: List[Tuple[str, str, int]],
     frames_source: str,
     cache: dict,
     silent_fail=False,
@@ -88,7 +88,7 @@ def load_v_clip_from_metadata_cache(
 
 
 def load_a_clip_from_metadata(
-    clip_meta_data: List[Tuple[str, int, int]],
+    clip_meta_data: List[Tuple[str, str, int]],
     frames_source,
     audio_source,
     audio_offset: float,

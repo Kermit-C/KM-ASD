@@ -8,13 +8,17 @@
 
 
 import torch
+import torch.nn as nn
+import torch.optim as optim
+from pytorch_metric_learning import losses
 from torch.optim.lr_scheduler import MultiStepLR
 from torch_geometric.loader import DataLoader
 from torchvision import transforms
 
 import active_speaker_detection.asd_config as asd_conf
 import active_speaker_detection.utils.custom_transforms as ct
-from active_speaker_detection.datasets.graph_dataset import IndependentGraphDatasetETE3D
+from active_speaker_detection.datasets.graph_dataset import GraphDataset
+from active_speaker_detection.models.graph_model import get_backbone
 from active_speaker_detection.optimizers.optimizer_amp import optimize_asd
 from active_speaker_detection.utils.command_line import (
     get_default_arg_parser,
@@ -42,9 +46,9 @@ def train_asd_r3d18():
     tcp = get_temporal_connection_pattern(ctx_size, n_clips)
 
     # 模型主体选项
-    opt_config = asd_conf.ASD_R3D_18_4lvl_params
+    opt_config = asd_conf.ASD_R3D_18_params
     # 模型输入配置
-    asd_config = asd_conf.ASD_R3D_18_inputs
+    asd_config = asd_conf.datasets
 
     # 数据转换
     image_size = (img_size, img_size)
@@ -72,10 +76,11 @@ def train_asd_r3d18():
     )
 
     # 创建网络并转移到GPU
-    pretrain_weightds_path = asd_config["video_pretrain_weights"]
-    audio_pretrain_weightds_path = asd_config["audio_pretrain_weights"]
-    vfal_ecapa_pretrain_weights = asd_config["vfal_ecapa_pretrain_weights"]
-    asd_net = opt_config["backbone"](
+    pretrain_weightds_path = opt_config["video_pretrain_weights"]
+    audio_pretrain_weightds_path = opt_config["audio_pretrain_weights"]
+    vfal_ecapa_pretrain_weights = opt_config["vfal_ecapa_pretrain_weights"]
+    asd_net = get_backbone(
+        opt_config["encoder_type"],
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
         vfal_ecapa_pretrain_weights,
@@ -87,11 +92,11 @@ def train_asd_r3d18():
     asd_net.to(device)
 
     # 优化配置
-    criterion = opt_config["criterion"]
-    vfal_critierion = opt_config["vfal_criterion"]
-    optimizer = opt_config["optimizer"](
-        asd_net.parameters(), lr=opt_config["learning_rate"]
-    )
+    criterion = nn.CrossEntropyLoss()
+    vfal_critierion = (
+        losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0),  # type: ignore
+    )  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
+    optimizer = optim.Adam(asd_net.parameters(), lr=opt_config["learning_rate"])  # type: ignore
     scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
 
     # 数据路径
@@ -101,7 +106,7 @@ def train_asd_r3d18():
     audio_val_path = asd_config["audio_val_dir"]
 
     # 数据加载器
-    d_train = IndependentGraphDatasetETE3D(
+    d_train = GraphDataset(
         audio_train_path,
         video_train_path,
         asd_config["csv_train_full"],
@@ -115,7 +120,7 @@ def train_asd_r3d18():
         do_video_augment=True,
         crop_ratio=0.95,
     )
-    d_val = IndependentGraphDatasetETE3D(
+    d_val = GraphDataset(
         audio_val_path,
         video_val_path,
         asd_config["csv_val_full"],

@@ -13,6 +13,8 @@ from torch.nn import functional as F
 from torch_geometric.data import Data
 from torchvision import transforms
 
+from active_speaker_detection.models.graph_model import get_backbone
+
 from . import asd_config as asd_conf
 from .models.graph_layouts import (
     generate_av_mask,
@@ -61,9 +63,9 @@ class ActiveSpeakerDetector:
         )
 
         torch.set_grad_enabled(False)
-        self.model = infer_config["backbone"](train_weights=trained_model).to(
-            self.device
-        )
+        self.model = get_backbone(
+            infer_config["encoder_type"], train_weights=trained_model
+        ).to(self.device)
         self.model.eval()
 
         self.video_transform = transforms.Compose(
