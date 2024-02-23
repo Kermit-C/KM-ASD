@@ -214,7 +214,7 @@ class DataStore:
                 self.ts_to_entity[video_id][timestamp].append(entity_id)
 
     def get_audio_size(self, half_clip_length: int) -> Tuple[Tuple[int, int, int]]:
-        """获得音频的大小，返回一个元组(1, 13, T)"""
+        """获得音频的大小，返回一个元组(1, T, W)"""
         video_id, entity_id = self.entity_list[0]
         # 一个人的所有时间戳的元数据
         entity_metadata = self.entity_data[video_id][entity_id]
@@ -235,7 +235,7 @@ class DataStore:
     def get_audio_data(
         self, video_id: str, entity_id: str, mid_index: int, half_clip_length: int
     ) -> Tuple[np.ndarray, np.ndarray, int, str]:
-        """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, 13, T)、fbank(1, 80, T)和标签"""
+        """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, T, W)、fbank(1, 80, T)和标签"""
         entity_metadata = self.entity_data[video_id][entity_id]
         # 获取这个实体的音频偏移
         audio_offset = float(entity_metadata[0][1])

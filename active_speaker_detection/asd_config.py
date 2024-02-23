@@ -56,6 +56,23 @@ train_params = [
         "batch_size": 17,
         "threads": 8,
     },
+    {
+        "name": "LIGHT",
+        # 网络架构
+        "encoder_type": "LIGHT",
+        "encoder_train_weights": None,
+        # 预训练权重
+        "audio_pretrain_weights": None,
+        "video_pretrain_weights": None,
+        "vfal_ecapa_pretrain_weights": None,
+        # 优化配置
+        "learning_rate": 3e-4,
+        "epochs": 15,
+        "gamma": 0.1,
+        # 批次配置
+        "batch_size": 17,
+        "threads": 8,
+    },
 ]
 
 inference_params = {

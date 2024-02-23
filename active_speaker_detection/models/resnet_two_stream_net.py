@@ -261,13 +261,7 @@ class ResnetTwoStreamNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward_audio(self, a, audio_size: Tuple[int, int, int]):
-        """
-        :param a: 音频特征
-        :param audio_size: 音频特征的大小, (1, 13, T)
-        """
-        a = torch.unsqueeze(a[:, 0, 0, : audio_size[1], : audio_size[2]], dim=1)
-
+    def forward_audio(self, a):
         a = self.audio_conv1(a)
         a = self.a_bn1(a)
         a = self.relu(a)
@@ -298,9 +292,13 @@ class ResnetTwoStreamNet(nn.Module):
         v = v.reshape(v.size(0), -1)
         return v
 
-    def forward(self, a, v, audio_size: Tuple[int, int, int]):
+    def forward(self, a, v):
+        """
+        :param a: (B, C, T, W)
+        :param v: (B, C, T, H, W)
+        """
         # 音频和视频的特征提取
-        audio_feats = self.forward_audio(a, audio_size)
+        audio_feats = self.forward_audio(a)
         video_feats = self.forward_video(v)
 
         # 降维，降到节点特征的维度 128

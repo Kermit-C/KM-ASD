@@ -125,7 +125,7 @@ def _train_model_amp_avl(
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
             with autocast(True):
-                audio_out, video_out = model(audio_data, video_data, audio_size)
+                audio_out, video_out = model(audio_data, video_data)
                 audio_out, video_out = fc_a(audio_out), fc_v(video_out)
                 # 单独音频和视频的损失
                 loss_a: torch.Tensor = criterion(audio_out, target_a)
@@ -199,7 +199,7 @@ def _test_model_encoder_losses(
         target_a = target_a.to(device)
 
         with torch.set_grad_enabled(False):
-            audio_out, video_out = model(audio_data, video_data, audio_size)
+            audio_out, video_out = model(audio_data, video_data)
             audio_out, video_out = fc_a(audio_out), fc_v(video_out)
             # 单独音频和视频的损失
             loss_a: torch.Tensor = criterion(audio_out, target_a)

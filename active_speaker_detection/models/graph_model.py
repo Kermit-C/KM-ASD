@@ -82,7 +82,12 @@ class GraphNet(nn.Module):
         audio_mask, video_mask = generate_av_mask(ctx_size, x.size(0))
 
         # 音频和视频的特征提取
-        audio_feats = self.encoder.forward_audio(x[audio_mask], audio_size)
+        audio_feats = self.encoder.forward_audio(
+            torch.unsqueeze(
+                x[audio_mask][:, 0, 0, : audio_size[1], : audio_size[2]], dim=1
+            ),
+            audio_size,
+        )
         video_feats = self.encoder.forward_video(x[video_mask])
         vfal_a_feats, vfal_v_feats = self.encoder.forward_vfal(
             x2, video_feats, vfal_size

@@ -179,7 +179,7 @@ class GraphDataset(Dataset):
     def get_audio_size(
         self,
     ) -> Tuple[Tuple[int, int, int]]:
-        """获得音频的大小，返回一个元组(1, 13, T)"""
+        """获得音频的大小，返回一个元组(1, T, W)"""
         return self.store.get_audio_size(self.half_clip_length)
 
     def _get_scene_video_data(

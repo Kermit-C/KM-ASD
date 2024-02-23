@@ -81,6 +81,8 @@ def train():
 
     has_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if has_cuda else "cpu")
+    # TMP: 临时使用 cpu, debug
+    # device = "cpu"
     print("Cuda info ", has_cuda, device)
     asd_net.to(device)
 

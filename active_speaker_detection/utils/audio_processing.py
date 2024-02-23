@@ -14,7 +14,7 @@ from speechbrain.processing.features import InputNormalization
 
 
 def generate_mel_spectrogram(audio_clip: np.ndarray, sample_rate: int) -> np.ndarray:
-    """计算音频片段的梅尔频谱图，维度为 (1, 13, T)"""
+    """计算音频片段的梅尔频谱图，维度为 (1, T, W)"""
     mfcc = zip(*python_speech_features.mfcc(audio_clip, sample_rate))
     audio_features = np.stack([np.array(i) for i in mfcc])
     audio_features = np.expand_dims(audio_features, axis=0)

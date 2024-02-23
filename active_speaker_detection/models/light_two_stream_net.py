@@ -160,7 +160,7 @@ class VisualEncoder(nn.Module):
     def __init__(self):
         super(VisualEncoder, self).__init__()
 
-        self.block1 = VisualBlock(1, 32, is_down=True)
+        self.block1 = VisualBlock(3, 32, is_down=True)
         self.pool1 = nn.MaxPool3d(
             kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)
         )
@@ -260,21 +260,23 @@ class LightTwoStreamNet(nn.Module):
         self.__init_weight()
 
     def forward_visual(self, x):
-        B, T, W, H = x.shape
-        x = x.view(B, 1, T, W, H)
         x = (x / 255 - 0.4161) / 0.1688
-        x = self.visualEncoder(x)  # type: ignore
+        x = self.visual_encoder(x)
         return x
 
     def forward_audio(self, x):
-        x = x.unsqueeze(1).transpose(2, 3)
-        x = self.audioEncoder(x)  # type: ignore
+        x = x.transpose(2, 3)
+        x = self.audio_encoder(x)
         return x
 
-    def forward(self, audio_data, video_data, audio_size: tuple[int, int, int]):
-        # audio_data: (B, T, W), audio_embed: (B, T, C)
+    def forward(self, audio_data, video_data):
+        """
+        :param a: (B, C, T, W)
+        :param v: (B, C, T, H, W)
+        """
+        # audio_embed: (B, T, C)
         audio_embed = self.forward_audio(audio_data)
-        # video_data: (B, T, W, H), audio_embed: (B, T, C)
+        # audio_embed: (B, T, C)
         visual_embed = self.forward_visual(video_data)
 
         audio_embed = self.max_pool(audio_embed.transpose(1, 2)).squeeze(2)
