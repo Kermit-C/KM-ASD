@@ -6,8 +6,7 @@
 @Date: 2024-02-16 20:48:53
 """
 
-from active_speaker_detection import asd_r3d18, asd_r3d50
+from active_speaker_detection import asd_config, asd_train
 
 if __name__ == "__main__":
-    asd_r3d18.train_asd_r3d18()
-    # asd_r3d50.train_asd_r3d50()
+    asd_train.train(asd_config.r3d18_params["param_config"], asd_config.datasets)

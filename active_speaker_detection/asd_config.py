@@ -21,8 +21,7 @@ datasets = {
     "models_out": "./active_speaker_detection/results",
 }
 
-
-ASD_R3D_18_params = {
+r3d18_params = {
     # 网络架构
     "encoder_type": "R3D18",
     # 优化配置
@@ -39,7 +38,7 @@ ASD_R3D_18_params = {
 }
 
 
-ASD_R3D_50_params = {
+r3d50_params = {
     # 网络架构
     "encoder_type": "R3D50",
     # 优化配置

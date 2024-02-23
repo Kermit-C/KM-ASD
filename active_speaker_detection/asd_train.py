@@ -15,7 +15,6 @@ from torch.optim.lr_scheduler import MultiStepLR
 from torch_geometric.loader import DataLoader
 from torchvision import transforms
 
-import active_speaker_detection.asd_config as asd_conf
 import active_speaker_detection.utils.custom_transforms as ct
 from active_speaker_detection.datasets.graph_dataset import GraphDataset
 from active_speaker_detection.models.graph_model import get_backbone
@@ -32,7 +31,7 @@ from .models.graph_layouts import (
 )
 
 
-def train_asd_r3d18():
+def train(param_config, dataset_config):
     # 解析命令行参数
     command_line_args = get_default_arg_parser().parse_args()
     lr_arg, frames_per_clip, ctx_size, n_clips, strd, img_size = (
@@ -44,11 +43,6 @@ def train_asd_r3d18():
     scp = get_spatial_connection_pattern(ctx_size, n_clips)
     # 获取时间连接模式
     tcp = get_temporal_connection_pattern(ctx_size, n_clips)
-
-    # 模型主体选项
-    opt_config = asd_conf.ASD_R3D_18_params
-    # 模型输入配置
-    asd_config = asd_conf.datasets
 
     # 数据转换
     image_size = (img_size, img_size)
@@ -72,15 +66,15 @@ def train_asd_r3d18():
         + str(strd)
     )
     log, target_models = setup_optim_outputs(
-        asd_config["models_out"], opt_config, model_name
+        dataset_config["models_out"], param_config, model_name
     )
 
     # 创建网络并转移到GPU
-    pretrain_weightds_path = opt_config["video_pretrain_weights"]
-    audio_pretrain_weightds_path = opt_config["audio_pretrain_weights"]
-    vfal_ecapa_pretrain_weights = opt_config["vfal_ecapa_pretrain_weights"]
+    pretrain_weightds_path = param_config["video_pretrain_weights"]
+    audio_pretrain_weightds_path = param_config["audio_pretrain_weights"]
+    vfal_ecapa_pretrain_weights = param_config["vfal_ecapa_pretrain_weights"]
     asd_net = get_backbone(
-        opt_config["encoder_type"],
+        param_config["encoder_type"],
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
         vfal_ecapa_pretrain_weights,
@@ -96,20 +90,20 @@ def train_asd_r3d18():
     vfal_critierion = (
         losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0),  # type: ignore
     )  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
-    optimizer = optim.Adam(asd_net.parameters(), lr=opt_config["learning_rate"])  # type: ignore
+    optimizer = optim.Adam(asd_net.parameters(), lr=param_config["learning_rate"])  # type: ignore
     scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
 
     # 数据路径
-    video_train_path = asd_config["video_train_dir"]
-    audio_train_path = asd_config["audio_train_dir"]
-    video_val_path = asd_config["video_val_dir"]
-    audio_val_path = asd_config["audio_val_dir"]
+    video_train_path = dataset_config["video_train_dir"]
+    audio_train_path = dataset_config["audio_train_dir"]
+    video_val_path = dataset_config["video_val_dir"]
+    audio_val_path = dataset_config["audio_val_dir"]
 
     # 数据加载器
     d_train = GraphDataset(
         audio_train_path,
         video_train_path,
-        asd_config["csv_train_full"],
+        dataset_config["csv_train_full"],
         n_clips,
         strd,
         ctx_size,
@@ -123,7 +117,7 @@ def train_asd_r3d18():
     d_val = GraphDataset(
         audio_val_path,
         video_val_path,
-        asd_config["csv_val_full"],
+        dataset_config["csv_val_full"],
         n_clips,
         strd,
         ctx_size,
@@ -136,16 +130,16 @@ def train_asd_r3d18():
 
     dl_train = DataLoader(
         d_train,
-        batch_size=opt_config["batch_size"],
+        batch_size=param_config["batch_size"],
         shuffle=True,
-        num_workers=opt_config["threads"],
+        num_workers=param_config["threads"],
         pin_memory=True,
     )
     dl_val = DataLoader(
         d_val,
-        batch_size=opt_config["batch_size"],
+        batch_size=param_config["batch_size"],
         shuffle=True,
-        num_workers=opt_config["threads"],
+        num_workers=param_config["threads"],
         pin_memory=True,
     )
 
@@ -159,7 +153,7 @@ def train_asd_r3d18():
         vfal_critierion,
         optimizer,
         scheduler,
-        num_epochs=opt_config["epochs"],
+        num_epochs=param_config["epochs"],
         spatial_ctx_size=ctx_size,
         time_len=n_clips,
         models_out=target_models,

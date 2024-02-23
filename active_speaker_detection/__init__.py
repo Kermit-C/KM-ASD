@@ -6,5 +6,5 @@
 @Date: 2024-02-13 16:33:30
 """
 
-from .asd_r3d18 import train_asd_r3d18
-from .asd_r3d50 import train_asd_r3d50
+from . import asd_config
+from .asd_train import train
