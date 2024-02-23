@@ -20,7 +20,7 @@ from active_speaker_detection.models.graph_layouts import (
 )
 
 
-def optimize_asd(
+def optimize_graph(
     model,
     dataloader_train,
     data_loader_val,
@@ -133,7 +133,6 @@ def _train_model_amp_avl(
     audio_size, vfal_size = dataloader.dataset.get_audio_size()
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
-    # Iterate over data
     for idx, dl in enumerate(dataloader):
         print(
             "\t Train iter {:d}/{:d} {:.4f}".format(
@@ -149,7 +148,6 @@ def _train_model_amp_avl(
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
-            # TODO inneficient here
             # 生成掩码, 用于计算辅助损失, 包括单独的音频和视频损失
             audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
             # 生成单人时序上的掩码，仅用来计算单人时序上的损失，仅用于评估
@@ -202,7 +200,7 @@ def _train_model_amp_avl(
                 softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
             )
 
-        # statistics
+        # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()
@@ -275,7 +273,6 @@ def _test_model_graph_losses(
         entities = graph_data.y2
 
         with torch.set_grad_enabled(False):
-            # TODO inneficient here
             audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
             temporal_video_mask = generate_temporal_video_mask(
                 ctx_size, graph_data.x.size(0)
@@ -312,7 +309,7 @@ def _test_model_graph_losses(
                 softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
             )
 
-        # statistics
+        # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()

@@ -63,9 +63,10 @@ class ActiveSpeakerDetector:
         )
 
         torch.set_grad_enabled(False)
-        self.model = get_backbone(
+        self.model, _ = get_backbone(
             infer_config["encoder_type"], train_weights=trained_model
-        ).to(self.device)
+        )
+        self.model = self.model.to(self.device)
         self.model.eval()
 
         self.video_transform = transforms.Compose(

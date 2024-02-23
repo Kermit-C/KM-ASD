@@ -7,16 +7,17 @@
 """
 
 import math
-import os
 import random
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-import numpy as np
 import torch
-from PIL import Image
 from torch_geometric.data import Data, Dataset
 from torchvision import transforms
 
+from active_speaker_detection.models.graph_layouts import (
+    get_spatial_connection_pattern,
+    get_temporal_connection_pattern,
+)
 from active_speaker_detection.utils.augmentations import video_temporal_crop
 
 from .data_store import DataStore
@@ -33,8 +34,6 @@ class GraphDataset(Dataset):
         stride: int,  # 步长
         context_size,  # 上下文大小，即上下文中有多少个实体
         clip_lenght,  # 片段长度，短时序上下文片段的长度
-        spatial_connection_pattern,
-        temporal_connection_pattern,
         video_transform: Optional[transforms.Compose] = None,  # 视频转换方法
         do_video_augment=False,  # 是否视频增强
         crop_ratio=0.95,  # 视频裁剪比例
@@ -59,12 +58,20 @@ class GraphDataset(Dataset):
             clip_lenght / 2
         )  # 每刻计算特征的帧数一半的长度
 
+        # 获取空间连接模式
+        spatial_connection_pattern = get_spatial_connection_pattern(
+            context_size, graph_time_steps
+        )
         spatial_src_edges = spatial_connection_pattern["src"]
         spatial_dst_edges = spatial_connection_pattern["dst"]
         self.spatial_batch_edges = torch.tensor(
             [spatial_src_edges, spatial_dst_edges], dtype=torch.long
         )
 
+        # 获取时间连接模式
+        temporal_connection_pattern = get_temporal_connection_pattern(
+            context_size, graph_time_steps
+        )
         temporal_src_edges = temporal_connection_pattern["src"]
         temporal_dst_edges = temporal_connection_pattern["dst"]
         self.temporal_batch_edges = torch.tensor(

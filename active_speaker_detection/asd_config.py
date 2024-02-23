@@ -21,38 +21,42 @@ datasets = {
     "models_out": "./active_speaker_detection/results",
 }
 
-r3d18_params = {
-    # 网络架构
-    "encoder_type": "R3D18",
-    # 优化配置
-    "learning_rate": 3e-4,
-    "epochs": 15,
-    "gamma": 0.1,
-    # 批次配置
-    "batch_size": 17,
-    "threads": 8,
-    # 预训练权重
-    "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-    "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
-    "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
-}
-
-
-r3d50_params = {
-    # 网络架构
-    "encoder_type": "R3D50",
-    # 优化配置
-    "learning_rate": 3e-4,
-    "epochs": 15,
-    "gamma": 0.1,
-    # 批次配置
-    "batch_size": 17,
-    "threads": 8,
-    # 预训练权重
-    "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-    "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
-    "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
-}
+train_params = [
+    {
+        "name": "R3D18",
+        # 网络架构
+        "encoder_type": "R3D18",
+        "encoder_train_weights": None,
+        # 预训练权重
+        "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
+        "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        # 优化配置
+        "learning_rate": 3e-4,
+        "epochs": 15,
+        "gamma": 0.1,
+        # 批次配置
+        "batch_size": 17,
+        "threads": 8,
+    },
+    {
+        "name": "R3D50",
+        # 网络架构
+        "encoder_type": "R3D50",
+        "encoder_train_weights": None,
+        # 预训练权重
+        "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
+        "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        # 优化配置
+        "learning_rate": 3e-4,
+        "epochs": 15,
+        "gamma": 0.1,
+        # 批次配置
+        "batch_size": 17,
+        "threads": 8,
+    },
+]
 
 inference_params = {
     "trained_model": "/hdd1/ckm/active_speaker_detection/results/ASD_R3D_18_clip13_ctx2_len7_str3_15ep.pth",

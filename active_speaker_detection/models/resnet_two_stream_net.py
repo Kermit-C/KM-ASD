@@ -361,6 +361,12 @@ def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     return
 
 
+def _load_weights_into_model(model: nn.Module, ws_file):
+    """加载训练权重"""
+    model.load_state_dict(torch.load(ws_file))
+    return
+
+
 ############### 以下是模型的工厂函数 ###############
 
 
@@ -368,6 +374,7 @@ def get_resnet_encoder(
     type: str,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
+    encoder_train_weights=None,
 ):
     if type == "R3D18":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
@@ -377,6 +384,8 @@ def get_resnet_encoder(
             _load_video_weights_into_model(encoder, video_pretrained_weigths)
         if audio_pretrained_weights is not None:
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
+        if encoder_train_weights is not None:
+            _load_weights_into_model(encoder, encoder_train_weights)
         return encoder
     elif type == "R3D50":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
@@ -386,5 +395,8 @@ def get_resnet_encoder(
             _load_video_weights_into_model(encoder, video_pretrained_weigths)
         if audio_pretrained_weights is not None:
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
+        if encoder_train_weights is not None:
+            _load_weights_into_model(encoder, encoder_train_weights)
+        return encoder
     else:
         raise ValueError("Unknown type")

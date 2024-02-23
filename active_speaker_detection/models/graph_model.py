@@ -6,13 +6,15 @@
 @Date: 2024-02-10 15:46:54
 """
 
-from typing import List, Optional, Tuple
+from typing import Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.parameter
 from torch.nn import functional as F
 from torch_geometric.nn import EdgeConv
+
+from active_speaker_detection.models.light_two_stream_net import get_light_encoder
 
 from .graph_layouts import generate_av_mask
 from .resnet_two_stream_net import get_resnet_encoder
@@ -159,11 +161,13 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 ############### 以下是模型的工厂函数 ###############
 
+
 def get_backbone(
     encoder_type: str,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
     vfal_ecapa_pretrain_weights=None,
+    encoder_train_weights=None,
     train_weights=None,
 ):
     if encoder_type == "R3D18":
@@ -171,13 +175,17 @@ def get_backbone(
             "R3D18",
             video_pretrained_weigths,
             audio_pretrained_weights,
+            encoder_train_weights,
         )
     elif encoder_type == "R3D50":
         encoder = get_resnet_encoder(
             "R3D50",
             video_pretrained_weigths,
             audio_pretrained_weights,
+            encoder_train_weights,
         )
+    elif encoder_type == "LIGHT":
+        encoder = get_light_encoder(encoder_train_weights)
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")
 
@@ -185,4 +193,4 @@ def get_backbone(
     if train_weights is not None:
         _load_weights_into_model(model, train_weights)
 
-    return model
+    return model, encoder

@@ -51,8 +51,6 @@ class DataStore:
         # 读取并处理标签文件到 cache
         entity_set = self.cache_entity_data(csv_file_path)
         self.entity_list_postprocessing(entity_set)
-        # 复制一份 entity_list
-        self.entity_list.extend(self.entity_list)
 
     def get_speaker_context(
         self, video_id: str, target_entity_id: str, center_ts: str, ctx_len: int

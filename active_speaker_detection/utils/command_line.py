@@ -11,8 +11,9 @@ import argparse
 
 def get_default_arg_parser():
     parser = argparse.ArgumentParser()
-    # 学习率
-    parser.add_argument("--lr", default="5e-4")
+    parser.add_argument("--name", default="R3D18")
+    # 训练阶段，encoder、graph、end2end
+    parser.add_argument("--stage", default="end2end")
     # 每刻计算特征的帧数
     parser.add_argument("--frmc", default="13")
     # 上下文大小，每刻的实体数
@@ -28,11 +29,12 @@ def get_default_arg_parser():
 
 
 def unpack_command_line_args(args):
-    lr_arg = float(args.lr)
+    name = args.name
+    stage = args.stage
     frames_per_clip = float(args.frmc)
     ctx_size = int(args.ctx)
     n_clips = int(args.nclp)
     strd = int(args.strd)
     img_size = int(args.size)
 
-    return lr_arg, frames_per_clip, ctx_size, n_clips, strd, img_size
+    return name, stage, frames_per_clip, ctx_size, n_clips, strd, img_size
