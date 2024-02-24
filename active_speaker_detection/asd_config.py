@@ -22,7 +22,6 @@ datasets = {
 }
 
 inference_params = {
-    "trained_model": "/hdd1/ckm/active_speaker_detection/results/ASD_R3D_18_clip13_ctx2_len7_str3_15ep.pth",
     "encoder_type": "R3D18",
     # 每刻计算特征的帧数
     "frmc": 13,

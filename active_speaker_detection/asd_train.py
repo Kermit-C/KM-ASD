@@ -19,14 +19,14 @@ from torchvision import transforms
 
 import active_speaker_detection.utils.custom_transforms as ct
 from active_speaker_detection import asd_config
-from active_speaker_detection.datasets.encoder_dataset import EncoderDataset
-from active_speaker_detection.datasets.encoder_gen_emb import gen_embedding
-from active_speaker_detection.datasets.end2end_dataset import End2endDataset
-from active_speaker_detection.datasets.graph_dataset import GraphDataset
+from active_speaker_detection.datasets.dataset_encoder import EncoderDataset
+from active_speaker_detection.datasets.dataset_end2end import End2endDataset
+from active_speaker_detection.datasets.dataset_graph import GraphDataset
+from active_speaker_detection.datasets.gen_emb import gen_embedding
 from active_speaker_detection.models.graph_model import get_backbone
-from active_speaker_detection.optimizers.encoder_optimizer import optimize_encoder
-from active_speaker_detection.optimizers.end2end_optimizer import optimize_end2end
-from active_speaker_detection.optimizers.graph_optimizer import optimize_graph
+from active_speaker_detection.optimizers.optimizer_encoder import optimize_encoder
+from active_speaker_detection.optimizers.optimizer_end2end import optimize_end2end
+from active_speaker_detection.optimizers.optimizer_graph import optimize_graph
 from active_speaker_detection.utils.command_line import (
     get_default_arg_parser,
     unpack_command_line_args,

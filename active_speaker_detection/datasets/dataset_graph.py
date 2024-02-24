@@ -18,7 +18,7 @@ from active_speaker_detection.models.graph_layouts import (
     get_temporal_connection_pattern,
 )
 
-from .emb_data_store import EmbeddingDataStore
+from .data_store_emb import EmbeddingDataStore
 
 
 class GraphDataset(Dataset):

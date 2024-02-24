@@ -14,13 +14,13 @@ import torch.nn.parameter
 from torch.nn import functional as F
 from torch_geometric.nn import EdgeConv
 
-from active_speaker_detection.models.light_two_stream_net import get_light_encoder
-from active_speaker_detection.models.resnet_tsm_two_steam_net import (
+from active_speaker_detection.models.two_steam_resnet_tsm_net import (
     get_resnet_tsm_encoder,
 )
+from active_speaker_detection.models.two_stream_light_net import get_light_encoder
 
 from .graph_layouts import generate_av_mask
-from .resnet_two_stream_net import get_resnet_encoder
+from .two_stream_resnet_net import get_resnet_encoder
 
 
 class LinearPathPreact(nn.Module):
@@ -182,7 +182,10 @@ def get_backbone(
         raise ValueError(f"Unknown encoder type: {encoder_type}")
 
     model = GraphNet(encoder, 128)
+    # 先加载整个的，如果有单独的 encoder 的权重，再加载 encoder 的权重
     if train_weights is not None:
         _load_weights_into_model(model, train_weights)
+    if encoder_train_weights is not None:
+        _load_weights_into_model(encoder, encoder_train_weights)
 
     return model, encoder
