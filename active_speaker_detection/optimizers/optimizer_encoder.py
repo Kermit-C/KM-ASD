@@ -26,13 +26,7 @@ def optimize_encoder(
     models_out=None,
     log=None,
 ):
-    # 定义辅助分类器
-    fc_a = nn.Linear(128, 2).to(device)
-    fc_v = nn.Linear(128, 2).to(device)
-    fc_av = nn.Linear(128 * 2, 2).to(device)
-
     max_val_ap = 0
-
     for epoch in range(num_epochs):
         print()
         print("Epoch {}/{}".format(epoch + 1, num_epochs))
@@ -44,18 +38,12 @@ def optimize_encoder(
             optimizer,
             criterion,
             device,
-            fc_a,
-            fc_v,
-            fc_av,
         )
         outs_val = _test_model_encoder_losses(
             model,
             data_loader_val,
             criterion,
             device,
-            fc_a,
-            fc_v,
-            fc_av,
         )
         scheduler.step()
 
@@ -97,9 +85,6 @@ def _train_model_amp_avl(
     optimizer,
     criterion: nn.modules.loss._Loss,
     device,
-    fc_a,
-    fc_v,
-    fc_av,
 ):
     """训练一个 epoch 的模型，返回图的损失和音频视频的辅助损失"""
     model.train()
@@ -131,12 +116,7 @@ def _train_model_amp_avl(
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
             with autocast(True):
-                audio_out, video_out = model(audio_data, video_data)
-                audio_out, video_out, av_out = (
-                    fc_a(audio_out),
-                    fc_v(video_out),
-                    fc_av(torch.cat([audio_out, video_out], dim=1)),
-                )
+                _, _, audio_out, video_out, av_out = model(audio_data, video_data)
                 # 单独音频和视频的损失
                 loss_a: torch.Tensor = criterion(audio_out, target_a)
                 loss_v: torch.Tensor = criterion(video_out, target)
@@ -178,9 +158,6 @@ def _test_model_encoder_losses(
     dataloader,
     criterion: nn.modules.loss._Loss,
     device,
-    fc_a,
-    fc_v,
-    fc_av,
 ):
     """测试模型，返回图的损失和音频视频的辅助损失"""
     model.eval()
@@ -208,12 +185,7 @@ def _test_model_encoder_losses(
         target_a = target_a.to(device)
 
         with torch.set_grad_enabled(False):
-            audio_out, video_out = model(audio_data, video_data)
-            audio_out, video_out, av_out = (
-                fc_a(audio_out),
-                fc_v(video_out),
-                fc_av(torch.cat([audio_out, video_out], dim=1)),
-            )
+            _, _, audio_out, video_out, av_out = model(audio_data, video_data)
             # 单独音频和视频的损失
             loss_a: torch.Tensor = criterion(audio_out, target_a)
             loss_v: torch.Tensor = criterion(video_out, target)

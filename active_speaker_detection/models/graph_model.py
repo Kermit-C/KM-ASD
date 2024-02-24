@@ -65,8 +65,6 @@ class GraphNet(nn.Module):
         self.edge_temporal_3 = EdgeConv(LinearPathPreact(filter_size * 2, filter_size))
         self.edge_temporal_4 = EdgeConv(LinearPathPreact(filter_size * 2, filter_size))
 
-        self.fc_aux_a = nn.Linear(128, 2)
-        self.fc_aux_v = nn.Linear(128, 2)
         self.fc = nn.Linear(filter_size, 2)
 
         # 共享
@@ -94,7 +92,9 @@ class GraphNet(nn.Module):
                 x[audio_mask][:, 0, 0, : audio_size[1], : audio_size[2]], dim=1
             )
             video_data = x[video_mask]
-            audio_feats, video_feats = self.encoder(audio_data, video_data)
+            audio_feats, video_feats, audio_out, video_out, _ = self.encoder(
+                audio_data, video_data
+            )
 
             # 图特征
             graph_feats = torch.zeros(
@@ -125,8 +125,6 @@ class GraphNet(nn.Module):
         graph_feats_4st = graph_feats_4st + graph_feats_3st
 
         out = self.fc(graph_feats_4st)
-        audio_out = self.fc_aux_a(graph_feats[audio_mask])
-        video_out = self.fc_aux_v(graph_feats[video_mask])
 
         return out, audio_out, video_out
 

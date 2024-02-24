@@ -144,6 +144,11 @@ class ResnetTwoStreamNet(nn.Module):
         self.reduction_a = nn.Linear(512 * block_2d.expansion, 128)  # type: ignore
         self.reduction_v = nn.Linear(512 * block_3d.expansion, 128)  # type: ignore
 
+        # 分类器
+        self.fc_a = nn.Linear(128, 2)
+        self.fc_v = nn.Linear(128, 2)
+        self.fc_av = nn.Linear(128 * 2, 2)
+
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 # 使用Kaiming初始化（nn.init.kaiming_normal_）来初始化权重
@@ -301,7 +306,13 @@ class ResnetTwoStreamNet(nn.Module):
         audio_feats = self.relu(self.reduction_a(audio_feats))
         video_feats = self.relu(self.reduction_v(video_feats))
 
-        return audio_feats, video_feats
+        audio_out, video_out, av_out = (
+            self.fc_a(audio_feats),
+            self.fc_v(video_feats),
+            self.fc_av(torch.cat([audio_feats, video_feats], dim=1)),
+        )
+
+        return audio_feats, video_feats, audio_out, video_out, av_out
 
 
 ############### 以下是模型的加载权重 ###############

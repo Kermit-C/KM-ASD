@@ -89,6 +89,11 @@ class TwoStreamResNet(nn.Module):
         self.fc_128_a = nn.Linear(512 * block.expansion, 128)
         self.fc_128_v = nn.Linear(512 * block.expansion, 128)
 
+        # 分类器
+        self.fc_a = nn.Linear(128, 2)
+        self.fc_v = nn.Linear(128, 2)
+        self.fc_av = nn.Linear(128 * 2, 2)
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
@@ -194,7 +199,13 @@ class TwoStreamResNet(nn.Module):
         v = self.fc_128_v(v)
         v = self.relu(v)
 
-        return a, v
+        audio_out, video_out, av_out = (
+            self.fc_a(a),
+            self.fc_v(v),
+            self.fc_av(torch.cat([a, v], dim=1)),
+        )
+
+        return a, v, audio_out, video_out, av_out
 
 
 ############### 以下是模型的加载权重 ###############

@@ -257,6 +257,11 @@ class LightTwoStreamNet(nn.Module):
 
         self.max_pool = nn.AdaptiveMaxPool1d(1)
 
+        # 分类器
+        self.fc_a = nn.Linear(128, 2)
+        self.fc_v = nn.Linear(128, 2)
+        self.fc_av = nn.Linear(128 * 2, 2)
+
         self.__init_weight()
 
     def forward_visual(self, x):
@@ -282,8 +287,14 @@ class LightTwoStreamNet(nn.Module):
         audio_embed = self.max_pool(audio_embed.transpose(1, 2)).squeeze(2)
         visual_embed = self.max_pool(visual_embed.transpose(1, 2)).squeeze(2)
 
+        audio_out, video_out, av_out = (
+            self.fc_a(audio_embed),
+            self.fc_v(visual_embed),
+            self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
+        )
+
         # audio_embed: (B, C), visual_embed: (B, C)
-        return audio_embed, visual_embed
+        return audio_embed, visual_embed, audio_out, video_out, av_out
 
     def __init_weight(self):
         for m in self.modules():
