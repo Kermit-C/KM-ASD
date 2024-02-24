@@ -103,7 +103,7 @@ train_params = [
         "encoder_learning_rate": 1e-3,
         "encoder_epochs": 30,
         "encoder_milestones": list(range(30)),
-        "encoder_gamma": 0.5,
+        "encoder_gamma": 0.95,
         # 优化配置
         "batch_size": 17,
         "learning_rate": 3e-4,
