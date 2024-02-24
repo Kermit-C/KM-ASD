@@ -30,6 +30,8 @@ def optimize_encoder(
     fc_a = nn.Linear(128, 2).to(device)
     fc_v = nn.Linear(128, 2).to(device)
 
+    max_val_ap = 0
+
     for epoch in range(num_epochs):
         print()
         print("Epoch {}/{}".format(epoch + 1, num_epochs))
@@ -57,8 +59,9 @@ def optimize_encoder(
         train_loss, ta_loss, tv_loss, train_ap = outs_train
         val_loss, va_loss, vv_loss, val_ap = outs_val
 
-        if models_out is not None and epoch > num_epochs - 10:
-            # 保存最后 10 个 epoch 的模型
+        if models_out is not None and val_ap > max_val_ap:
+            # 保存当前最优模型
+            max_val_ap = val_ap
             model_target = os.path.join(models_out, str(epoch + 1) + ".pth")
             print("save model to ", model_target)
             torch.save(model.state_dict(), model_target)
@@ -105,7 +108,6 @@ def _train_model_amp_avl(
     running_loss_a = 0.0
     running_loss_v = 0.0
 
-    audio_size, vfal_size = dataloader.dataset.get_audio_size()
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
     for idx, dl in enumerate(dataloader):
@@ -181,9 +183,6 @@ def _test_model_encoder_losses(
     running_loss_a = 0.0
     running_loss_v = 0.0
 
-    audio_size, vfal_size = dataloader.dataset.get_audio_size()
-
-    # Iterate over data
     for idx, dl in enumerate(dataloader):
         print(
             "\t Val iter {:d}/{:d} {:.4f}".format(

@@ -38,7 +38,7 @@ def optimize_graph(
     models_out=None,
     log=None,
 ):
-
+    max_val_ap = 0
     for epoch in range(num_epochs):
         print()
         print("Epoch {}/{}".format(epoch + 1, num_epochs))
@@ -71,8 +71,9 @@ def optimize_graph(
         train_loss, ta_loss, tv_loss, tvfal_loss, train_ap = outs_train
         val_loss, va_loss, vv_loss, vvfal_loss, val_ap, val_tap, val_cap = outs_val
 
-        if models_out is not None and epoch > num_epochs - 10:
-            # 保存最后 10 个 epoch 的模型
+        if models_out is not None and val_ap > max_val_ap:
+            # 保存当前最优模型
+            max_val_ap = val_ap
             model_target = os.path.join(models_out, str(epoch + 1) + ".pth")
             print("save model to ", model_target)
             torch.save(model.state_dict(), model_target)
@@ -258,7 +259,6 @@ def _test_model_graph_losses(
 
     audio_size, vfal_size = dataloader.dataset.get_audio_size()
 
-    # Iterate over data
     for idx, dl in enumerate(dataloader):
         print(
             "\t Val iter {:d}/{:d} {:.4f}".format(

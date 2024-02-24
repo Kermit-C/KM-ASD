@@ -10,21 +10,43 @@ from typing import List, Tuple
 
 
 def generate_clip_meta(
-    entity_meta_data: List[Tuple[str, str, int]], midone: int, half_clip_size: int
+    entity_meta_data: List[Tuple[str, str, int]],
+    midone: int,
+    half_clip_size: int,
+    from_left: bool = True,
 ) -> List[Tuple[str, str, int]]:
     """生成一个长度为 half_clip_size*2+1 的单人时间片段
     :param entity_meta_data: 实体元数据
     :param midone: 中心时间戳，entity_meta_data 中的索引
     :param half_clip_size: 时间片段的一半长度
+    :param from_left: 是否只从左侧取
     """
-    max_span_left = _get_clip_max_span(entity_meta_data, midone, -1, half_clip_size + 1)
-    max_span_right = _get_clip_max_span(entity_meta_data, midone, 1, half_clip_size + 1)
+    if from_left:
+        if midone == 0:
+            # 如果是第一个元素，就只取一个元素，不然就不存在区间了，梅尔特征求不出
+            midone = 1
+        max_span_left = _get_clip_max_span(
+            entity_meta_data, midone, -1, 2 * half_clip_size + 1
+        )
+        clip_data = entity_meta_data[midone - max_span_left : midone + 1]
+        clip_data = _extend_clip_data_from_left(
+            clip_data, max_span_left, 2 * half_clip_size
+        )
+    else:
+        max_span_left = _get_clip_max_span(
+            entity_meta_data, midone, -1, half_clip_size + 1
+        )
+        max_span_right = _get_clip_max_span(
+            entity_meta_data, midone, 1, half_clip_size + 1
+        )
+        # 以 midone 为中心，取出时间片段
+        clip_data = entity_meta_data[
+            midone - max_span_left : midone + max_span_right + 1
+        ]
+        clip_data = _extend_clip_data(
+            clip_data, max_span_left, max_span_right, half_clip_size
+        )
 
-    # 以 midone 为中心，取出时间片段
-    clip_data = entity_meta_data[midone - max_span_left : midone + max_span_right + 1]
-    clip_data = _extend_clip_data(
-        clip_data, max_span_left, max_span_right, half_clip_size
-    )
     return clip_data
 
 
@@ -52,5 +74,16 @@ def _extend_clip_data(clip_data, max_span_left, max_span_right, half_clip_size):
     if max_span_right < half_clip_size:
         for i in range(half_clip_size - max_span_right):
             clip_data.insert(-1, clip_data[-1])
+
+    return clip_data
+
+
+def _extend_clip_data_from_left(clip_data, max_span_left, half_clip_size):
+    """只从左侧扩展数据，使得数据长度为 half_clip_size*2+1
+    如果不够，就复制首元素
+    """
+    if max_span_left < half_clip_size:
+        for i in range(half_clip_size - max_span_left):
+            clip_data.insert(0, clip_data[0])
 
     return clip_data
