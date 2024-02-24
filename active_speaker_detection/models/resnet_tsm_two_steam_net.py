@@ -81,6 +81,8 @@ class TwoStreamResNet(nn.Module):
             block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
         )
 
+        self.tsm = TemporalShift(n_div=8)
+
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
@@ -162,7 +164,7 @@ class TwoStreamResNet(nn.Module):
         a = self.avgpool(a)
         a = a.squeeze(-1).squeeze(-1)
 
-        v = v.transpose(1, 2)
+        v = v.transpose(1, 2).contiguous()
 
         b, t, c, h, w = v.size()
         v = v.view(b * t, c, h, w)
@@ -170,15 +172,19 @@ class TwoStreamResNet(nn.Module):
         v = self.v_bn1(v)
         v = self.relu(v)
         v = self.maxpool(v)
-        v = v.view(b, t, v.size(1), v.size(2), v.size(3))
 
+        v = self.tsm(v, t)
         v = self.v_layer1(v)
+        v = self.tsm(v, t)
         v = self.v_layer2(v)
+        v = self.tsm(v, t)
         v = self.v_layer3(v)
+        v = self.tsm(v, t)
         v = self.v_layer4(v)
         v = self.avgpool(v)
+        v = v.view(b, t, v.size(1), v.size(2), v.size(3))
 
-        v.transpose(1, 2)
+        v = v.transpose(1, 2).contiguous()
         v = v.squeeze(-1).squeeze(-1)
         v = v.mean(2)
 
@@ -189,25 +195,6 @@ class TwoStreamResNet(nn.Module):
         v = self.relu(v)
 
         return a, v
-
-
-def make_temporal_shift(net, n_div=8):
-    n_round = 1
-    if len(list(net.v_layer3.children())) >= 23:
-        n_round = 2
-        print("=> Using n_round {} to insert temporal shift".format(n_round))
-
-    def make_block_temporal(stage):
-        blocks = list(stage.children())
-        for i, b in enumerate(blocks):
-            if i % n_round == 0:
-                blocks[i].conv1 = TemporalShift(b.conv1, n_div=n_div)
-        return nn.Sequential(*blocks)
-
-    net.v_layer1 = make_block_temporal(net.v_layer1)
-    net.v_layer2 = make_block_temporal(net.v_layer2)
-    net.v_layer3 = make_block_temporal(net.v_layer3)
-    net.v_layer4 = make_block_temporal(net.v_layer4)
 
 
 ############### 以下是模型的加载权重 ###############
@@ -230,8 +217,6 @@ def _load_weights_into_two_stream_resnet(model, pretrained_weights):
 
     avgWs = torch.mean(conv1_weights, dim=1, keepdim=True)
     own_state["audio_conv1.weight"].copy_(avgWs)
-
-    make_temporal_shift(model)
 
     print("loaded ws from resnet")
     return model
@@ -256,8 +241,6 @@ def get_resnet_tsm_encoder(
         model = TwoStreamResNet(block, layers)
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
-        else:
-            make_temporal_shift(model)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
             model.eval()
@@ -267,8 +250,6 @@ def get_resnet_tsm_encoder(
         model = TwoStreamResNet(block, layers)
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
-        else:
-            make_temporal_shift(model)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
             model.eval()

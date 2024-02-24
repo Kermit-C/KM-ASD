@@ -12,30 +12,21 @@ import torch.nn as nn
 
 class TemporalShift(nn.Module):
 
-    def __init__(self, net, n_div=8):
+    def __init__(self, n_div=8):
         super(TemporalShift, self).__init__()
-        self.net = net
         self.fold_div = n_div
 
-    def forward(self, x):
-        # x: (B, T, C, H, W)
-        b, t, c, h, w = x.size()
-        x = self.shift(x, fold_div=self.fold_div)
-        x = x.view(b * t, c, h, w)
-        x = self.net(x)
-        x = x.view(b, t, x.size(1), x.size(2), x.size(3))
-        return x
+    def forward(self, x, clips=13):
+        # x: (B*T, C, H, W)
+        bt, c, h, w = x.size()
+        b = bt // clips
+        x = x.view(b, clips, c, h, w).contiguous()
 
-    @staticmethod
-    def shift(x, fold_div):
-        # x: (B, T, C, H, W)
-        b, t, c, h, w = x.size()
-
-        fold = c // fold_div
+        fold = c // self.fold_div
         out = torch.zeros_like(x)
         out[:, :-1, :fold] = x[:, 1:, :fold]  # shift left
         out[:, 1:, fold : 2 * fold] = x[:, :-1, fold : 2 * fold]  # shift right
         out[:, :, 2 * fold :] = x[:, :, 2 * fold :]  # not shift
 
-        return out.view(b, t, c, h, w)
-        # out: (B, T, C, H, W)
+        return out.view(b * clips, c, h, w).contiguous()
+        # out: (B*T, C, H, W)
