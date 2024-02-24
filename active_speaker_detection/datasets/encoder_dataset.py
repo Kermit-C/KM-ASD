@@ -49,13 +49,14 @@ class EncoderDataset(Dataset):
         )  # 每刻计算特征的帧数一半的长度
 
     def __len__(self):
-        return int(len(self.store.entity_list) / 1)
+        return len(self.store.feature_list)
 
     def __getitem__(self, index):
-        video_id, entity_id = self.store.entity_list[index]
+        video_id, entity_id, timestamp, entity_label = self.store.feature_list[index]
         target_entity_metadata = self.store.entity_data[video_id][entity_id]
-        # 随机选择一个中间时间戳的索引
-        center_index = random.randint(0, len(target_entity_metadata) - 1)
+        center_index = self.store.search_ts_in_meta_data(
+            target_entity_metadata, timestamp
+        )
 
         # 获取视频特征和标签
         video_data, targets, entities = self.store.get_video_data(
@@ -82,10 +83,6 @@ class EncoderDataset(Dataset):
             audio_fbank,
             targets[0],  # 视频标签
             target_a,  # 音频标签
+            entities[0],  # 视频实体
+            timestamp,
         )
-
-    def get_audio_size(
-        self,
-    ) -> Tuple[Tuple[int, int, int]]:
-        """获得音频的大小，返回一个元组(1, T, W)"""
-        return self.store.get_audio_size(self.half_clip_length)

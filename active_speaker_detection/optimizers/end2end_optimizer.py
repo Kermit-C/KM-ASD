@@ -20,7 +20,7 @@ from active_speaker_detection.models.graph_layouts import (
 )
 
 
-def optimize_graph(
+def optimize_end2end(
     model,
     dataloader_train,
     data_loader_val,
@@ -131,6 +131,7 @@ def _train_model_amp_avl(
     running_loss_v = 0.0
     running_loss_vfal = 0.0
 
+    audio_size, vfal_size = dataloader.dataset.get_audio_size()
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
     for idx, dl in enumerate(dataloader):
@@ -160,7 +161,9 @@ def _train_model_amp_avl(
             )
 
             with autocast(True):
-                outputs, audio_out, video_out = model(graph_data, ctx_size)
+                outputs, audio_out, video_out, vfal_a_feats, vfal_v_feats = model(
+                    graph_data, ctx_size, audio_size, vfal_size
+                )
                 # 单独音频和视频的损失
                 aux_loss_a: torch.Tensor = criterion(audio_out, targets[audio_mask])
                 aux_loss_v: torch.Tensor = criterion(video_out, targets[video_mask])
@@ -177,6 +180,7 @@ def _train_model_amp_avl(
                     + loss_graph
                 )
 
+            optimizer.zero_grad()  # 重置梯度，不加会爆显存
             scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
             scaler.update()

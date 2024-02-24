@@ -144,10 +144,6 @@ class ResnetTwoStreamNet(nn.Module):
         self.reduction_a = nn.Linear(512 * block_2d.expansion, 128)  # type: ignore
         self.reduction_v = nn.Linear(512 * block_3d.expansion, 128)  # type: ignore
 
-        # 辅助监督
-        self.fc_aux_a = nn.Linear(128, 2)
-        self.fc_aux_v = nn.Linear(128, 2)
-
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 # 使用Kaiming初始化（nn.init.kaiming_normal_）来初始化权重

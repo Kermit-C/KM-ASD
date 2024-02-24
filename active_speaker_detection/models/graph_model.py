@@ -6,7 +6,7 @@
 @Date: 2024-02-10 15:46:54
 """
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -65,6 +65,8 @@ class GraphNet(nn.Module):
         self.edge_temporal_3 = EdgeConv(LinearPathPreact(filter_size * 2, filter_size))
         self.edge_temporal_4 = EdgeConv(LinearPathPreact(filter_size * 2, filter_size))
 
+        self.fc_aux_a = nn.Linear(128, 2)
+        self.fc_aux_v = nn.Linear(128, 2)
         self.fc = nn.Linear(filter_size, 2)
 
         # 共享
@@ -74,65 +76,37 @@ class GraphNet(nn.Module):
         self,
         data,
         ctx_size,
-        audio_size: Tuple[int, int, int],
-        vfal_size: Tuple[int, int, int],
+        audio_size: Optional[Tuple[int, int, int]] = None,
+        vfal_size: Optional[Tuple[int, int, int]] = None,
     ):
-        x, x2, joint_edge_index, _ = data.x, data.x2, data.edge_index, data.batch
+        # x, x2, joint_edge_index, _ = data.x, data.x2, data.edge_index, data.batch
+        x, joint_edge_index, _ = data.x, data.edge_index, data.batch
         spatial_edge_index = joint_edge_index[0]
         temporal_edge_index = joint_edge_index[1]
 
         # 生成音频和视频的 mask
         audio_mask, video_mask = generate_av_mask(ctx_size, x.size(0))
 
-        # 音频和视频的特征提取
-        audio_feats = self.encoder.forward_audio(
-            torch.unsqueeze(
+        if len(x.shape) > 2:
+            # 从数据中提取音频和视频特征
+            assert audio_size is not None
+            audio_data = torch.unsqueeze(
                 x[audio_mask][:, 0, 0, : audio_size[1], : audio_size[2]], dim=1
-            ),
-            audio_size,
-        )
-        video_feats = self.encoder.forward_video(x[video_mask])
-        vfal_a_feats, vfal_v_feats = self.encoder.forward_vfal(
-            x2, video_feats, vfal_size
-        )
+            )
+            video_data = x[video_mask]
+            audio_feats, video_feats = self.encoder(audio_data, video_data)
 
-        # 降维，降到节点特征的维度 128
-        audio_feats = self.relu(self.encoder.reduction_a(audio_feats))
-        video_feats = self.relu(self.encoder.reduction_v(video_feats))
-        # video_feats = self.relu(
-        #     self.reduction_v_vfal(
-        #         torch.cat(
-        #             [
-        #                 video_feats,
-        #                 # 重复 vfal_a_feats，使得 batch 维度相同
-        #                 torch.cat(
-        #                     [
-        #                         torch.stack(
-        #                             [vfal_a]
-        #                             * (video_feats.size(0) // vfal_a_feats.size(0)),
-        #                             dim=0,
-        #                         )
-        #                         for vfal_a in vfal_a_feats
-        #                     ],
-        #                     dim=0,
-        #                 ),
-        #                 vfal_v_feats,
-        #             ],
-        #             dim=1,
-        #         )
-        #     )
-        # )
-
-        # 重建交错张量
-        graph_feats = torch.zeros(
-            (x.size(0), 128), device=audio_feats.get_device(), dtype=audio_feats.dtype
-        )
-        graph_feats[audio_mask] = audio_feats
-        graph_feats[video_mask] = video_feats
-
-        # 辅助监督
-        audio_out = self.encoder.fc_aux_a(graph_feats[audio_mask])
-        video_out = self.encoder.fc_aux_v(graph_feats[video_mask])
+            # 图特征
+            graph_feats = torch.zeros(
+                (x.size(0), 128),
+                device=audio_feats.get_device(),
+                dtype=audio_feats.dtype,
+            )
+            graph_feats[audio_mask] = audio_feats
+            graph_feats[video_mask] = video_feats
+        else:
+            # 输入的就是 encoder 出来的 128 维特征
+            graph_feats = x
 
         # 有残差的图神经网络
         graph_feats_1s = self.edge_spatial_1(graph_feats, spatial_edge_index)
@@ -150,13 +124,11 @@ class GraphNet(nn.Module):
         graph_feats_4st = self.edge_temporal_4(graph_feats_4s, temporal_edge_index)
         graph_feats_4st = graph_feats_4st + graph_feats_3st
 
-        return (
-            self.fc(graph_feats_4st),
-            audio_out,
-            video_out,
-            vfal_a_feats,
-            vfal_v_feats,
-        )
+        out = self.fc(graph_feats_4st)
+        audio_out = self.fc_aux_a(graph_feats[audio_mask])
+        video_out = self.fc_aux_v(graph_feats[video_mask])
+
+        return out, audio_out, video_out
 
 
 ############### 以下是模型的加载权重 ###############

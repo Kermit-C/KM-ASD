@@ -12,7 +12,7 @@ import argparse
 def get_default_arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", default="R3D18")
-    # 训练阶段，encoder、graph、end2end
+    # 阶段，encoder(训练 encoder)、encoder_gen_emb(用 encoder 生成 emb)、graph(训练图)、end2end(训练 encoder + 图)
     parser.add_argument("--stage", default="end2end")
     # 每刻计算特征的帧数
     parser.add_argument("--frmc", default="13")

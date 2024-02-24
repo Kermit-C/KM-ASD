@@ -122,7 +122,7 @@ def _train_model_amp_avl(
             end="\r",
         )
 
-        video_data, audio_data, _, target, target_a = dl
+        video_data, audio_data, _, target, target_a, _, _ = dl
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
         target = target.to(device)
@@ -201,7 +201,7 @@ def _test_model_encoder_losses(
             end="\r",
         )
 
-        video_data, audio_data, _, target, target_a = dl
+        video_data, audio_data, _, target, target_a, _, _ = dl
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
         target = target.to(device)

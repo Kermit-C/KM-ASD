@@ -6,6 +6,8 @@
 @Date: 2024-02-10 15:46:54
 """
 
+import os
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,9 +20,12 @@ from torchvision import transforms
 import active_speaker_detection.utils.custom_transforms as ct
 from active_speaker_detection import asd_config
 from active_speaker_detection.datasets.encoder_dataset import EncoderDataset
+from active_speaker_detection.datasets.encoder_gen_emb import gen_embedding
+from active_speaker_detection.datasets.end2end_dataset import End2endDataset
 from active_speaker_detection.datasets.graph_dataset import GraphDataset
 from active_speaker_detection.models.graph_model import get_backbone
 from active_speaker_detection.optimizers.encoder_optimizer import optimize_encoder
+from active_speaker_detection.optimizers.end2end_optimizer import optimize_end2end
 from active_speaker_detection.optimizers.graph_optimizer import optimize_graph
 from active_speaker_detection.utils.command_line import (
     get_default_arg_parser,
@@ -95,15 +100,16 @@ def train():
     audio_train_path = dataset_config["audio_train_dir"]
     video_val_path = dataset_config["video_val_dir"]
     audio_val_path = dataset_config["audio_val_dir"]
+    encoder_embedding_path = param_config["encoder_embedding_dir"]
 
-    if stage == "graph" or stage == "end2end":
+    if stage == "end2end":
         epochs = param_config["epochs"]
         lr = param_config["learning_rate"]
         milestones = param_config["milestones"]
         gamma = param_config["gamma"]
         optimizer = optim.Adam(asd_net.parameters(), lr=lr)
         scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
-        d_train = GraphDataset(
+        d_train = End2endDataset(
             audio_train_path,
             video_train_path,
             dataset_config["csv_train_full"],
@@ -115,7 +121,7 @@ def train():
             do_video_augment=True,
             crop_ratio=0.95,
         )
-        d_val = GraphDataset(
+        d_val = End2endDataset(
             audio_val_path,
             video_val_path,
             dataset_config["csv_val_full"],
@@ -125,6 +131,55 @@ def train():
             frames_per_clip,
             video_val_transform,
             do_video_augment=False,
+        )
+        dl_train = GeometricDataLoader(
+            d_train,
+            batch_size=param_config["batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        dl_val = GeometricDataLoader(
+            d_val,
+            batch_size=param_config["batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        optimize_end2end(
+            asd_net,
+            dl_train,
+            dl_val,
+            device,
+            criterion,
+            vfal_critierion,
+            optimizer,
+            scheduler,
+            num_epochs=epochs,
+            spatial_ctx_size=ctx_size,
+            time_len=n_clips,
+            models_out=target_models,
+            log=log,
+        )
+
+    elif stage == "graph":
+        epochs = param_config["epochs"]
+        lr = param_config["learning_rate"]
+        milestones = param_config["milestones"]
+        gamma = param_config["gamma"]
+        optimizer = optim.Adam(asd_net.parameters(), lr=lr)
+        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
+        d_train = GraphDataset(
+            os.path.join(encoder_embedding_path, "train"),
+            n_clips,
+            strd,
+            ctx_size,
+        )
+        d_val = GraphDataset(
+            os.path.join(encoder_embedding_path, "val"),
+            n_clips,
+            strd,
+            ctx_size,
         )
         dl_train = GeometricDataLoader(
             d_train,
@@ -156,7 +211,7 @@ def train():
             log=log,
         )
 
-    else:
+    elif stage == "encoder":
         epochs = param_config["encoder_epochs"]
         lr = param_config["encoder_learning_rate"]
         milestones = param_config["encoder_milestones"]
@@ -205,4 +260,51 @@ def train():
             num_epochs=epochs,
             models_out=target_models,
             log=log,
+        )
+
+    elif stage == "encoder_gen_emb":
+        d_train = EncoderDataset(
+            audio_train_path,
+            video_train_path,
+            dataset_config["csv_train_full"],
+            frames_per_clip,
+            video_train_transform,
+            do_video_augment=True,
+            crop_ratio=0.95,
+        )
+        d_val = EncoderDataset(
+            audio_val_path,
+            video_val_path,
+            dataset_config["csv_val_full"],
+            frames_per_clip,
+            video_val_transform,
+            do_video_augment=False,
+        )
+        dl_train = EncoderDataLoader(
+            d_train,
+            batch_size=100,
+            shuffle=False,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        dl_val = EncoderDataLoader(
+            d_val,
+            batch_size=100,
+            shuffle=False,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        gen_embedding(
+            encoder_net,
+            dl_train,
+            d_train,
+            os.path.join(encoder_embedding_path, "train"),
+            device,
+        )
+        gen_embedding(
+            encoder_net,
+            dl_val,
+            d_val,
+            os.path.join(encoder_embedding_path, "val"),
+            device,
         )

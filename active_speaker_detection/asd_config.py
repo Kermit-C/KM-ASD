@@ -44,7 +44,7 @@ train_params = [
         # 网络架构
         "encoder_type": "R3D18",
         "encoder_train_weights": None,
-        "encoder_embedding_dir": None,
+        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D18",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
@@ -68,7 +68,7 @@ train_params = [
         # 网络架构
         "encoder_type": "R3D50",
         "encoder_train_weights": None,
-        "encoder_embedding_dir": None,
+        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D50",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
@@ -92,7 +92,7 @@ train_params = [
         # 网络架构
         "encoder_type": "LIGHT",
         "encoder_train_weights": None,
-        "encoder_embedding_dir": None,
+        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/LIGHT",
         # 预训练权重
         "encoder_audio_pretrain_weights": None,
         "encoder_video_pretrain_weights": None,
@@ -116,7 +116,7 @@ train_params = [
         # 网络架构
         "encoder_type": "RES18_TSM",
         "encoder_train_weights": None,
-        "encoder_embedding_dir": None,
+        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES18_TSM",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
@@ -140,7 +140,7 @@ train_params = [
         # 网络架构
         "encoder_type": "RES50_TSM",
         "encoder_train_weights": None,
-        "encoder_embedding_dir": None,
+        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES50_TSM",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
