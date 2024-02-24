@@ -64,8 +64,8 @@ class DataStore:
         # csv_data 是一个二维列表，每一行是一个列表，每一行的元素是一个字符串
         for csv_row in csv_data:
             # TMP: 限制实体数量，Debug 用
-            if len(entity_set) > 50:
-                break
+            # if len(entity_set) > 50:
+            #     break
             if len(csv_row) != 10:
                 # 如果不是 10 个元素，就跳过
                 continue
