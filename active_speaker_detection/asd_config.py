@@ -27,10 +27,11 @@ train_params = [
         # 网络架构
         "encoder_type": "R3D18",
         "encoder_train_weights": None,
+        "encoder_embedding_dir": None,
         # 预训练权重
-        "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-        "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
-        "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
+        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_learning_rate": 1e-3,
         "encoder_epochs": 30,
@@ -50,10 +51,11 @@ train_params = [
         # 网络架构
         "encoder_type": "R3D50",
         "encoder_train_weights": None,
+        "encoder_embedding_dir": None,
         # 预训练权重
-        "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-        "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
-        "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
+        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_learning_rate": 1e-3,
         "encoder_epochs": 30,
@@ -73,10 +75,11 @@ train_params = [
         # 网络架构
         "encoder_type": "LIGHT",
         "encoder_train_weights": None,
+        "encoder_embedding_dir": None,
         # 预训练权重
-        "audio_pretrain_weights": None,
-        "video_pretrain_weights": None,
-        "vfal_ecapa_pretrain_weights": None,
+        "encoder_audio_pretrain_weights": None,
+        "encoder_video_pretrain_weights": None,
+        "encoder_vfal_ecapa_pretrain_weights": None,
         # encoder 优化配置
         "encoder_learning_rate": 1e-3,
         "encoder_epochs": 30,
@@ -99,12 +102,12 @@ inference_params = {
     # 每刻计算特征的帧数
     "frmc": 13,
     # 上下文大小，每刻的实体数
-    "ctx": 2,
+    "ctx": 3,
     # 图的时间上下文步数，即 clip 数
     "nclp": 7,
     # 图的时间上下文步长，即 clip 之间的间隔，单位为帧
     "strd": 3,
     # 图像大小，将把人脸 crop resize 到这个大小的正方形
-    "size": 160,
+    "size": 112,
     "audio_sample_rate": 16000,
 }

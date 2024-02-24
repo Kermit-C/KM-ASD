@@ -17,13 +17,13 @@ def get_default_arg_parser():
     # 每刻计算特征的帧数
     parser.add_argument("--frmc", default="13")
     # 上下文大小，每刻的实体数
-    parser.add_argument("--ctx", default="2")
+    parser.add_argument("--ctx", default="3")
     # 图的时间上下文步数，即 clip 数
     parser.add_argument("--nclp", default="7")
     # 图的时间上下文步长，即 clip 之间的间隔，单位为帧
     parser.add_argument("--strd", default="3")
     # 图像大小，将把人脸 crop resize 到这个大小的正方形
-    parser.add_argument("--size", default="160")
+    parser.add_argument("--size", default="112")
 
     return parser
 

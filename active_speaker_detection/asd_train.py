@@ -67,9 +67,9 @@ def train():
     )
 
     # 创建网络并转移到GPU
-    pretrain_weightds_path = param_config["video_pretrain_weights"]
-    audio_pretrain_weightds_path = param_config["audio_pretrain_weights"]
-    vfal_ecapa_pretrain_weights = param_config["vfal_ecapa_pretrain_weights"]
+    pretrain_weightds_path = param_config["encoder_video_pretrain_weights"]
+    audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
+    vfal_ecapa_pretrain_weights = param_config["encoder_vfal_ecapa_pretrain_weights"]
     encoder_train_weights = param_config["encoder_train_weights"]
     asd_net, encoder_net = get_backbone(
         param_config["encoder_type"],

@@ -29,6 +29,7 @@ def optimize_encoder(
     # 定义辅助分类器
     fc_a = nn.Linear(128, 2).to(device)
     fc_v = nn.Linear(128, 2).to(device)
+    fc_av = nn.Linear(128 * 2, 2).to(device)
 
     max_val_ap = 0
 
@@ -45,6 +46,7 @@ def optimize_encoder(
             device,
             fc_a,
             fc_v,
+            fc_av,
         )
         outs_val = _test_model_encoder_losses(
             model,
@@ -53,6 +55,7 @@ def optimize_encoder(
             device,
             fc_a,
             fc_v,
+            fc_av,
         )
         scheduler.step()
 
@@ -96,6 +99,7 @@ def _train_model_amp_avl(
     device,
     fc_a,
     fc_v,
+    fc_av,
 ):
     """训练一个 epoch 的模型，返回图的损失和音频视频的辅助损失"""
     model.train()
@@ -128,11 +132,16 @@ def _train_model_amp_avl(
         with torch.set_grad_enabled(True):
             with autocast(True):
                 audio_out, video_out = model(audio_data, video_data)
-                audio_out, video_out = fc_a(audio_out), fc_v(video_out)
+                audio_out, video_out, av_out = (
+                    fc_a(audio_out),
+                    fc_v(video_out),
+                    fc_av(torch.cat([audio_out, video_out], dim=1)),
+                )
                 # 单独音频和视频的损失
                 loss_a: torch.Tensor = criterion(audio_out, target_a)
                 loss_v: torch.Tensor = criterion(video_out, target)
-                loss = loss_a + loss_v
+                loss_av: torch.Tensor = criterion(av_out, target)
+                loss = loss_a + loss_v + loss_av
 
             scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
@@ -140,7 +149,7 @@ def _train_model_amp_avl(
 
         with torch.set_grad_enabled(False):
             label_lst.extend(target.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(video_out).cpu().numpy()[:, 1].tolist())
+            pred_lst.extend(softmax_layer(av_out).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss.item()
@@ -171,6 +180,7 @@ def _test_model_encoder_losses(
     device,
     fc_a,
     fc_v,
+    fc_av,
 ):
     """测试模型，返回图的损失和音频视频的辅助损失"""
     model.eval()
@@ -199,14 +209,19 @@ def _test_model_encoder_losses(
 
         with torch.set_grad_enabled(False):
             audio_out, video_out = model(audio_data, video_data)
-            audio_out, video_out = fc_a(audio_out), fc_v(video_out)
+            audio_out, video_out, av_out = (
+                fc_a(audio_out),
+                fc_v(video_out),
+                fc_av(torch.cat([audio_out, video_out], dim=1)),
+            )
             # 单独音频和视频的损失
             loss_a: torch.Tensor = criterion(audio_out, target_a)
             loss_v: torch.Tensor = criterion(video_out, target)
-            loss = loss_a + loss_v
+            loss_av: torch.Tensor = criterion(av_out, target)
+            loss = loss_a + loss_v + loss_av
 
             label_lst.extend(target.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(video_out).cpu().numpy()[:, 1].tolist())
+            pred_lst.extend(softmax_layer(av_out).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss.item()
