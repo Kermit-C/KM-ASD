@@ -328,13 +328,12 @@ def _load_video_weights_into_model(model: nn.Module, ws_file):
     model.v_layer3.eval()  # type: ignore
     model.v_layer4.eval()  # type: ignore
 
-    print("loaded video ws")
+    print("loaded video from resnet")
     return
 
 
 def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     """加载音频预训练权重，这里使用了 resnet18 的预训练权重"""
-    # resnet_state_dict = load_state_dict_from_url(model_urls[arch2d], progress=progress)
     resnet_state_dict = torch.load(audio_pretrained_weights)
 
     own_state = model.state_dict()
@@ -355,7 +354,7 @@ def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     model.a_layer3.eval()  # type: ignore
     model.a_layer4.eval()  # type: ignore
 
-    print("loaded audio ws")
+    print("loaded audio from resnet")
     return
 
 
@@ -384,6 +383,7 @@ def get_resnet_encoder(
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
         if encoder_train_weights is not None:
             _load_weights_into_model(encoder, encoder_train_weights)
+            encoder.eval()
         return encoder
     elif type == "R3D50":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
@@ -395,6 +395,7 @@ def get_resnet_encoder(
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
         if encoder_train_weights is not None:
             _load_weights_into_model(encoder, encoder_train_weights)
+            encoder.eval()
         return encoder
     else:
         raise ValueError("Unknown type")

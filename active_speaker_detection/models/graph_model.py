@@ -15,6 +15,9 @@ from torch.nn import functional as F
 from torch_geometric.nn import EdgeConv
 
 from active_speaker_detection.models.light_two_stream_net import get_light_encoder
+from active_speaker_detection.models.resnet_tsm_two_steam_net import (
+    get_resnet_tsm_encoder,
+)
 
 from .graph_layouts import generate_av_mask
 from .resnet_two_stream_net import get_resnet_encoder
@@ -191,6 +194,18 @@ def get_backbone(
         )
     elif encoder_type == "LIGHT":
         encoder = get_light_encoder(encoder_train_weights)
+    elif encoder_type == "RES18_TSM":
+        encoder = get_resnet_tsm_encoder(
+            "resnet18",
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
+    elif encoder_type == "RES50_TSM":
+        encoder = get_resnet_tsm_encoder(
+            "resnet50",
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")
 
