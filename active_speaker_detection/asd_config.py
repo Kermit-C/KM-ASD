@@ -31,9 +31,15 @@ train_params = [
         "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
         "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        # encoder 优化配置
+        "encoder_learning_rate": 1e-3,
+        "encoder_epochs": 30,
+        "encoder_milestones": list(range(30)),
+        "encoder_gamma": 0.5,
         # 优化配置
         "learning_rate": 3e-4,
         "epochs": 15,
+        "milestones": [6, 8],
         "gamma": 0.1,
         # 批次配置
         "batch_size": 17,
@@ -48,9 +54,15 @@ train_params = [
         "audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
         "vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
+        # encoder 优化配置
+        "encoder_learning_rate": 1e-3,
+        "encoder_epochs": 30,
+        "encoder_milestones": list(range(30)),
+        "encoder_gamma": 0.5,
         # 优化配置
         "learning_rate": 3e-4,
         "epochs": 15,
+        "milestones": [6, 8],
         "gamma": 0.1,
         # 批次配置
         "batch_size": 17,
@@ -65,9 +77,15 @@ train_params = [
         "audio_pretrain_weights": None,
         "video_pretrain_weights": None,
         "vfal_ecapa_pretrain_weights": None,
+        # encoder 优化配置
+        "encoder_learning_rate": 1e-3,
+        "encoder_epochs": 30,
+        "encoder_milestones": list(range(30)),
+        "encoder_gamma": 0.5,
         # 优化配置
         "learning_rate": 3e-4,
         "epochs": 15,
+        "milestones": [6, 8],
         "gamma": 0.1,
         # 批次配置
         "batch_size": 17,

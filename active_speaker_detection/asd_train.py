@@ -84,13 +84,11 @@ def train():
     print("Cuda info ", has_cuda, device)
     asd_net.to(device)
 
-    # 优化配置
+    # loss
     criterion = nn.CrossEntropyLoss()
     vfal_critierion = (
         losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0),  # type: ignore
     )  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
-    optimizer = optim.Adam(asd_net.parameters(), lr=param_config["learning_rate"])  # type: ignore
-    scheduler = MultiStepLR(optimizer, milestones=[6, 8], gamma=0.1)
 
     # 数据路径
     video_train_path = dataset_config["video_train_dir"]
@@ -99,6 +97,12 @@ def train():
     audio_val_path = dataset_config["audio_val_dir"]
 
     if stage == "graph" or stage == "end2end":
+        epochs = param_config["epochs"]
+        lr = param_config["learning_rate"]
+        milestones = param_config["milestones"]
+        gamma = param_config["gamma"]
+        optimizer = optim.Adam(asd_net.parameters(), lr=lr)
+        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = GraphDataset(
             audio_train_path,
             video_train_path,
@@ -145,7 +149,7 @@ def train():
             vfal_critierion,
             optimizer,
             scheduler,
-            num_epochs=param_config["epochs"],
+            num_epochs=epochs,
             spatial_ctx_size=ctx_size,
             time_len=n_clips,
             models_out=target_models,
@@ -153,6 +157,12 @@ def train():
         )
 
     else:
+        epochs = param_config["encoder_epochs"]
+        lr = param_config["encoder_learning_rate"]
+        milestones = param_config["encoder_milestones"]
+        gamma = param_config["encoder_gamma"]
+        optimizer = optim.Adam(asd_net.parameters(), lr=lr)
+        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = EncoderDataset(
             audio_train_path,
             video_train_path,
@@ -192,7 +202,7 @@ def train():
             criterion,
             optimizer,
             scheduler,
-            num_epochs=param_config["epochs"],
+            num_epochs=epochs,
             models_out=target_models,
             log=log,
         )
