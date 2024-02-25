@@ -329,12 +329,6 @@ def _load_video_weights_into_model(model: nn.Module, ws_file):
         else:
             print("No video assignation for ", name)
 
-    model.v_conv1.eval()  # type: ignore
-    model.v_layer1.eval()  # type: ignore
-    model.v_layer2.eval()  # type: ignore
-    model.v_layer3.eval()  # type: ignore
-    model.v_layer4.eval()  # type: ignore
-
     print("loaded video from resnet")
     return
 
@@ -354,12 +348,6 @@ def _load_audio_weights_into_model(model: nn.Module, audio_pretrained_weights):
     conv1_weights = resnet_state_dict["conv1.weight"]
     avgWs = torch.mean(conv1_weights, dim=1, keepdim=True)
     own_state["audio_conv1.weight"].copy_(avgWs)
-
-    model.audio_conv1.eval()  # type: ignore
-    model.a_layer1.eval()  # type: ignore
-    model.a_layer2.eval()  # type: ignore
-    model.a_layer3.eval()  # type: ignore
-    model.a_layer4.eval()  # type: ignore
 
     print("loaded audio from resnet")
     return
