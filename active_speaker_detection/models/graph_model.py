@@ -14,10 +14,10 @@ import torch.nn.parameter
 from torch.nn import functional as F
 from torch_geometric.nn import EdgeConv
 
-from active_speaker_detection.models.two_steam_resnet_tsm_net import (
+from active_speaker_detection.models.two_stream_light_net import get_light_encoder
+from active_speaker_detection.models.two_stream_resnet_tsm_net import (
     get_resnet_tsm_encoder,
 )
-from active_speaker_detection.models.two_stream_light_net import get_light_encoder
 
 from .graph_layouts import generate_av_mask
 from .two_stream_resnet_net import get_resnet_encoder
