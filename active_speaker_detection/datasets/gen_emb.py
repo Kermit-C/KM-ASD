@@ -15,21 +15,10 @@ import torch
 def gen_embedding(
     model,
     dataloader,
-    dataset,
     out_path,
     device,
 ):
     model.eval()
-    dataset_store_cache = {
-        "entity_data": dataset.store.entity_data,
-        "speech_data": dataset.store.speech_data,
-        "ts_to_entity": dataset.store.ts_to_entity,
-        "entity_list": dataset.store.entity_list,
-        "feature_list": dataset.store.feature_list,
-    }
-    with open(os.path.join(out_path, "dataset_store_cache.pkl"), "wb") as f:
-        pickle.dump(dataset_store_cache, f)
-
     for idx, dl in enumerate(dataloader):
         print(
             "\t Gen emb iter {:d}/{:d}".format(idx, len(dataloader)),

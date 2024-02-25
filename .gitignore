@@ -162,6 +162,7 @@ cython_debug/
 *.pt
 /voice_verification/cnceleb_verification/train_models
 /active_speaker_detection/results
+/active_speaker_detection/datasets/resources/data_store_cache
 
 # IDE
 /.vscode

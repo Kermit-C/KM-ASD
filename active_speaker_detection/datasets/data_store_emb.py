@@ -17,12 +17,7 @@ import numpy as np
 class EmbeddingDataStore:
     """embedding 存储"""
 
-    """
-    csv 标注格式：
-    | video_id | frame_timestamp | entity_box_x1 | entity_box_y1 | entity_box_x2 | entity_box_y2 | label | entity_id | label_id | instance_id |
-    """
-
-    def __init__(self, embedding_root):
+    def __init__(self, embedding_root: str, data_store_cache: str):
         # 数据根目录
         self.embedding_root = embedding_root
 
@@ -41,13 +36,12 @@ class EmbeddingDataStore:
         self.feature_list: List[Tuple[str, str, str, int]] = []
 
         # 读取 Cache
-        self.load_cache()
+        self.load_cache(data_store_cache)
 
-    def load_cache(self):
+    def load_cache(self, data_store_cache: str):
         """加载缓存"""
-        cache_file_path = os.path.join(self.embedding_root, "dataset_store_cache.pkl")
-        if os.path.exists(cache_file_path):
-            with open(cache_file_path, "rb") as f:
+        if os.path.exists(data_store_cache):
+            with open(data_store_cache, "rb") as f:
                 cache = pickle.load(f)
                 self.entity_data = cache["entity_data"]
                 self.speech_data = cache["speech_data"]

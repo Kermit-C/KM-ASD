@@ -25,7 +25,7 @@ class EncoderDataset(Dataset):
         self,
         audio_root,
         video_root,
-        csv_file_path,
+        data_store_train_cache,
         clip_lenght,  # 片段长度，短时序上下文片段的长度
         video_transform: Optional[transforms.Compose] = None,  # 视频转换方法
         do_video_augment=False,  # 是否视频增强
@@ -33,7 +33,7 @@ class EncoderDataset(Dataset):
         norm_audio=False,  # 是否归一化音频
     ):
         super().__init__()
-        self.store = DataStore(audio_root, video_root, csv_file_path)
+        self.store = DataStore(audio_root, video_root, data_store_train_cache)
 
         # 后处理
         self.crop_ratio = crop_ratio

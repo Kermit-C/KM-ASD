@@ -29,7 +29,7 @@ class End2endDataset(Dataset):
         self,
         audio_root,
         video_root,
-        csv_file_path,
+        data_store_train_cache,
         graph_time_steps: int,  # 图的时间步数
         stride: int,  # 步长
         context_size,  # 上下文大小，即上下文中有多少个实体
@@ -40,7 +40,7 @@ class End2endDataset(Dataset):
         norm_audio=False,  # 是否归一化音频
     ):
         super().__init__()
-        self.store = DataStore(audio_root, video_root, csv_file_path)
+        self.store = DataStore(audio_root, video_root, data_store_train_cache)
 
         # 后处理
         self.crop_ratio = crop_ratio

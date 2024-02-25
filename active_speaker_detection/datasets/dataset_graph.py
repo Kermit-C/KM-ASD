@@ -26,12 +26,13 @@ class GraphDataset(Dataset):
     def __init__(
         self,
         embedding_root,
+        data_store_cache,
         graph_time_steps: int,  # 图的时间步数
         stride: int,  # 步长
         context_size,  # 上下文大小，即上下文中有多少个实体
     ):
         super().__init__()
-        self.store = EmbeddingDataStore(embedding_root)
+        self.store = EmbeddingDataStore(embedding_root, data_store_cache)
 
         # 图上下文
         self.context_size = context_size  # 上下文大小，即上下文中有多少个实体

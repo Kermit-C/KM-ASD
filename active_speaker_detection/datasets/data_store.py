@@ -7,6 +7,7 @@
 """
 
 import os
+import pickle
 import random
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -16,22 +17,12 @@ from PIL import Image
 
 import active_speaker_detection.utils.clip_utils as cu
 import active_speaker_detection.utils.io_util as io
-from active_speaker_detection.utils.file_util import (
-    csv_to_list,
-    postprocess_entity_label,
-    postprocess_speech_label,
-)
 
 
 class DataStore:
     """数据存储"""
 
-    """
-    csv 标注格式：
-    | video_id | frame_timestamp | entity_box_x1 | entity_box_y1 | entity_box_x2 | entity_box_y2 | label | entity_id | label_id | instance_id |
-    """
-
-    def __init__(self, audio_root, video_root, csv_file_path):
+    def __init__(self, audio_root, video_root, data_store_cache):
         # 数据根目录
         self.audio_root = audio_root  # 音频根目录
         self.video_root = video_root  # 视频根目录
@@ -50,95 +41,19 @@ class DataStore:
         # 所有特征的列表 (video_id, entity_id, timestamp, entity_label)
         self.feature_list: List[Tuple[str, str, str, int]] = []
 
-        # 读取并处理标签文件到 cache
-        entity_set = self.cache_entity_data(csv_file_path)
-        self.postprocess_entity_list(entity_set)
+        # 读取 Cache
+        self.load_cache(data_store_cache)
 
-    def cache_entity_data(self, csv_file_path):
-        """读取标签文件到 cache，返回所有实体的 set"""
-        # 保存所有实体的 set, (video_id, entity_id)
-        entity_set: set[Tuple[str, str]] = set()
-
-        csv_data = csv_to_list(csv_file_path)
-        csv_data.pop(0)  # CSV header
-        # csv_data 是一个二维列表，每一行是一个列表，每一行的元素是一个字符串
-        for csv_row in csv_data:
-            # TMP: 限制实体数量，Debug 用
-            # if len(entity_set) > 50:
-            #     break
-            if len(csv_row) != 10:
-                # 如果不是 10 个元素，就跳过
-                continue
-            video_id = csv_row[0]  # 视频 id
-            entity_id = csv_row[-3]  # 实体 id
-            timestamp = csv_row[1]  # 时间戳
-
-            speech_label = postprocess_speech_label(csv_row[-2])
-            entity_label = postprocess_entity_label(csv_row[-2])
-            # 最小的实体数据，什么人在什么时间什么状态
-            minimal_entity_data = (
-                entity_id,
-                timestamp,
-                entity_label,
-            )
-
-            # 存储最少的实体数据
-            # 先判断 video_id 是否在 entity_data 中，如果不在，就添加一个空字典
-            if video_id not in self.entity_data.keys():
-                self.entity_data[video_id] = {}
-            if entity_id not in self.entity_data[video_id].keys():
-                self.entity_data[video_id][entity_id] = []
-                entity_set.add((video_id, entity_id))
-            # 将 minimal_entity_data 添加到 entity_data 中
-            self.entity_data[video_id][entity_id].append(minimal_entity_data)
-
-            # 存储语音元数据
-            if video_id not in self.speech_data.keys():
-                self.speech_data[video_id] = {}
-            if timestamp not in self.speech_data[video_id].keys():
-                self.speech_data[video_id][timestamp] = speech_label
-            # 相当于聚合一个时间点所有人说话状态
-            new_speech_label = max(self.speech_data[video_id][timestamp], speech_label)
-            self.speech_data[video_id][timestamp] = new_speech_label
-
-        return entity_set
-
-    def postprocess_entity_list(self, entity_set):
-        """后处理 _cache_entity_data 得到的数据"""
-        print("Initial", len(entity_set))
-
-        # 过滤掉磁盘上没有的实体，video_root 中有每一个实体的文件夹
-        print("video_root", self.video_root)
-        all_disk_data = set(os.listdir(self.video_root))  # type: ignore
-        for video_id, entity_id in entity_set.copy():
-            if entity_id.replace(":", "_") not in all_disk_data:
-                entity_set.remove((video_id, entity_id))
-        print("Pruned not in disk", len(entity_set))
-
-        # 过滤掉实体文件夹中，timestamp 画面数和 entity_data 中的数量不一致的实体
-        for video_id, entity_id in entity_set.copy():
-            dir = os.path.join(self.video_root, entity_id.replace(":", "_"))  # type: ignore
-            if len(os.listdir(dir)) != len(self.entity_data[video_id][entity_id]):
-                entity_set.remove((video_id, entity_id))
-
-        print("Pruned not complete", len(entity_set))
-        self.entity_list = sorted(list(entity_set))
-
-        for video_id, entity_id in entity_set:
-            ent_min_data = self.entity_data[video_id][entity_id]
-
-            # 保存时间点对应实体列表的关系字典
-            if video_id not in self.ts_to_entity.keys():
-                self.ts_to_entity[video_id] = {}
-            for ed in ent_min_data:
-                timestamp = ed[1]
-                if timestamp not in self.ts_to_entity[video_id].keys():
-                    self.ts_to_entity[video_id][timestamp] = []
-                self.ts_to_entity[video_id][timestamp].append(entity_id)
-
-            # 存储所有特征的列表
-            for ed in ent_min_data:
-                self.feature_list.append((video_id, entity_id, ed[1], ed[2]))
+    def load_cache(self, data_store_cache: str):
+        """加载缓存"""
+        if os.path.exists(data_store_cache):
+            with open(data_store_cache, "rb") as f:
+                cache = pickle.load(f)
+                self.entity_data = cache["entity_data"]
+                self.speech_data = cache["speech_data"]
+                self.ts_to_entity = cache["ts_to_entity"]
+                self.entity_list = cache["entity_list"]
+                self.feature_list = cache["feature_list"]
 
     def get_speaker_context(
         self, video_id: str, target_entity_id: str, center_ts: str, ctx_len: int

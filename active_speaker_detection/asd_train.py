@@ -100,6 +100,8 @@ def train():
     audio_train_path = dataset_config["audio_train_dir"]
     video_val_path = dataset_config["video_val_dir"]
     audio_val_path = dataset_config["audio_val_dir"]
+    data_store_train_cache = dataset_config["data_store_train_cache"]
+    data_store_val_cache = dataset_config["data_store_val_cache"]
     encoder_embedding_path = param_config["encoder_embedding_dir"]
 
     if stage == "end2end":
@@ -112,7 +114,7 @@ def train():
         d_train = End2endDataset(
             audio_train_path,
             video_train_path,
-            dataset_config["csv_train_full"],
+            data_store_train_cache,
             n_clips,
             strd,
             ctx_size,
@@ -124,7 +126,7 @@ def train():
         d_val = End2endDataset(
             audio_val_path,
             video_val_path,
-            dataset_config["csv_val_full"],
+            data_store_val_cache,
             n_clips,
             strd,
             ctx_size,
@@ -171,12 +173,14 @@ def train():
         scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = GraphDataset(
             os.path.join(encoder_embedding_path, "train"),
+            data_store_train_cache,
             n_clips,
             strd,
             ctx_size,
         )
         d_val = GraphDataset(
             os.path.join(encoder_embedding_path, "val"),
+            data_store_val_cache,
             n_clips,
             strd,
             ctx_size,
@@ -216,12 +220,12 @@ def train():
         lr = param_config["encoder_learning_rate"]
         milestones = param_config["encoder_milestones"]
         gamma = param_config["encoder_gamma"]
-        optimizer = optim.Adam(asd_net.parameters(), lr=lr)
+        optimizer = optim.Adam(encoder_net.parameters(), lr=lr)
         scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = EncoderDataset(
             audio_train_path,
             video_train_path,
-            dataset_config["csv_train_full"],
+            data_store_train_cache,
             frames_per_clip,
             video_train_transform,
             do_video_augment=True,
@@ -230,7 +234,7 @@ def train():
         d_val = EncoderDataset(
             audio_val_path,
             video_val_path,
-            dataset_config["csv_val_full"],
+            data_store_val_cache,
             frames_per_clip,
             video_val_transform,
             do_video_augment=False,
@@ -266,7 +270,7 @@ def train():
         d_train = EncoderDataset(
             audio_train_path,
             video_train_path,
-            dataset_config["csv_train_full"],
+            data_store_train_cache,
             frames_per_clip,
             video_train_transform,
             do_video_augment=True,
@@ -275,7 +279,7 @@ def train():
         d_val = EncoderDataset(
             audio_val_path,
             video_val_path,
-            dataset_config["csv_val_full"],
+            data_store_val_cache,
             frames_per_clip,
             video_val_transform,
             do_video_augment=False,
@@ -297,14 +301,12 @@ def train():
         gen_embedding(
             encoder_net,
             dl_train,
-            d_train,
             os.path.join(encoder_embedding_path, "train"),
             device,
         )
         gen_embedding(
             encoder_net,
             dl_val,
-            d_val,
             os.path.join(encoder_embedding_path, "val"),
             device,
         )

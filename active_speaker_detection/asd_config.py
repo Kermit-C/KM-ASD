@@ -17,6 +17,9 @@ datasets = {
     "video_train_dir": "/ssd1/ckm2/instance_crops_time_train/",
     "audio_val_dir": "/ssd1/ckm2/instance_wavs_time_val/",
     "video_val_dir": "/ssd1/ckm2/instance_crops_time_val/",
+    # 数据存储
+    "data_store_train_cache": "active_speaker_detection/datasets/resources/data_store_cache/dataset_train_store_cache.pkl",
+    "data_store_val_cache": "active_speaker_detection/datasets/resources/data_store_cache/dataset_val_store_cache.pkl",
     # 模型保存目录
     "models_out": "./active_speaker_detection/results",
 }
