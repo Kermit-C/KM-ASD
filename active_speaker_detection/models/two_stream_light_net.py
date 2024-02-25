@@ -225,7 +225,7 @@ class AudioEncoder(nn.Module):
         self.__init_weight()
 
     def forward(self, x):
-        # x: (B, C, W, T)
+        # x: (B, C, 13, T)
         x = self.block1(x)
         x = self.pool1(x)
 
@@ -270,13 +270,12 @@ class LightTwoStreamNet(nn.Module):
         return x
 
     def forward_audio(self, x):
-        x = x.transpose(2, 3)
         x = self.audio_encoder(x)
         return x
 
     def forward(self, audio_data, video_data):
         """
-        :param a: (B, C, T, W)
+        :param a: (B, C, 13, T)
         :param v: (B, C, T, H, W)
         """
         # audio_embed: (B, T, C)

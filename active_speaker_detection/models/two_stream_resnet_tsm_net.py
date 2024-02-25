@@ -154,7 +154,7 @@ class TwoStreamResNet(nn.Module):
 
     def forward(self, a, v):
         """
-        :param a: (B, C, T, W)
+        :param a: (B, C, 13, T)
         :param v: (B, C, T, H, W)
         """
         a = self.audio_conv1(a)

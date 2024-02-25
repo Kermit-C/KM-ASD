@@ -295,7 +295,7 @@ class ResnetTwoStreamNet(nn.Module):
 
     def forward(self, a, v):
         """
-        :param a: (B, C, T, W)
+        :param a: (B, C, 13, T)
         :param v: (B, C, T, H, W)
         """
         # 音频和视频的特征提取
