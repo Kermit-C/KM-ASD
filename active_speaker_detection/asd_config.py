@@ -53,9 +53,9 @@ train_params = [
         "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
-        "encoder_learning_rate": 1e-3,
-        "encoder_epochs": 30,
-        "encoder_milestones": list(range(0, 30, 10)),
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
         "batch_size": 17,
@@ -64,7 +64,7 @@ train_params = [
         "milestones": [6, 8],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 8,
+        "threads": 24,
     },
     {
         "name": "R3D50",
@@ -78,9 +78,9 @@ train_params = [
         "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
-        "encoder_learning_rate": 1e-3,
-        "encoder_epochs": 30,
-        "encoder_milestones": list(range(0, 30, 10)),
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
         "batch_size": 17,
@@ -89,7 +89,7 @@ train_params = [
         "milestones": [6, 8],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 8,
+        "threads": 24,
     },
     {
         "name": "LIGHT",
@@ -114,7 +114,7 @@ train_params = [
         "milestones": [6, 8],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 8,
+        "threads": 24,
     },
     {
         "name": "RES18_TSM",
@@ -128,9 +128,9 @@ train_params = [
         "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
-        "encoder_learning_rate": 1e-3,
-        "encoder_epochs": 30,
-        "encoder_milestones": list(range(0, 30, 10)),
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
         "batch_size": 17,
@@ -139,7 +139,7 @@ train_params = [
         "milestones": [6, 8],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 8,
+        "threads": 24,
     },
     {
         "name": "RES50_TSM",
@@ -153,9 +153,9 @@ train_params = [
         "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
-        "encoder_learning_rate": 1e-3,
-        "encoder_epochs": 30,
-        "encoder_milestones": list(range(0, 30, 10)),
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
         "batch_size": 17,
@@ -164,6 +164,6 @@ train_params = [
         "milestones": [6, 8],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 8,
+        "threads": 24,
     },
 ]

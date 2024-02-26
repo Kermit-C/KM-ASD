@@ -275,6 +275,7 @@ def train():
             video_train_transform,
             do_video_augment=True,
             crop_ratio=0.95,
+            eval=True,
         )
         d_val = EncoderDataset(
             audio_val_path,
@@ -283,6 +284,7 @@ def train():
             frames_per_clip,
             video_val_transform,
             do_video_augment=False,
+            eval=True,
         )
         dl_train = EncoderDataLoader(
             d_train,

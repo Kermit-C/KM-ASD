@@ -31,6 +31,7 @@ class EncoderDataset(Dataset):
         do_video_augment=False,  # 是否视频增强
         crop_ratio=0.95,  # 视频裁剪比例
         norm_audio=False,  # 是否归一化音频
+        eval=False,
     ):
         super().__init__()
         self.store = DataStore(audio_root, video_root, data_store_train_cache)
@@ -48,15 +49,32 @@ class EncoderDataset(Dataset):
             clip_lenght / 2
         )  # 每刻计算特征的帧数一半的长度
 
+        self.eval = eval
+
     def __len__(self):
-        return len(self.store.feature_list)
+        if self.eval:
+            # 是 eval 就用全部
+            return len(self.store.feature_list)
+        else:
+            # 训练的话用实体列表
+            return len(self.store.entity_list)
 
     def __getitem__(self, index):
-        video_id, entity_id, timestamp, entity_label = self.store.feature_list[index]
-        target_entity_metadata = self.store.entity_data[video_id][entity_id]
-        center_index = self.store.search_ts_in_meta_data(
-            target_entity_metadata, timestamp
-        )
+        if self.eval:
+            video_id, entity_id, timestamp, entity_label = self.store.feature_list[
+                index
+            ]
+            target_entity_metadata = self.store.entity_data[video_id][entity_id]
+            center_index = self.store.search_ts_in_meta_data(
+                target_entity_metadata, timestamp
+            )
+        else:
+            video_id, entity_id = self.store.entity_list[index]
+            target_entity_metadata = self.store.entity_data[video_id][entity_id]
+            # 随机选择一个中间时间戳的索引
+            # TODO: 这样是不是没把所有的时间戳都用上
+            center_index = random.randint(0, len(target_entity_metadata) - 1)
+            timestamp = target_entity_metadata[center_index][1]
 
         # 获取视频特征和标签
         video_data, targets, entities = self.store.get_video_data(
