@@ -85,6 +85,8 @@ def _train_model_amp_avl(
     optimizer,
     criterion: nn.modules.loss._Loss,
     device,
+    a_weight=0.2,
+    v_weight=0.5,
 ):
     """训练一个 epoch 的模型，返回图的损失和音频视频的辅助损失"""
     model.train()
@@ -121,7 +123,7 @@ def _train_model_amp_avl(
                 loss_a: torch.Tensor = criterion(audio_out, target_a)
                 loss_v: torch.Tensor = criterion(video_out, target)
                 loss_av: torch.Tensor = criterion(av_out, target)
-                loss = loss_a + loss_v + loss_av
+                loss = a_weight * loss_a + v_weight * loss_v + loss_av
 
             scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
@@ -158,6 +160,8 @@ def _test_model_encoder_losses(
     dataloader,
     criterion: nn.modules.loss._Loss,
     device,
+    a_weight=0.2,
+    v_weight=0.5,
 ):
     """测试模型，返回图的损失和音频视频的辅助损失"""
     model.eval()
@@ -190,7 +194,7 @@ def _test_model_encoder_losses(
             loss_a: torch.Tensor = criterion(audio_out, target_a)
             loss_v: torch.Tensor = criterion(video_out, target)
             loss_av: torch.Tensor = criterion(av_out, target)
-            loss = loss_a + loss_v + loss_av
+            loss = a_weight * loss_a + v_weight * loss_v + loss_av
 
             label_lst.extend(target.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(av_out).cpu().numpy()[:, 1].tolist())

@@ -163,6 +163,7 @@ cython_debug/
 /voice_verification/cnceleb_verification/train_models
 /active_speaker_detection/results
 /active_speaker_detection/datasets/resources/data_store_cache
+/active_speaker_detection/datasets/resources/embeddings
 
 # IDE
 /.vscode

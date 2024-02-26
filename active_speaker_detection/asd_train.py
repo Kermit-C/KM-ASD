@@ -288,14 +288,14 @@ def train():
         )
         dl_train = EncoderDataLoader(
             d_train,
-            batch_size=512,
+            batch_size=param_config["encoder_batch_size"],
             shuffle=False,
             num_workers=param_config["threads"],
             pin_memory=True,
         )
         dl_val = EncoderDataLoader(
             d_val,
-            batch_size=512,
+            batch_size=param_config["encoder_batch_size"],
             shuffle=False,
             num_workers=param_config["threads"],
             pin_memory=True,
