@@ -52,9 +52,16 @@ class FaceCropProcessor(BaseEventBusProcessor):
         last_frame_faces = None
         retry_count = 0
         while last_frame_faces is None:
+            time_interval = 0.01
             if retry_count > 0:
-                time.sleep(0.1)
-            if retry_count > (self.processor_timeout / 0.1):
+                # TODO: 修复性能问题，换一种方式实现
+                time.sleep(time_interval)
+            if (
+                retry_count > (self.processor_timeout / time_interval)
+                or event_message_body.frame_count == 1
+            ):
+                # 如果是第一帧，就没有上一帧的人脸
+                # 或者重试次数超过了超时时间
                 last_frame_faces = []
                 break
             last_frame_faces = self.store.get_faces(

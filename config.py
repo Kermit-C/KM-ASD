@@ -91,7 +91,7 @@ event_bus = {
         "FaceCropProcessor": {
             "processor_name": "face_crop_processor",
             "topic": "face_crop_topic",
-            "timeout": 10,
+            "timeout": 1,
             "properties": {
                 "face_crop_size": 112,
                 "same_face_between_frames_iou_threshold": 0.5,

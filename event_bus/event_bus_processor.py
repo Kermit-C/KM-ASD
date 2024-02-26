@@ -7,8 +7,10 @@
 """
 
 import threading
+import time
 
 from config import event_bus
+from utils.logger_util import eb_logger
 
 from .event_bus_excecutor import submit as submit_executor
 from .event_message import EventMessage, EventMessageBody
@@ -77,16 +79,26 @@ class BaseEventBusProcessor:
 
     def _handler(self, event_message: EventMessage):
         """处理消息"""
+        start_time = time.time()
+        eb_logger.debug(f"processor {self.processor_name} start")
         try:
             self.last_message.value = event_message
             assert isinstance(event_message.body, EventMessageBody)
             return self.process(event_message.body)
         except Exception as e:
             try:
+                eb_logger.debug(f"processor {self.processor_name} exception: {str(e)}")
                 assert isinstance(event_message.body, EventMessageBody)
                 self.process_exception(event_message.body, e)
             except Exception as ee:
+                eb_logger.error(
+                    f"processor {self.processor_name} process_exception exception", ee
+                )
                 self.result_exception(ee)
+        finally:
+            eb_logger.debug(
+                f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
+            )
 
     def _listener(self, event_message: EventMessage):
         """监听消息"""
