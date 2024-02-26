@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.parameter
 from torch.nn import functional as F
 
+from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
+
 from .resnet.shared_2d import BasicBlock2D, conv1x1
 from .resnet.shared_3d import BasicBlock3D, Bottleneck3D, conv1x1x1, get_inplanes
 
@@ -31,6 +33,7 @@ class ResnetTwoStreamNet(nn.Module):
         args_3d: Tuple[
             nn.Module, List[int], List[int], int, int, int, bool, str, float
         ],
+        encoder_enable_vf: bool = True,
     ):
         super().__init__()
 
@@ -75,7 +78,6 @@ class ResnetTwoStreamNet(nn.Module):
         self.dilation_2d = 1
         self.groups_2d = groups_2d
         self.base_width = width_per_group
-
         self.audio_conv1 = nn.Conv2d(
             1, self.inplanes_2d, kernel_size=7, stride=2, padding=3, bias=False
         )
@@ -109,7 +111,6 @@ class ResnetTwoStreamNet(nn.Module):
         block_inplanes = [int(x * widen_factor) for x in block_inplanes_3d]
         self.in_planes_3d = block_inplanes[0]
         self.no_max_pool = no_max_pool
-
         self.v_conv1 = nn.Conv3d(
             n_input_channels,
             self.in_planes_3d,
@@ -134,8 +135,13 @@ class ResnetTwoStreamNet(nn.Module):
         self.v_layer4 = self._make_layer_3D(
             block_3d, block_inplanes[3], layers_3d[3], shortcut_type, stride=2
         )
-
         self.v_avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
+
+        # 音脸分支
+        self.encoder_enable_vf = encoder_enable_vf
+        self.vf_layer = VfalSlEncoder(
+            voice_size=512, face_size=512, embedding_size=128, shared=True
+        )
 
         # 共享
         self.relu = nn.ReLU(inplace=True)
@@ -302,17 +308,49 @@ class ResnetTwoStreamNet(nn.Module):
         audio_feats = self.forward_audio(a)
         video_feats = self.forward_video(v)
 
-        # 降维，降到节点特征的维度 128
-        audio_feats = self.relu(self.reduction_a(audio_feats))
-        video_feats = self.relu(self.reduction_v(video_feats))
+        if self.encoder_enable_vf:
+            # 音脸分支
+            vf_a_emb, vf_v_emb = self.vf_layer(audio_feats, video_feats)
 
-        audio_out, video_out, av_out = (
-            self.fc_a(audio_feats),
-            self.fc_v(video_feats),
-            self.fc_av(torch.cat([audio_feats, video_feats], dim=1)),
-        )
+            # 降维，降到节点特征的维度 128，然后加上音脸分支的特征
+            audio_feats = self.relu(self.reduction_a(audio_feats)) + vf_a_emb
+            video_feats = self.relu(self.reduction_v(video_feats)) + vf_v_emb
 
-        return audio_feats, video_feats, audio_out, video_out, av_out
+            audio_out, video_out, av_out = (
+                self.fc_a(audio_feats),
+                self.fc_v(video_feats),
+                self.fc_av(torch.cat([audio_feats, video_feats], dim=1)),
+            )
+
+            return (
+                audio_feats,
+                video_feats,
+                audio_out,
+                video_out,
+                av_out,
+                vf_a_emb,
+                vf_v_emb,
+            )
+        else:
+            # 降维，降到节点特征的维度 128
+            audio_feats = self.relu(self.reduction_a(audio_feats))
+            video_feats = self.relu(self.reduction_v(video_feats))
+
+            audio_out, video_out, av_out = (
+                self.fc_a(audio_feats),
+                self.fc_v(video_feats),
+                self.fc_av(torch.cat([audio_feats, video_feats], dim=1)),
+            )
+
+            return (
+                audio_feats,
+                video_feats,
+                audio_out,
+                video_out,
+                av_out,
+                None,
+                None,
+            )
 
 
 ############### 以下是模型的加载权重 ###############
@@ -364,6 +402,7 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_resnet_encoder(
     type: str,
+    encoder_enable_vf: bool,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
     encoder_train_weights=None,
@@ -371,7 +410,7 @@ def get_resnet_encoder(
     if type == "R3D18":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
         args_3d = BasicBlock3D, [2, 2, 2, 2], get_inplanes(), 3, 7, 1, False, "B", 1.0
-        encoder = ResnetTwoStreamNet(args_2d, args_3d)  # type: ignore
+        encoder = ResnetTwoStreamNet(args_2d, args_3d, encoder_enable_vf)  # type: ignore
         if video_pretrained_weigths is not None:
             _load_video_weights_into_model(encoder, video_pretrained_weigths)
         if audio_pretrained_weights is not None:
@@ -383,7 +422,7 @@ def get_resnet_encoder(
     elif type == "R3D50":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
         args_3d = Bottleneck3D, [3, 4, 6, 3], get_inplanes(), 3, 7, 1, False, "B", 1.0
-        encoder = ResnetTwoStreamNet(args_2d, args_3d)  # type: ignore
+        encoder = ResnetTwoStreamNet(args_2d, args_3d, encoder_enable_vf)  # type: ignore
         if video_pretrained_weigths is not None:
             _load_video_weights_into_model(encoder, video_pretrained_weigths)
         if audio_pretrained_weights is not None:

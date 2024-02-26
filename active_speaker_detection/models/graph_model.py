@@ -92,8 +92,8 @@ class GraphNet(nn.Module):
                 x[audio_mask][:, 0, 0, : audio_size[1], : audio_size[2]], dim=1
             )
             video_data = x[video_mask]
-            audio_feats, video_feats, audio_out, video_out, _ = self.encoder(
-                audio_data, video_data
+            audio_feats, video_feats, audio_out, video_out, _, vf_a_emb, vf_v_emb = (
+                self.encoder(audio_data, video_data)
             )
 
             # 图特征
@@ -107,6 +107,10 @@ class GraphNet(nn.Module):
         else:
             # 输入的就是 encoder 出来的 128 维特征
             graph_feats = x
+            audio_out = None
+            video_out = None
+            vf_a_emb = None
+            vf_v_emb = None
 
         # 有残差的图神经网络
         graph_feats_1s = self.edge_spatial_1(graph_feats, spatial_edge_index)
@@ -126,7 +130,7 @@ class GraphNet(nn.Module):
 
         out = self.fc(graph_feats_4st)
 
-        return out, audio_out, video_out
+        return out, audio_out, video_out, vf_a_emb, vf_v_emb
 
 
 ############### 以下是模型的加载权重 ###############
@@ -142,6 +146,7 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_backbone(
     encoder_type: str,
+    encoder_enable_vf: bool,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
     vfal_ecapa_pretrain_weights=None,
@@ -151,6 +156,7 @@ def get_backbone(
     if encoder_type == "R3D18":
         encoder = get_resnet_encoder(
             "R3D18",
+            encoder_enable_vf,
             video_pretrained_weigths,
             audio_pretrained_weights,
             encoder_train_weights,
@@ -158,21 +164,24 @@ def get_backbone(
     elif encoder_type == "R3D50":
         encoder = get_resnet_encoder(
             "R3D50",
+            encoder_enable_vf,
             video_pretrained_weigths,
             audio_pretrained_weights,
             encoder_train_weights,
         )
     elif encoder_type == "LIGHT":
-        encoder = get_light_encoder(encoder_train_weights)
+        encoder = get_light_encoder(encoder_train_weights, encoder_enable_vf)
     elif encoder_type == "RES18_TSM":
         encoder = get_resnet_tsm_encoder(
             "resnet18",
+            encoder_enable_vf,
             video_pretrained_weigths,
             encoder_train_weights,
         )
     elif encoder_type == "RES50_TSM":
         encoder = get_resnet_tsm_encoder(
             "resnet50",
+            encoder_enable_vf,
             video_pretrained_weigths,
             encoder_train_weights,
         )

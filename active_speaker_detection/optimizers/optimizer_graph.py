@@ -26,15 +26,11 @@ def optimize_graph(
     data_loader_val,
     device,
     criterion,
-    vfal_critierion,
     optimizer,
     scheduler,
     num_epochs,
     spatial_ctx_size,
     time_len,  # 图的时间步数
-    a_weight=0.2,
-    v_weight=0.5,
-    vfal_weight=0.3,
     models_out=None,
     log=None,
 ):
@@ -49,27 +45,22 @@ def optimize_graph(
             dataloader_train,
             optimizer,
             criterion,
-            vfal_critierion,
             device,
             spatial_ctx_size,
             time_len,
-            a_weight,
-            v_weight,
-            vfal_weight,
         )
         outs_val = _test_model_graph_losses(
             model,
             data_loader_val,
             criterion,
-            vfal_critierion,
             device,
             spatial_ctx_size,
             time_len,
         )
         scheduler.step()
 
-        train_loss, ta_loss, tv_loss, tvfal_loss, train_ap = outs_train
-        val_loss, va_loss, vv_loss, vvfal_loss, val_ap, val_tap, val_cap = outs_val
+        train_loss, ta_loss, tv_loss, train_ap = outs_train
+        val_loss, va_loss, vv_loss, val_ap, val_tap, val_cap = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
             # 保存当前最优模型
@@ -85,12 +76,12 @@ def optimize_graph(
                     train_loss,
                     ta_loss,
                     tv_loss,
-                    tvfal_loss,
+                    0,
                     train_ap,
                     val_loss,
                     va_loss,
                     vv_loss,
-                    vvfal_loss,
+                    0,
                     val_ap,
                     val_tap,
                     val_cap,
@@ -105,13 +96,9 @@ def _train_model_amp_avl(
     dataloader,
     optimizer,
     criterion: nn.modules.loss._Loss,
-    vfal_critierion: nn.modules.loss._Loss,
     device,
     ctx_size,
     time_len: int,  # 图的时间步数
-    a_weight,
-    v_weight,
-    vfal_weight,
 ):
     """训练一个 epoch 的模型，返回图的损失和音频视频的辅助损失"""
     model.train()
@@ -129,7 +116,6 @@ def _train_model_amp_avl(
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
-    running_loss_vfal = 0.0
 
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
@@ -160,22 +146,9 @@ def _train_model_amp_avl(
             )
 
             with autocast(True):
-                outputs, audio_out, video_out = model(graph_data, ctx_size)
-                # 单独音频和视频的损失
-                aux_loss_a: torch.Tensor = criterion(audio_out, targets[audio_mask])
-                aux_loss_v: torch.Tensor = criterion(video_out, targets[video_mask])
-                # aux_loss_vfal: torch.Tensor = vfal_critierion(
-                #     torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-                #     torch.cat([entities[audio_mask], entities[video_mask]], dim=0),
-                # )
+                outputs, _, _, _, _ = model(graph_data, ctx_size)
                 # 图的损失
-                loss_graph: torch.Tensor = criterion(outputs, targets)
-                loss = (
-                    a_weight * aux_loss_a
-                    + v_weight * aux_loss_v
-                    # + vfal_weight * aux_loss_vfal
-                    + loss_graph
-                )
+                loss: torch.Tensor = criterion(outputs, targets)
 
             scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
@@ -198,39 +171,33 @@ def _train_model_amp_avl(
             )
 
         # 统计
-        running_loss_g += loss_graph.item()
-        running_loss_a += aux_loss_a.item()
-        running_loss_v += aux_loss_v.item()
-        # running_loss_vfal += aux_loss_vfal.item()
+        running_loss_g += loss.item()
         if idx == len(dataloader) - 2:
             break
 
     epoch_loss_g = running_loss_g / len(dataloader)
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
-    epoch_loss_vfal = running_loss_vfal / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
     epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
     epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vfal Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
-            epoch_loss_vfal,
             epoch_ap,
             epoch_time_ap,
             epoch_center_ap,
         )
     )
-    return epoch_loss_g, epoch_loss_a, epoch_loss_v, epoch_loss_vfal, epoch_ap
+    return epoch_loss_g, epoch_loss_a, epoch_loss_v, epoch_ap
 
 
 def _test_model_graph_losses(
     model,
     dataloader,
     criterion: nn.modules.loss._Loss,
-    vfal_critierion: nn.modules.loss._Loss,
     device,
     ctx_size,
     time_len,  # 图的时间步数
@@ -251,7 +218,6 @@ def _test_model_graph_losses(
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
-    running_loss_vfal = 0.0
 
     audio_size, vfal_size = dataloader.dataset.get_audio_size()
 
@@ -277,18 +243,8 @@ def _test_model_graph_losses(
                 ctx_size, graph_data.x.size(0), time_len
             )
 
-            outputs, audio_out, video_out, vfal_a_feats, vfal_v_feats = model(
-                graph_data, ctx_size, audio_size, vfal_size
-            )
-            loss_graph = criterion(outputs, targets)
-            aux_loss_a = criterion(audio_out, targets[audio_mask])
-            aux_loss_v = criterion(video_out, targets[video_mask])
-            # aux_loss_vfal: torch.Tensor = vfal_critierion(
-            #     torch.cat([vfal_a_feats, vfal_v_feats], dim=0),
-            #     torch.cat(
-            #         [entities[audio_mask], entities[video_mask]], dim=0
-            #     ).squeeze(),
-            # )
+            outputs, _, _, _, _ = model(graph_data, ctx_size, audio_size, vfal_size)
+            loss = criterion(outputs, targets)
 
             label_lst.extend(targets[video_mask].cpu().numpy().tolist())
             pred_lst.extend(
@@ -306,27 +262,21 @@ def _test_model_graph_losses(
             )
 
         # 统计
-        running_loss_g += loss_graph.item()
-        running_loss_a += aux_loss_a.item()
-        running_loss_v += aux_loss_v.item()
-        # running_loss_vfal += aux_loss_vfal.item()
-
+        running_loss_g += loss.item()
         if idx == len(dataloader) - 2:
             break
 
     epoch_loss_g = running_loss_g / len(dataloader)
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
-    epoch_loss_vfal = running_loss_vfal / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
     epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
     epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vfal Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
-            epoch_loss_vfal,
             epoch_ap,
             epoch_time_ap,
             epoch_center_ap,
@@ -336,7 +286,6 @@ def _test_model_graph_losses(
         epoch_loss_g,
         epoch_loss_a,
         epoch_loss_v,
-        epoch_loss_vfal,
         epoch_ap,
         epoch_time_ap,
         epoch_center_ap,

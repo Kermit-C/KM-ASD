@@ -9,6 +9,8 @@
 import torch
 import torch.nn as nn
 
+from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
+
 
 class AudioBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -249,13 +251,20 @@ class AudioEncoder(nn.Module):
 
 
 class LightTwoStreamNet(nn.Module):
-    def __init__(self):
+
+    def __init__(self, encoder_enable_vf: bool):
         super(LightTwoStreamNet, self).__init__()
 
         self.audio_encoder = AudioEncoder()
         self.visual_encoder = VisualEncoder()
 
         self.max_pool = nn.AdaptiveMaxPool1d(1)
+
+        # 音脸分支
+        self.encoder_enable_vf = encoder_enable_vf
+        self.vf_layer = VfalSlEncoder(
+            voice_size=128, face_size=128, embedding_size=128, shared=True
+        )
 
         # 分类器
         self.fc_a = nn.Linear(128, 2)
@@ -286,14 +295,38 @@ class LightTwoStreamNet(nn.Module):
         audio_embed = self.max_pool(audio_embed.transpose(1, 2)).squeeze(2)
         visual_embed = self.max_pool(visual_embed.transpose(1, 2)).squeeze(2)
 
-        audio_out, video_out, av_out = (
-            self.fc_a(audio_embed),
-            self.fc_v(visual_embed),
-            self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
-        )
+        if self.encoder_enable_vf:
+            # 音脸分支
+            vf_a_emb, vf_v_emb = self.vf_layer(audio_embed, visual_embed)
 
-        # audio_embed: (B, C), visual_embed: (B, C)
-        return audio_embed, visual_embed, audio_out, video_out, av_out
+            audio_embed += vf_a_emb
+            visual_embed += vf_v_emb
+
+            audio_out, video_out, av_out = (
+                self.fc_a(audio_embed),
+                self.fc_v(visual_embed),
+                self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
+            )
+
+            # audio_embed: (B, C), visual_embed: (B, C)
+            return (
+                audio_embed,
+                visual_embed,
+                audio_out,
+                video_out,
+                av_out,
+                vf_a_emb,
+                vf_v_emb,
+            )
+        else:
+            audio_out, video_out, av_out = (
+                self.fc_a(audio_embed),
+                self.fc_v(visual_embed),
+                self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
+            )
+
+            # audio_embed: (B, C), visual_embed: (B, C)
+            return audio_embed, visual_embed, audio_out, video_out, av_out, None, None
 
     def __init_weight(self):
         for m in self.modules():
@@ -316,8 +349,9 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_light_encoder(
     encoder_train_weights=None,
+    encoder_enable_vf=True,
 ):
-    model = LightTwoStreamNet()
+    model = LightTwoStreamNet(encoder_enable_vf)
     if encoder_train_weights:
         _load_weights_into_model(model, encoder_train_weights)
         model.eval()

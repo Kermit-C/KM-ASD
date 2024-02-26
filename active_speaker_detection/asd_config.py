@@ -26,6 +26,7 @@ datasets = {
 
 inference_params = {
     "encoder_type": "R3D18",
+    "encoder_enable_vf": True,
     # 每刻计算特征的帧数
     "frmc": 13,
     # 上下文大小，每刻的实体数
@@ -45,6 +46,7 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
+        "encoder_enable_vf": True,
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D18",
         # 预训练权重
@@ -70,6 +72,7 @@ train_params = [
         "name": "R3D50",
         # 网络架构
         "encoder_type": "R3D50",
+        "encoder_enable_vf": True,
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D50",
         # 预训练权重
@@ -95,7 +98,8 @@ train_params = [
         "name": "LIGHT",
         # 网络架构
         "encoder_type": "LIGHT",
-        "encoder_train_weights": None,
+        "encoder_enable_vf": True,
+        "encoder_train_weights": "active_speaker_detection/results/LIGHT_stage_encoder_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/LIGHT",
         # 预训练权重
         "encoder_audio_pretrain_weights": None,
@@ -120,6 +124,7 @@ train_params = [
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
+        "encoder_enable_vf": True,
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES18_TSM",
         # 预训练权重
@@ -143,6 +148,7 @@ train_params = [
     },
     {
         "name": "RES50_TSM",
+        "encoder_enable_vf": True,
         # 网络架构
         "encoder_type": "RES50_TSM",
         "encoder_train_weights": None,

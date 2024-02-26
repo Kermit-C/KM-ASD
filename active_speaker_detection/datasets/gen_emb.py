@@ -30,7 +30,7 @@ def gen_embedding(
         audio_data = audio_data.to(device)
 
         with torch.set_grad_enabled(False):
-            audio_out, video_out, _, _, _ = model(audio_data, video_data)
+            audio_out, video_out, _, _, _, _, _ = model(audio_data, video_data)
             audio_np = audio_out.cpu().numpy()
             video_np = video_out.cpu().numpy()
 

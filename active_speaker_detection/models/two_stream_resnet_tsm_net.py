@@ -13,6 +13,7 @@ import torch.nn.parameter
 from torch.nn import functional as F
 
 from active_speaker_detection.models.tsm.temporal_shift_layout import TemporalShift
+from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
 
 from .resnet.shared_2d import BasicBlock2D, Bottleneck2D, conv1x1
 
@@ -28,6 +29,7 @@ class TwoStreamResNet(nn.Module):
         width_per_group=64,
         replace_stride_with_dilation=None,
         norm_layer=None,
+        encoder_enable_vf=True,
     ):
         super(TwoStreamResNet, self).__init__()
         if norm_layer is None:
@@ -79,6 +81,15 @@ class TwoStreamResNet(nn.Module):
         )
         self.v_layer4 = self._make_layer(
             block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
+        )
+
+        # 音脸分支
+        self.encoder_enable_vf = encoder_enable_vf
+        self.vf_layer = VfalSlEncoder(
+            voice_size=512 * block.expansion,
+            face_size=512 * block.expansion,
+            embedding_size=128,
+            shared=True,
         )
 
         self.tsm = TemporalShift(n_div=8)
@@ -193,19 +204,37 @@ class TwoStreamResNet(nn.Module):
         v = v.squeeze(-1).squeeze(-1)
         v = v.mean(2)
 
-        # 降维到 128
-        a = self.fc_128_a(a)
-        a = self.relu(a)
-        v = self.fc_128_v(v)
-        v = self.relu(v)
+        if self.encoder_enable_vf:
+            # 音脸分支
+            vf_a_emb, vf_v_emb = self.vf_layer(a, v)
 
-        audio_out, video_out, av_out = (
-            self.fc_a(a),
-            self.fc_v(v),
-            self.fc_av(torch.cat([a, v], dim=1)),
-        )
+            # 降维到 128，然后加上音脸分支的特征
+            a = self.fc_128_a(a) + vf_a_emb
+            a = self.relu(a)
+            v = self.fc_128_v(v) + vf_v_emb
+            v = self.relu(v)
 
-        return a, v, audio_out, video_out, av_out
+            audio_out, video_out, av_out = (
+                self.fc_a(a),
+                self.fc_v(v),
+                self.fc_av(torch.cat([a, v], dim=1)),
+            )
+
+            return a, v, audio_out, video_out, av_out, vf_a_emb, vf_v_emb
+        else:
+            # 降维到 128
+            a = self.fc_128_a(a)
+            a = self.relu(a)
+            v = self.fc_128_v(v)
+            v = self.relu(v)
+
+            audio_out, video_out, av_out = (
+                self.fc_a(a),
+                self.fc_v(v),
+                self.fc_av(torch.cat([a, v], dim=1)),
+            )
+
+            return a, v, audio_out, video_out, av_out, None, None
 
 
 ############### 以下是模型的加载权重 ###############
@@ -244,12 +273,13 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_resnet_tsm_encoder(
     type: str,
+    encoder_enable_vf: bool,
     pretrained_weigths=None,
     encoder_train_weights=None,
 ):
     if type == "resnet18":
         block, layers = BasicBlock2D, [2, 2, 2, 2]
-        model = TwoStreamResNet(block, layers)
+        model = TwoStreamResNet(block, layers, encoder_enable_vf=encoder_enable_vf)
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:
@@ -258,7 +288,7 @@ def get_resnet_tsm_encoder(
         return model
     elif type == "resnet50":
         block, layers = Bottleneck2D, [3, 4, 6, 3]
-        model = TwoStreamResNet(block, layers)
+        model = TwoStreamResNet(block, layers, encoder_enable_vf=encoder_enable_vf)
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:

@@ -58,6 +58,8 @@ def train():
         param_config["encoder_type"]
         + "_stage_"
         + stage
+        + "_vf"
+        + str(1 if param_config["encoder_enable_vf"] else 0)
         + "_clip"
         + str(frames_per_clip)
         + "_ctx"
@@ -78,6 +80,7 @@ def train():
     encoder_train_weights = param_config["encoder_train_weights"]
     asd_net, encoder_net = get_backbone(
         param_config["encoder_type"],
+        param_config["encoder_enable_vf"],
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
         vfal_ecapa_pretrain_weights,
@@ -91,7 +94,7 @@ def train():
 
     # loss
     criterion = nn.CrossEntropyLoss()
-    vfal_critierion = (
+    vf_critierion = (
         losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0),  # type: ignore
     )  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
 
@@ -154,7 +157,7 @@ def train():
             dl_val,
             device,
             criterion,
-            vfal_critierion,
+            vf_critierion,
             optimizer,
             scheduler,
             num_epochs=epochs,
@@ -205,7 +208,6 @@ def train():
             dl_val,
             device,
             criterion,
-            vfal_critierion,
             optimizer,
             scheduler,
             num_epochs=epochs,
@@ -259,6 +261,7 @@ def train():
             dl_val,
             device,
             criterion,
+            vf_critierion,
             optimizer,
             scheduler,
             num_epochs=epochs,

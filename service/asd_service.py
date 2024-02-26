@@ -70,6 +70,7 @@ def detect_active_speaker(
     )
     # TMP: 调试工程链路用
     return [random.random() > 0.5 for _ in range(len(faces_clip_list[-1]))]
+    # TODO: 返回 emb，缓存 emb
     p_list: list[list[float]] = detector.detect_active_speaker(
         faces=faces_clip_list, audios=audio_aggregate_list
     )
