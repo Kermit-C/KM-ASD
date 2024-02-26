@@ -264,7 +264,7 @@ def _load_weights_into_two_stream_resnet(model, pretrained_weights):
 
 def _load_weights_into_model(model: nn.Module, ws_file):
     """加载训练权重"""
-    model.load_state_dict(torch.load(ws_file))
+    model.load_state_dict(torch.load(ws_file), strict=False)
     return
 
 

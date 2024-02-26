@@ -94,9 +94,8 @@ def train():
 
     # loss
     criterion = nn.CrossEntropyLoss()
-    vf_critierion = (
-        losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0),  # type: ignore
-    )  # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
+    vf_critierion = losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0)  # type: ignore
+    # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
 
     # 数据路径
     video_train_path = dataset_config["video_train_dir"]
