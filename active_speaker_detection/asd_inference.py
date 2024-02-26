@@ -6,6 +6,8 @@
 @Date: 2024-02-22 09:41:42
 """
 
+from typing import Optional
+
 import cv2
 import numpy as np
 import torch
@@ -31,7 +33,7 @@ from .utils.custom_transforms import video_val
 
 class ActiveSpeakerDetector:
 
-    def __init__(self, trained_model: str, cpu: bool = False):
+    def __init__(self, trained_model: Optional[str] = None, cpu: bool = False):
         infer_config = asd_conf.inference_params
         self.frames_per_clip = infer_config["frmc"]
         self.ctx_size = infer_config["ctx"]

@@ -68,6 +68,8 @@ def detect_active_speaker(
     faces_clip_list, audio_aggregate_list = get_faces_and_audios_of_graph(
         request_id=request_id, frame_count=frame_count
     )
+    # TMP: 调试工程链路用
+    return [random.random() > 0.5 for _ in range(len(faces_clip_list[-1]))]
     p_list: list[list[float]] = detector.detect_active_speaker(
         faces=faces_clip_list, audios=audio_aggregate_list
     )
@@ -120,13 +122,13 @@ def get_faces_and_audios_of_graph(
             alloc_num = 0
             for j, frame_face in enumerate(frame_faces):
                 face_bbox = frame_face["face_bbox"]
-                face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)
-                if face_idx != -1:
-                    frame_faces_idx_list[j] = face_idx
+                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)
+                if last_face_idx != -1:
+                    frame_faces_idx_list[last_face_idx] = j
                     alloc_num += 1
             # 没有分配到的，随机分配
             if alloc_num > 0:
-                for j in range(ctx_size - alloc_num, ctx_size):
+                for j in range(alloc_num, ctx_size):
                     frame_faces_idx_list[j] = frame_faces_idx_list[
                         random.randint(0, alloc_num - 1)
                     ]
@@ -170,7 +172,7 @@ def get_faces_and_audios_of_graph(
         for j in range(frames_per_clip):
             if (
                 len(aggregate_audio_list) > 0
-                and aggregate_audio_list[0] == audio_list[i - j]
+                and aggregate_audio_list[0] is audio_list[i - j]
             ):
                 # 如果当前帧和上一帧的音频一样，就不用再取了
                 break

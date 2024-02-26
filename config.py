@@ -27,7 +27,7 @@ extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
 
 asd_enabled = True
-asd_model = "active_speaker_detection/models/ASD_R3D_18_4lvl_160x160.pth"
+asd_model = None
 asd_cpu = False
 asd_p_threshold = 0.5
 asd_same_face_between_frames_iou_threshold = 0.5

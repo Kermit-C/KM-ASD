@@ -87,15 +87,22 @@ class VideoToFrameStore:
         frame_timestamps = list(
             self.frame_store_of_request.get(request_id)["frames_ts_to_cnt_dict"].keys()
         )
-        frame_timestamps.sort()
-        for i in range(len(frame_timestamps) - 1):
-            if frame_timestamps[i] <= timestamp < frame_timestamps[i + 1]:
-                return (
-                    frame_timestamps[i]
-                    if abs(frame_timestamps[i] - timestamp)
-                    < abs(frame_timestamps[i + 1] - timestamp)
-                    else frame_timestamps[i + 1]
-                )
+        # 顺序 save_frame 的话，下面就不需要排序，排序是个性能点
+        # frame_timestamps.sort()
+        # TODO: 二分查找优化
+        for i in range(len(frame_timestamps)):
+            if i == 0:
+                # 第零个
+                if timestamp < frame_timestamps[i]:
+                    return frame_timestamps[i]
+            else:
+                if frame_timestamps[i - 1] <= timestamp < frame_timestamps[i]:
+                    return (
+                        frame_timestamps[i - 1]
+                        if abs(frame_timestamps[i - 1] - timestamp)
+                        < abs(frame_timestamps[i] - timestamp)
+                        else frame_timestamps[i]
+                    )
         return None
 
     def get_info(self, request_id: str) -> dict:

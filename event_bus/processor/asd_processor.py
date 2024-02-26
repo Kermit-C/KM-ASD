@@ -89,88 +89,89 @@ class AsdProcessor(BaseEventBusProcessor):
         with self.asd_create_lock_lock:
             if self.get_request_id() not in self.asd_lock_of_request:
                 self.asd_lock_of_request[self.get_request_id()] = Lock()
+                asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
+            else:
+                asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
 
-        with self.asd_lock_of_request[self.get_request_id()]:
+        with asd_lock_of_request:
             if (
-                not self.store.is_frame_completed(self.get_request_id(), frame_count)
-                or self.store.is_frame_asded(self.get_request_id(), frame_count)
-                or not self.store.is_frame_before_all_asded(
+                self.store.is_frame_completed(self.get_request_id(), frame_count)
+                and not self.store.is_frame_asded(self.get_request_id(), frame_count)
+                and self.store.is_frame_before_all_asded(
                     self.get_request_id(), frame_count
                 )
             ):
-                del self.asd_lock_of_request[self.get_request_id()]
-                return
-
-            while True:
-                wait_asd_frame_count_list: list[int] = [
-                    frame_count
-                ] + self.store.get_frame_after_all_completed(
-                    self.get_request_id(), frame_count
-                )
-
-                for wait_asd_frame_count in wait_asd_frame_count_list:
-                    face_dicts = self.store.get_frame_faces(
-                        self.get_request_id(), wait_asd_frame_count
+                while True:
+                    wait_asd_frame_count_list: list[int] = [
+                        frame_count
+                    ] + self.store.get_frame_after_all_completed(
+                        self.get_request_id(), frame_count
                     )
-                    faces: list[np.ndarray] = [
-                        face_dict["face_frame"] for face_dict in face_dicts
-                    ]
-                    face_bboxes: list[tuple[int, int, int, int]] = [
-                        face_dict["face_bbox"] for face_dict in face_dicts
-                    ]
-                    audio: np.ndarray = self.store.get_frame_audio(
-                        self.get_request_id(), wait_asd_frame_count
-                    )  # type: ignore
 
-                    try:
-                        is_active_list = call_asd(
-                            self.get_request_id(),
-                            frame_count,
-                            faces,
-                            face_bboxes,
-                            audio,
-                            self.processor_timeout,
+                    for wait_asd_frame_count in wait_asd_frame_count_list:
+                        face_dicts = self.store.get_frame_faces(
+                            self.get_request_id(), wait_asd_frame_count
                         )
-                    except:
-                        is_active_list = [False] * len(faces)
+                        faces: list[np.ndarray] = [
+                            face_dict["face_frame"] for face_dict in face_dicts
+                        ]
+                        face_bboxes: list[tuple[int, int, int, int]] = [
+                            face_dict["face_bbox"] for face_dict in face_dicts
+                        ]
+                        audio: np.ndarray = self.store.get_frame_audio(
+                            self.get_request_id(), wait_asd_frame_count
+                        )  # type: ignore
 
-                    for face_bbox, is_active, face_dict in zip(
-                        face_bboxes, is_active_list, face_dicts
+                        try:
+                            is_active_list = call_asd(
+                                self.get_request_id(),
+                                frame_count,
+                                faces,
+                                face_bboxes,
+                                audio,
+                                self.processor_timeout,
+                            )
+                        except:
+                            is_active_list = [False] * len(faces)
+
+                        for face_bbox, is_active, face_dict in zip(
+                            face_bboxes, is_active_list, face_dicts
+                        ):
+                            asd_status = 1 if is_active else 0
+                            self.publish_next(
+                                "reduce_topic",
+                                ReduceMessageBody(
+                                    type="ASD",
+                                    frame_count=wait_asd_frame_count,
+                                    frame_timestamp=self.store.get_frame_info(
+                                        self.get_request_id(), wait_asd_frame_count
+                                    )[  # type: ignore
+                                        "frame_timestamp"
+                                    ],
+                                    frame_face_idx=face_dict["face_idx"],
+                                    frame_face_count=self.store.get_frame_info(
+                                        self.get_request_id(), wait_asd_frame_count
+                                    )[  # type: ignore
+                                        "frame_face_count"
+                                    ],
+                                    frame_face_bbox=face_bbox,
+                                    frame_asd_status=asd_status,
+                                ),
+                            )
+                        self.store.set_frame_asded(
+                            self.get_request_id(), wait_asd_frame_count
+                        )
+
+                    # 判断一下下一个帧是否已经完整，以防处理上面的时候有新的帧进来，导致卡死
+                    frame_count = wait_asd_frame_count_list[-1] + 1
+                    if not self.store.is_frame_completed(
+                        self.get_request_id(), frame_count
                     ):
-                        asd_status = 1 if is_active else 0
-                        self.publish_next(
-                            "reduce_topic",
-                            ReduceMessageBody(
-                                type="ASD",
-                                frame_count=wait_asd_frame_count,
-                                frame_timestamp=self.store.get_frame_info(
-                                    self.get_request_id(), wait_asd_frame_count
-                                )[  # type: ignore
-                                    "frame_timestamp"
-                                ],
-                                frame_face_idx=face_dict["face_idx"],
-                                frame_face_count=self.store.get_frame_info(
-                                    self.get_request_id(), wait_asd_frame_count
-                                )[  # type: ignore
-                                    "frame_face_count"
-                                ],
-                                frame_face_bbox=face_bbox,
-                                frame_asd_status=asd_status,
-                            ),
-                        )
-                    self.store.set_frame_asded(
-                        self.get_request_id(), wait_asd_frame_count
-                    )
-
-                # 判断一下下一个帧是否已经完整，以防处理上面的时候有新的帧进来，导致卡死
-                frame_count = wait_asd_frame_count_list[-1] + 1
-                if not self.store.is_frame_completed(
-                    self.get_request_id(), frame_count
-                ):
-                    break
+                        break
 
         with self.asd_create_lock_lock:
-            del self.asd_lock_of_request[self.get_request_id()]
+            if self.get_request_id() in self.asd_lock_of_request:
+                del self.asd_lock_of_request[self.get_request_id()]
 
     def _parse_audio_frame(
         self, audio_frame: np.ndarray, audio_frame_timestamp: int
@@ -182,10 +183,9 @@ class AsdProcessor(BaseEventBusProcessor):
             )
         )
         assert parsed_frame_timestamp is not None
-        audio_to_pcm_processor = self._get_audio_to_pcm_processor()
-        audio_to_pcm_sample_rate: int = audio_to_pcm_processor.audio_to_pcm_sample_rate
-        audio_frame_length: int = audio_to_pcm_processor.frame_length
-        audio_frame_step: int = audio_to_pcm_processor.frame_step
+        audio_to_pcm_sample_rate, audio_frame_length, audio_frame_step = (
+            self._get_audio_to_pcm_config()
+        )
         video_fps: float = self._get_video_fps(self.get_request_id())
 
         lag_timestamp = audio_frame_timestamp - parsed_frame_timestamp
@@ -227,10 +227,13 @@ class AsdProcessor(BaseEventBusProcessor):
         assert isinstance(video_to_frame_store, VideoToFrameProcessor)
         return video_to_frame_store.store
 
-    def _get_audio_to_pcm_processor(self) -> AudioToPcmProcessor:
-        """获取音频转 PCM 处理器"""
+    def _get_audio_to_pcm_config(self) -> tuple[int, int, int]:
+        """获取音频转 PCM 处理器配置"""
         audio_to_pcm_processor = get_processor(
             config.event_bus["processors"]["AudioToPcmProcessor"]["processor_name"]
         )
         assert isinstance(audio_to_pcm_processor, AudioToPcmProcessor)
-        return audio_to_pcm_processor
+        audio_to_pcm_sample_rate: int = audio_to_pcm_processor.audio_to_pcm_sample_rate
+        audio_frame_length: int = audio_to_pcm_processor.frame_length
+        audio_frame_step: int = audio_to_pcm_processor.frame_step
+        return audio_to_pcm_sample_rate, audio_frame_length, audio_frame_step

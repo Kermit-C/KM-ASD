@@ -41,7 +41,9 @@ class ActiveSpeakerDetectionStore:
     ):
         with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
-                self.store_of_request.put(request_id, {"frames": []})
+                self.store_of_request.put(
+                    request_id, {"frames": [], "frame_asded_count": 0}
+                )
             request_store = self.store_of_request.get(request_id)
             while len(request_store["frames"]) <= frame_count - 1:
                 # 补充空帧
@@ -52,6 +54,7 @@ class ActiveSpeakerDetectionStore:
                     "frame_face_count": frame_face_count,
                     "faces": [],
                     "audio_frame": None,
+                    "is_asded": False,
                 }
             else:
                 request_store["frames"][frame_count - 1][
@@ -109,7 +112,8 @@ class ActiveSpeakerDetectionStore:
         if len(request_store["frames"]) < frame_count:
             return False
         return (
-            len(request_store["frames"][frame_count - 1]["faces"])
+            request_store["frames"][frame_count - 1] is not None
+            and len(request_store["frames"][frame_count - 1]["faces"])
             == request_store["frames"][frame_count - 1]["frame_face_count"]
             and request_store["frames"][frame_count - 1]["audio_frame"] is not None
         )
@@ -122,7 +126,10 @@ class ActiveSpeakerDetectionStore:
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
             return False
-        return request_store["frames"][frame_count - 1]["is_asded"]
+        return (
+            request_store["frames"] is not None
+            and request_store["frames"][frame_count - 1]["is_asded"]
+        )
 
     def is_frame_before_all_asded(self, request_id: str, frame_count: int) -> bool:
         if frame_count < 1:
