@@ -77,7 +77,7 @@ class EncoderDataset(Dataset):
             timestamp = target_entity_metadata[center_index][1]
 
         # 获取视频特征和标签
-        video_data, targets, entities = self.store.get_video_data(
+        video_data, targets, entities, positions = self.store.get_video_data(
             video_id,
             entity_id,
             center_index,

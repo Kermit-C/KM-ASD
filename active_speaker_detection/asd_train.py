@@ -74,8 +74,8 @@ def train():
 
     # loss
     criterion = nn.CrossEntropyLoss()
-    # vf_critierion = losses.MultiSimilarityLoss(alpha=2, beta=50, base=1)
-    vf_critierion = losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
+    vf_critierion = losses.MultiSimilarityLoss(alpha=2, beta=50, base=1)
+    # vf_critierion = losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
 
     # 数据路径
     video_train_path = dataset_config["video_train_dir"]
@@ -117,11 +117,11 @@ def train():
             audio_train_path,
             video_train_path,
             data_store_train_cache,
-            n_clips,
-            strd,
-            ctx_size,
             frames_per_clip,
-            video_train_transform,
+            graph_time_steps=n_clips,
+            graph_time_stride=strd,
+            max_context=ctx_size,
+            video_transform=video_train_transform,
             do_video_augment=True,
             crop_ratio=0.95,
         )
@@ -129,11 +129,11 @@ def train():
             audio_val_path,
             video_val_path,
             data_store_val_cache,
-            n_clips,
-            strd,
-            ctx_size,
             frames_per_clip,
-            video_val_transform,
+            graph_time_steps=n_clips,
+            graph_time_stride=strd,
+            max_context=ctx_size,
+            video_transform=video_train_transform,
             do_video_augment=False,
         )
         dl_train = GeometricDataLoader(
@@ -196,16 +196,16 @@ def train():
         d_train = GraphDataset(
             os.path.join(encoder_embedding_path, "train"),
             data_store_train_cache,
-            n_clips,
-            strd,
-            ctx_size,
+            graph_time_steps=n_clips,
+            graph_time_stride=strd,
+            max_context=ctx_size,
         )
         d_val = GraphDataset(
             os.path.join(encoder_embedding_path, "val"),
             data_store_val_cache,
-            n_clips,
-            strd,
-            ctx_size,
+            graph_time_steps=n_clips,
+            graph_time_stride=strd,
+            max_context=ctx_size,
         )
         dl_train = GeometricDataLoader(
             d_train,
@@ -298,6 +298,9 @@ def train():
             optimizer,
             scheduler,
             num_epochs=epochs,
+            a_weight=0.2,
+            v_weight=0.5,
+            vf_weight=0.5,
             models_out=target_models,
             log=log,
         )

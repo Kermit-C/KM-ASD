@@ -15,7 +15,6 @@ import numpy as np
 import torch
 from PIL import Image
 
-import active_speaker_detection.utils.clip_utils as cu
 import active_speaker_detection.utils.io_util as io
 
 
@@ -31,6 +30,10 @@ class DataStore:
 
         # 一个人在什么时候是否说话 (entity_id, timestamp, entity_label)
         self.entity_data: Dict[str, Dict[str, List[Tuple[str, str, int]]]] = {}
+        # 一个人在什么时候的位置信息 (x1, y1, x2, y2)
+        self.entity_pos_data: Dict[
+            str, Dict[str, List[Tuple[float, float, float, float]]]
+        ] = {}
         # 一个时间点是否说话，用于音频节点
         self.speech_data: Dict[str, Dict[str, int]] = {}
         # 一个时间点的实体们
@@ -50,45 +53,37 @@ class DataStore:
             with open(data_store_cache, "rb") as f:
                 cache = pickle.load(f)
                 self.entity_data = cache["entity_data"]
+                self.entity_pos_data = cache["entity_pos_data"]
                 self.speech_data = cache["speech_data"]
                 self.ts_to_entity = cache["ts_to_entity"]
                 self.entity_list = cache["entity_list"]
                 self.feature_list = cache["feature_list"]
 
     def get_speaker_context(
-        self, video_id: str, target_entity_id: str, center_ts: str, ctx_len: int
+        self,
+        video_id: str,
+        target_entity_id: str,
+        center_ts: str,
+        max_context: Optional[int] = None,
     ) -> List[str]:
         """
         获取同一时间点的上下文，返回一个列表，列表中的元素是实体 id
         :param video_id: 视频 id
         :param target_entity_id: 目标实体 id
         :param center_ts: 时间戳
-        :param ctx_len: 上下文长度，实体数量
+        :param max_context: 最大上下文长度
         """
         # 获取包含自己的上下文实体列表
         context_entities = list(self.ts_to_entity[video_id][center_ts])
         random.shuffle(context_entities)
         # 排除自己
         context_entities.remove(target_entity_id)
+        # 保证自己在第一个位置
+        context_entities.insert(0, target_entity_id)
 
-        if not context_entities:
-            # 如果没有上下文，就返回自己
-            context_entities.insert(0, target_entity_id)
-            while len(context_entities) < ctx_len:  # self is context
-                # 从 context_entities 中随机选择一个实体，添加到 context_entities 中
-                # 补全到 ctx_len 的长度
-                context_entities.append(random.choice(context_entities))
-        elif len(context_entities) < ctx_len:
-            # 保证自己在第一个位置
-            context_entities.insert(0, target_entity_id)  # make sure is at 0
-            while len(context_entities) < ctx_len:
-                # 从 context_entities 中随机选择一个实体，添加到 context_entities 中
-                # 补全到 ctx_len 的长度
-                context_entities.append(random.choice(context_entities[1:]))
-        else:
-            context_entities.insert(0, target_entity_id)  # make sure is at 0
+        if max_context is not None:
             # 太长了，就截断
-            context_entities = context_entities[:ctx_len]
+            context_entities = context_entities[:max_context]
 
         return context_entities
 
@@ -97,7 +92,7 @@ class DataStore:
         entity_data: List[Tuple[str, str, int]],
         target_index: int,
         graph_time_steps: int,
-        stride: int,
+        graph_time_stride: int,
     ) -> List[str]:
         """获取时间上下文，返回时间戳列表"""
         # 所有时间戳
@@ -108,10 +103,10 @@ class DataStore:
         center_ts_idx = all_ts.index(str(center_ts))
 
         half_time_steps = int(graph_time_steps / 2)
-        start = center_ts_idx - (half_time_steps * stride)
-        end = center_ts_idx + ((half_time_steps + 1) * stride)
+        start = center_ts_idx - (half_time_steps * graph_time_stride)
+        end = center_ts_idx + ((half_time_steps + 1) * graph_time_stride)
         # 选取的时间戳索引
-        selected_ts_idx = list(range(start, end, stride))
+        selected_ts_idx = list(range(start, end, graph_time_stride))
 
         selected_ts = []
         for i, idx in enumerate(selected_ts_idx):
@@ -143,7 +138,7 @@ class DataStore:
         mid_index = random.randint(0, len(entity_metadata) - 1)
 
         # 生成一个长度为 half_clip_size*2+1 的单人时间片段
-        clip_meta_data: List[Tuple[str, str, int]] = cu.generate_clip_meta(
+        clip_meta_data: List[Tuple[str, str, int]] = self.generate_clip_meta(
             entity_metadata, mid_index, half_clip_length
         )
         # 从片段元数据中获得音频梅尔特征
@@ -177,7 +172,7 @@ class DataStore:
                     break
 
         # 生成一个长度为 half_clip_size*2+1 的单人时间片段
-        clip_meta_data = cu.generate_clip_meta(
+        clip_meta_data = self.generate_clip_meta(
             entity_metadata, mid_index, half_clip_length
         )
         # 从片段元数据中获得音频梅尔特征
@@ -196,13 +191,18 @@ class DataStore:
         video_id: str,
         entity_id: str,
         mid_index: int,
-        context_size: int,
+        max_context: Optional[int],
         half_clip_length: int,
         video_transform: Callable,
         video_augment: Optional[Callable] = None,
         video_augment_crop_ratio: Optional[float] = None,
         cache: Optional[dict] = None,
-    ) -> Tuple[List[List[torch.Tensor]], List[int], List[str]]:
+    ) -> Tuple[
+        List[List[torch.Tensor]],
+        List[int],
+        List[str],
+        List[Tuple[float, float, float, float]],
+    ]:
         """根据实体 ID 和中间某刻时间戳索引，获取所有人视频画面 List(人数 list(clip数)) tensor(通道数 * 高度 * 宽度) 和这一刻所有实体的标签
         :param video_id: 视频 id
         :param entity_id: 实体 id
@@ -212,7 +212,7 @@ class DataStore:
         # 获取中间时间戳
         time_ent = orginal_entity_metadata[mid_index][1]
         # 获取上下文的实体 id list
-        context = self.get_speaker_context(video_id, entity_id, time_ent, context_size)
+        context = self.get_speaker_context(video_id, entity_id, time_ent, max_context)
 
         # 视频数据，同一个人的是 List 的一个元素
         video_data: List[List[Image.Image]] = []
@@ -220,16 +220,21 @@ class DataStore:
         targets: list[int] = []
         # 实体
         entities: list[str] = []
+        # 位置信息
+        positions: list[Tuple[float, float, float, float]] = []
         for ctx_entity in context:
             # 查找时间戳在 entity_metadata 中的索引
             entity_metadata = self.entity_data[video_id][ctx_entity]
+            entity_pos_data = self.entity_pos_data[video_id][ctx_entity]
             # 获取中间时间戳在 entity_metadata 中的索引
             ts_idx = self.search_ts_in_meta_data(entity_metadata, time_ent)
             # 获取到标签
             target_ctx = int(entity_metadata[ts_idx][-1])
+            # 获取到位置信息
+            pos_ctx = entity_pos_data[ts_idx]
 
             # 生成一个长度为 half_clip_size*2+1 的单人时间片段
-            clip_meta_data = cu.generate_clip_meta(
+            clip_meta_data = self.generate_clip_meta(
                 entity_metadata, ts_idx, half_clip_length
             )
             # 从片段元数据中获得视频 Image list
@@ -242,6 +247,7 @@ class DataStore:
             )
             targets.append(target_ctx)
             entities.append(ctx_entity)
+            positions.append(pos_ctx)
 
         if video_augment is not None:
             # 视频增强
@@ -254,10 +260,87 @@ class DataStore:
             tensor_vd = [video_transform(f) for f in vd]
             video_data[vd_idx] = tensor_vd  # type: ignore
 
-        return video_data, targets, entities  # type: ignore
+        return video_data, targets, entities, positions  # type: ignore
 
-    def parse_entities_to_int(self, entities: List[str]) -> List[int]:
-        """将实体列表转换为 int"""
-        entities_set: set[str] = set(entities)
-        entities_list: list[str] = list(entities_set)
-        return [entities_list.index(e) for e in entities]
+    def generate_clip_meta(
+        self,
+        entity_meta_data: List[Tuple[str, str, int]],
+        midone: int,
+        half_clip_size: int,
+        from_left: bool = True,
+    ) -> List[Tuple[str, str, int]]:
+        """生成一个长度为 half_clip_size*2+1 的单人时间片段
+        :param entity_meta_data: 实体元数据
+        :param midone: 中心时间戳，entity_meta_data 中的索引
+        :param half_clip_size: 时间片段的一半长度
+        :param from_left: 是否只从左侧取
+        """
+        if from_left:
+            if midone == 0:
+                # 如果是第一个元素，就只取一个元素，不然就不存在区间了，梅尔特征求不出
+                midone = 1
+            max_span_left = self._get_clip_max_span(
+                entity_meta_data, midone, -1, 2 * half_clip_size + 1
+            )
+            clip_data = entity_meta_data[midone - max_span_left : midone + 1]
+            clip_data = self._extend_clip_data_from_left(
+                clip_data, max_span_left, 2 * half_clip_size
+            )
+        else:
+            max_span_left = self._get_clip_max_span(
+                entity_meta_data, midone, -1, half_clip_size + 1
+            )
+            max_span_right = self._get_clip_max_span(
+                entity_meta_data, midone, 1, half_clip_size + 1
+            )
+            # 以 midone 为中心，取出时间片段
+            clip_data = entity_meta_data[
+                midone - max_span_left : midone + max_span_right + 1
+            ]
+            clip_data = self._extend_clip_data(
+                clip_data, max_span_left, max_span_right, half_clip_size
+            )
+
+        return clip_data
+
+    def _get_clip_max_span(
+        self,
+        entity_meta_data: List[Tuple[str, str, int]],
+        midone: int,
+        direction: int,
+        max: int,
+    ):
+        idx = 0
+        for idx in range(0, max):
+            if midone + (idx * direction) < 0:
+                return idx - 1
+            if midone + (idx * direction) >= len(entity_meta_data):
+                return idx - 1
+
+        return idx
+
+    def _extend_clip_data(
+        self, clip_data, max_span_left, max_span_right, half_clip_size
+    ):
+        """扩展数据，使得数据长度为 half_clip_size*2+1
+        如果不够，就复制首尾元素
+        """
+        if max_span_left < half_clip_size:
+            for i in range(half_clip_size - max_span_left):
+                clip_data.insert(0, clip_data[0])
+
+        if max_span_right < half_clip_size:
+            for i in range(half_clip_size - max_span_right):
+                clip_data.insert(-1, clip_data[-1])
+
+        return clip_data
+
+    def _extend_clip_data_from_left(self, clip_data, max_span_left, half_clip_size):
+        """只从左侧扩展数据，使得数据长度为 half_clip_size*2+1
+        如果不够，就复制首元素
+        """
+        if max_span_left < half_clip_size:
+            for i in range(half_clip_size - max_span_left):
+                clip_data.insert(0, clip_data[0])
+
+        return clip_data

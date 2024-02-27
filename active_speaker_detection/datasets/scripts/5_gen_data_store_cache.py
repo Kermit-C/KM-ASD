@@ -33,6 +33,10 @@ class DataStoreLoader:
 
         # 一个人在什么时候是否说话 (entity_id, timestamp, entity_label)
         self.entity_data: Dict[str, Dict[str, List[Tuple[str, str, int]]]] = {}
+        # 一个人在什么时候的位置信息 (x1, y1, x2, y2)
+        self.entity_pos_data: Dict[
+            str, Dict[str, List[Tuple[float, float, float, float]]]
+        ] = {}
         # 一个时间点是否说话，用于音频节点
         self.speech_data: Dict[str, Dict[str, int]] = {}
         # 一个时间点的实体们
@@ -71,16 +75,26 @@ class DataStoreLoader:
                 timestamp,
                 entity_label,
             )
+            # 最小的实体位置数据，什么人在什么时间什么位置
+            minimal_entity_pos_data = (
+                float(csv_row[2]),
+                float(csv_row[3]),
+                float(csv_row[4]),
+                float(csv_row[5]),
+            )
 
             # 存储最少的实体数据
             # 先判断 video_id 是否在 entity_data 中，如果不在，就添加一个空字典
             if video_id not in self.entity_data.keys():
                 self.entity_data[video_id] = {}
+                self.entity_pos_data[video_id] = {}
             if entity_id not in self.entity_data[video_id].keys():
                 self.entity_data[video_id][entity_id] = []
+                self.entity_pos_data[video_id][entity_id] = []
                 entity_set.add((video_id, entity_id))
             # 将 minimal_entity_data 添加到 entity_data 中
             self.entity_data[video_id][entity_id].append(minimal_entity_data)
+            self.entity_pos_data[video_id][entity_id].append(minimal_entity_pos_data)
 
             # 存储语音元数据
             if video_id not in self.speech_data.keys():
@@ -169,6 +183,7 @@ if __name__ == "__main__":
     )
     dataset_store_cache = {
         "entity_data": datastore.entity_data,
+        "entity_pos_data": datastore.entity_pos_data,
         "speech_data": datastore.speech_data,
         "ts_to_entity": datastore.ts_to_entity,
         "entity_list": datastore.entity_list,
@@ -194,6 +209,7 @@ if __name__ == "__main__":
     )
     dataset_store_cache = {
         "entity_data": datastore.entity_data,
+        "entity_pos_data": datastore.entity_pos_data,
         "speech_data": datastore.speech_data,
         "ts_to_entity": datastore.ts_to_entity,
         "entity_list": datastore.entity_list,

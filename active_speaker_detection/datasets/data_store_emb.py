@@ -25,6 +25,10 @@ class EmbeddingDataStore:
 
         # 一个人在什么时候是否说话 (entity_id, timestamp, entity_label)
         self.entity_data: Dict[str, Dict[str, List[Tuple[str, str, int]]]] = {}
+        # 一个人在什么时候的位置信息 (x1, y1, x2, y2)
+        self.entity_pos_data: Dict[
+            str, Dict[str, List[Tuple[float, float, float, float]]]
+        ] = {}
         # 一个时间点是否说话，用于音频节点
         self.speech_data: Dict[str, Dict[str, int]] = {}
         # 一个时间点的实体们
@@ -44,45 +48,37 @@ class EmbeddingDataStore:
             with open(data_store_cache, "rb") as f:
                 cache = pickle.load(f)
                 self.entity_data = cache["entity_data"]
+                self.entity_pos_data = cache["entity_pos_data"]
                 self.speech_data = cache["speech_data"]
                 self.ts_to_entity = cache["ts_to_entity"]
                 self.entity_list = cache["entity_list"]
                 self.feature_list = cache["feature_list"]
 
     def get_speaker_context(
-        self, video_id: str, target_entity_id: str, center_ts: str, ctx_len: int
+        self,
+        video_id: str,
+        target_entity_id: str,
+        center_ts: str,
+        max_context: Optional[int] = None,
     ) -> List[str]:
         """
         获取同一时间点的上下文，返回一个列表，列表中的元素是实体 id
         :param video_id: 视频 id
         :param target_entity_id: 目标实体 id
         :param center_ts: 时间戳
-        :param ctx_len: 上下文长度，实体数量
+        :param max_context: 最大上下文长度
         """
         # 获取包含自己的上下文实体列表
         context_entities = list(self.ts_to_entity[video_id][center_ts])
         random.shuffle(context_entities)
         # 排除自己
         context_entities.remove(target_entity_id)
+        # 保证自己在第一个位置
+        context_entities.insert(0, target_entity_id)
 
-        if not context_entities:
-            # 如果没有上下文，就返回自己
-            context_entities.insert(0, target_entity_id)
-            while len(context_entities) < ctx_len:  # self is context
-                # 从 context_entities 中随机选择一个实体，添加到 context_entities 中
-                # 补全到 ctx_len 的长度
-                context_entities.append(random.choice(context_entities))
-        elif len(context_entities) < ctx_len:
-            # 保证自己在第一个位置
-            context_entities.insert(0, target_entity_id)  # make sure is at 0
-            while len(context_entities) < ctx_len:
-                # 从 context_entities 中随机选择一个实体，添加到 context_entities 中
-                # 补全到 ctx_len 的长度
-                context_entities.append(random.choice(context_entities[1:]))
-        else:
-            context_entities.insert(0, target_entity_id)  # make sure is at 0
+        if max_context is not None:
             # 太长了，就截断
-            context_entities = context_entities[:ctx_len]
+            context_entities = context_entities[:max_context]
 
         return context_entities
 
@@ -91,7 +87,7 @@ class EmbeddingDataStore:
         entity_data: List[Tuple[str, str, int]],
         target_index: int,
         graph_time_steps: int,
-        stride: int,
+        graph_time_stride: int,
     ) -> List[str]:
         """获取时间上下文，返回时间戳列表"""
         # 所有时间戳
@@ -102,10 +98,10 @@ class EmbeddingDataStore:
         center_ts_idx = all_ts.index(str(center_ts))
 
         half_time_steps = int(graph_time_steps / 2)
-        start = center_ts_idx - (half_time_steps * stride)
-        end = center_ts_idx + ((half_time_steps + 1) * stride)
+        start = center_ts_idx - (half_time_steps * graph_time_stride)
+        end = center_ts_idx + ((half_time_steps + 1) * graph_time_stride)
         # 选取的时间戳索引
-        selected_ts_idx = list(range(start, end, stride))
+        selected_ts_idx = list(range(start, end, graph_time_stride))
 
         selected_ts = []
         for i, idx in enumerate(selected_ts_idx):
@@ -162,11 +158,13 @@ class EmbeddingDataStore:
         video_id: str,
         entity_id: str,
         timestamp: str,
-        context_size: int,
-    ) -> Tuple[list[np.ndarray], list[int], list[str]]:
+        max_context: Optional[int],
+    ) -> Tuple[
+        list[np.ndarray], list[int], list[str], list[Tuple[float, float, float, float]]
+    ]:
         """根据实体 ID 和某刻时间戳，获取所有人视频嵌入和标签"""
         # 获取上下文的实体 id list
-        context = self.get_speaker_context(video_id, entity_id, timestamp, context_size)
+        context = self.get_speaker_context(video_id, entity_id, timestamp, max_context)
 
         # 视频数据，同一个人的是 List 的一个元素
         video_data: List[np.ndarray] = []
@@ -174,10 +172,14 @@ class EmbeddingDataStore:
         targets: list[int] = []
         # 实体
         entities: list[str] = []
+        # 位置信息
+        positions: list[Tuple[float, float, float, float]] = []
         for ctx_entity in context:
             entity_metadata = self.entity_data[video_id][ctx_entity]
+            entity_pos_data = self.entity_pos_data[video_id][ctx_entity]
             ts_idx = self.search_ts_in_meta_data(entity_metadata, timestamp)
             target_ctx = int(entity_metadata[ts_idx][-1])
+            pos_ctx = entity_pos_data[ts_idx]
 
             dir = os.path.join(self.embedding_root, ctx_entity.replace(":", "_"))
             with open(os.path.join(dir, f"video_{timestamp}.pkl"), "rb") as f:
@@ -185,5 +187,6 @@ class EmbeddingDataStore:
 
             targets.append(target_ctx)
             entities.append(ctx_entity)
+            positions.append(pos_ctx)
 
-        return (video_data, targets, entities)
+        return (video_data, targets, entities, positions)

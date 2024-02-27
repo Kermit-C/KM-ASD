@@ -14,10 +14,6 @@ import torch
 from torch_geometric.data import Data, Dataset
 from torchvision import transforms
 
-from active_speaker_detection.models.graph_layouts import (
-    get_spatial_connection_pattern,
-    get_temporal_connection_pattern,
-)
 from active_speaker_detection.utils.augmentations import video_temporal_crop
 
 from .data_store import DataStore
@@ -30,10 +26,12 @@ class End2endDataset(Dataset):
         audio_root,
         video_root,
         data_store_train_cache,
-        graph_time_steps: int,  # 图的时间步数
-        stride: int,  # 步长
-        context_size,  # 上下文大小，即上下文中有多少个实体
         clip_lenght,  # 片段长度，短时序上下文片段的长度
+        graph_time_steps: int,  # 图的时间步数
+        graph_time_stride: int,  # 步长
+        is_edge_double=False,  # 是否边是双向的
+        is_edge_across_entity=False,  # 是否跨实体连接，即不同实体不同时刻之间的连接
+        max_context: Optional[int] = None,  # 最大上下文大小，即上下文中有多少个实体
         video_transform: Optional[transforms.Compose] = None,  # 视频转换方法
         do_video_augment=False,  # 是否视频增强
         crop_ratio=0.95,  # 视频裁剪比例
@@ -49,38 +47,20 @@ class End2endDataset(Dataset):
         )
         self.do_video_augment = do_video_augment  # 是否视频增强
 
-        # 图上下文
-        self.context_size = context_size  # 上下文大小，即上下文中有多少个实体
-
         # 图节点的配置
         self.norm_audio = norm_audio  # 是否归一化音频
         self.half_clip_length = math.floor(
             clip_lenght / 2
         )  # 每刻计算特征的帧数一半的长度
 
-        # 获取空间连接模式
-        spatial_connection_pattern = get_spatial_connection_pattern(
-            context_size, graph_time_steps
-        )
-        spatial_src_edges = spatial_connection_pattern["src"]
-        spatial_dst_edges = spatial_connection_pattern["dst"]
-        self.spatial_batch_edges = torch.tensor(
-            [spatial_src_edges, spatial_dst_edges], dtype=torch.long
-        )
-
-        # 获取时间连接模式
-        temporal_connection_pattern = get_temporal_connection_pattern(
-            context_size, graph_time_steps
-        )
-        temporal_src_edges = temporal_connection_pattern["src"]
-        temporal_dst_edges = temporal_connection_pattern["dst"]
-        self.temporal_batch_edges = torch.tensor(
-            [temporal_src_edges, temporal_dst_edges], dtype=torch.long
-        )
-
         # 时序层配置
         self.graph_time_steps = graph_time_steps  # 图的时间步数
-        self.stride = stride  # 图的步长
+        self.graph_time_stride = graph_time_stride  # 图的步长
+        self.is_edge_double = is_edge_double  # 是否边是双向的
+        self.is_edge_across_entity = is_edge_across_entity
+
+        # 图上下文
+        self.max_context = max_context  # 上下文大小，即上下文中有多少个实体
 
     def __len__(self):
         return len(self.store.entity_list)
@@ -96,30 +76,40 @@ class End2endDataset(Dataset):
         center_index = random.randint(0, len(target_entity_metadata) - 1)
         # 获取时间上下文，时间戳列表
         time_context: List[str] = self.store.get_time_context(
-            target_entity_metadata, center_index, self.graph_time_steps, self.stride
+            target_entity_metadata,
+            center_index,
+            self.graph_time_steps,
+            self.graph_time_stride,
         )
 
-        # 图节点的特征数据
-        feature_set: Optional[torch.Tensor] = None
-        # vfal 特征数据
-        vfal_feature_set: Optional[torch.Tensor] = None
-        # 图节点的标签数据
-        target_set: List[int] = []
+        # 图节点特征
+        feature_list: list[torch.Tensor] = []
+        # 图节点的标签数据，前面是音频标签，后面是视频标签
+        target_list: list[Tuple[int, int]] = []
         # 图节点的实体数据
-        entities_set: List[str] = []
+        entity_list: list[str] = []
+        # 时间戳列表
+        timestamp_list: list[str] = []
+        # 位置列表
+        position_list: list[Tuple[float, float, float, float]] = []
+
+        # # 图节点的特征数据
+        # feature_set: Optional[torch.Tensor] = None
+        # # vfal 特征数据
+        # vfal_feature_set: Optional[torch.Tensor] = None
+        # # 图节点的标签数据
+        # target_set: List[int] = []
+        # # 图节点的实体数据
+        # entities_set: List[str] = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
-        # 时刻的上下文节点数，是上下文大小+1
-        nodes_per_time = self.context_size + 1
         cache = {}
-        for time_idx, tc in enumerate(time_context):
-            # 对每个上下文时间戳，获取视频特征和标签
-
-            target_index = all_ts.index(tc)
-
+        # 对每个上下文时间戳，获取视频特征和标签
+        for time_idx, timestamp in enumerate(time_context):
+            target_index = all_ts.index(timestamp)
             # 获取视频特征和标签
-            video_data, target_v, entities_v = self._get_scene_video_data(
+            video_data, target_v, entities_v, positions = self._get_scene_video_data(
                 video_id, entity_id, target_index, cache
             )
             # 获取音频特征和标签
@@ -127,54 +117,82 @@ class End2endDataset(Dataset):
                 video_id, entity_id, target_index, self.half_clip_length
             )
 
-            # 填充标签
-            target_set.append(target_a)
-            for tv in target_v:
-                target_set.append(tv)
-            # 填充实体
-            entities_set.append(entity_a)
-            for ev in entities_v:
-                entities_set.append(ev)
+            a_data = torch.from_numpy(audio_data)
+            for v_data, target, entity, pos in zip(
+                video_data, target_v, entities_v, positions
+            ):
+                # 一个数据是 2 * 通道数 * clip数 * 高度 * 宽度 的 5D tensor
+                # 前面是音频特征，后面是视频特征
+                # 音频特征通道数和 clip 数都是 1
+                a_extend_data = torch.zeros_like(v_data)
+                a_extend_data[0, 0, : a_data.size(1), : a_data.size(2)] = a_data
+                feature_list.append(torch.stack([a_extend_data, v_data], dim=0))
+                target_list.append((target_a, target))
+                entity_list.append(entity)
+                timestamp_list.append(timestamp)
+                position_list.append(pos)
 
-            # 创建一个 tensor，用于存放特征数据，这里是 5D 的，第一个维度是时刻上下文节点数*时间上下文数，第二个维度是通道数，第三个维度是clip数，第四五个维度是画面的长宽
-            # IMPORTANT: 节点所在是第一个维度
-            if feature_set is None:
-                feature_set = torch.zeros(
-                    nodes_per_time * (self.graph_time_steps),
-                    video_data[0].size(0),
-                    video_data[0].size(1),
-                    video_data[0].size(2),
-                    video_data[0].size(3),
-                )
-            audio_fbank = torch.from_numpy(audio_fbank)
-            if vfal_feature_set is None:
-                vfal_feature_set = torch.zeros(
-                    self.graph_time_steps,
-                    audio_fbank.size(1),
-                    audio_fbank.size(2),
-                )
+        # 边的出发点，每一条无向边会正反记录两次
+        source_vertices: list[int] = []
+        # 边的结束点，每一条无向边会正反记录两次
+        target_vertices: list[int] = []
+        # 边出发点的位置信息，x1, y1, x2, y2
+        source_vertices_pos: list[Tuple[float, float, float, float]] = []
+        # 边结束点的位置信息，x1, y1, x2, y2
+        target_vertices_pos: list[Tuple[float, float, float, float]] = []
 
-            # 图节点的偏移，在 feature_set 中的偏移
-            graph_offset = time_idx * nodes_per_time
-            # 第一个维度的第一个节点是音频特征
-            audio_data = torch.from_numpy(audio_data)
-            feature_set[
-                graph_offset, 0, 0, : audio_data.size(1), : audio_data.size(2)
-            ] = audio_data
-            # 填充视频特征
-            for i in range(self.context_size):
-                feature_set[graph_offset + (i + 1), ...] = video_data[i]
+        # 构造边
+        for i, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
+            for j, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
+                # 自己不连接自己
+                if i == j:
+                    continue
 
-            vfal_feature_set[time_idx, : audio_fbank.size(1), : audio_fbank.size(2)] = (
-                audio_fbank
-            )
+                # 只单向连接
+                if not self.is_edge_double and float(timestamp_list[i]) > float(
+                    timestamp_list[j]
+                ):
+                    continue
+
+                if timestamp_list[i] == timestamp_list[j]:
+                    # 同一时刻上下文中的实体之间的连接
+                    source_vertices.append(i)
+                    target_vertices.append(j)
+                    source_vertices_pos.append(position_list[i])
+                    target_vertices_pos.append(position_list[j])
+                elif entity_list[i] == entity_list[j]:
+                    # 同一实体在不同时刻之间的连接
+                    source_vertices.append(i)
+                    target_vertices.append(j)
+                    source_vertices_pos.append(position_list[i])
+                    target_vertices_pos.append(position_list[j])
+                elif self.is_edge_across_entity:
+                    # 不同实体在不同时刻之间的连接
+                    source_vertices.append(i)
+                    target_vertices.append(j)
+                    source_vertices_pos.append(position_list[i])
+                    target_vertices_pos.append(position_list[j])
 
         return Data(
-            x=feature_set,
-            x2=vfal_feature_set,
-            edge_index=(self.spatial_batch_edges, self.temporal_batch_edges),  # type: ignore
-            y=torch.tensor(target_set),
-            y2=torch.tensor(self.store.parse_entities_to_int(entities_set)),
+            # 维度为 [节点数量, 2, 通道数 , clip数 , 高度 , 宽度]，表示每个节点的音频和视频特征
+            x=torch.tensor(feature_list),
+            # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
+            edge_index=torch.tensor(
+                [source_vertices, target_vertices], dtype=torch.long
+            ),
+            # 维度为 [2, 边的数量, 4]，表示每条边的两侧节点的位置信息
+            edge_attr=torch.tensor(
+                [source_vertices_pos, target_vertices_pos], dtype=torch.float
+            ),
+            # 维度为 [节点数量, 3]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是实体标签
+            y=torch.tensor(
+                [
+                    (target[0], target[1], entity)
+                    for target, entity in zip(
+                        target_list, self._parse_entities_to_int(entity_list)
+                    )
+                ]
+            ),
         )
 
     def get_audio_size(
@@ -185,19 +203,24 @@ class End2endDataset(Dataset):
 
     def _get_scene_video_data(
         self, video_id: str, entity_id: str, mid_index: int, cache: dict
-    ) -> Tuple[List[torch.Tensor], List[int], List[str]]:
+    ) -> Tuple[
+        list[torch.Tensor],
+        list[int],
+        list[str],
+        list[Tuple[float, float, float, float]],
+    ]:
         """根据实体 ID 和中间某刻时间戳索引
-        获取所有人视频画面 List(人数) tensor(通道数 * clip数 * 高度 * 宽度) 和这一刻所有实体的标签
+        获取所有人视频画面 list(人数) tensor(通道数 * clip数 * 高度 * 宽度) 和这一刻所有实体的标签
         :param video_id: 视频 id
         :param entity_id: 实体 id
         :param mid_index: 时间戳索引，即中间时间戳的索引
         :param cache: 缓存
         """
-        video_data, targets, entities = self.store.get_video_data(
+        video_data, targets, entities, positions = self.store.get_video_data(
             video_id,
             entity_id,
             mid_index,
-            self.context_size,
+            self.max_context,
             self.half_clip_length,
             self.video_transform,
             video_temporal_crop if self.do_video_augment else None,
@@ -205,4 +228,15 @@ class End2endDataset(Dataset):
             cache,
         )
         # 把一个人的多个画面合并成一个 4D tensor
-        return [torch.stack(vd, dim=1) for vd in video_data], targets, entities
+        return (
+            [torch.stack(vd, dim=1) for vd in video_data],
+            targets,
+            entities,
+            positions,
+        )
+
+    def _parse_entities_to_int(self, entities: list[str]) -> list[int]:
+        """将实体列表转换为 int"""
+        entities_set: set[str] = set(entities)
+        entities_list: list[str] = list(entities_set)
+        return [entities_list.index(e) for e in entities]

@@ -56,6 +56,8 @@ def setup_optim_outputs(
                 "val_video_loss",
                 "val_vfal_loss",
                 "val_map",
+                "val_tmap",
+                "val_cmap",
             ]
         )
     else:
@@ -68,7 +70,7 @@ def setup_optim_outputs(
             try:
                 dump_cfg[key] = value.__name__
             except:
-                dump_cfg[key] = "CrossEntropyLoss"
+                dump_cfg[key] = str(value)
     json_cfg = os.path.join(models_out, experiment_name + "/cfg.json")
     with open(json_cfg, "w") as json_file:
         json.dump(dump_cfg, json_file)

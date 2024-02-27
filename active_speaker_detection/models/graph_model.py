@@ -53,7 +53,6 @@ class GraphNet(nn.Module):
         super().__init__()
 
         self.encoder = encoder
-        self.reduction_v_vfal = nn.Linear(128 * 3, 128)
 
         self.edge_spatial_1 = EdgeConv(LinearPathPreact(128 * 2, filter_size))
         self.edge_spatial_2 = EdgeConv(LinearPathPreact(filter_size * 2, filter_size))
