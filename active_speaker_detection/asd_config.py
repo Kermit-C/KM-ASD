@@ -26,6 +26,7 @@ datasets = {
 
 inference_params = {
     "encoder_type": "R3D18",
+    "graph_type": "GraphAllEdgeNet",
     "encoder_enable_vf": True,
     # 每刻计算特征的帧数
     "frmc": 13,
@@ -46,13 +47,13 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "encoder_train_weights": "/hdd1/ckm/asd/active_speaker_detection/results/R3D18_stage_encoder_vf1_clip13.0/23.pth",
         "encoder_embedding_dir": "/hdd1/ckm2/embeddings/R3D18",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
-        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
         "encoder_learning_rate": 3e-4,
@@ -72,13 +73,13 @@ train_params = [
         "name": "R3D50",
         # 网络架构
         "encoder_type": "R3D50",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D50",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
-        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
         "encoder_learning_rate": 3e-4,
@@ -98,13 +99,13 @@ train_params = [
         "name": "LIGHT",
         # 网络架构
         "encoder_type": "LIGHT",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "encoder_train_weights": "active_speaker_detection/results/LIGHT_stage_encoder_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/LIGHT",
         # 预训练权重
         "encoder_audio_pretrain_weights": None,
         "encoder_video_pretrain_weights": None,
-        "encoder_vfal_ecapa_pretrain_weights": None,
         # encoder 优化配置
         "encoder_batch_size": 128,
         "encoder_learning_rate": 1e-3,
@@ -124,13 +125,13 @@ train_params = [
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES18_TSM",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
         "encoder_learning_rate": 3e-4,
@@ -151,12 +152,12 @@ train_params = [
         "encoder_enable_vf": True,
         # 网络架构
         "encoder_type": "RES50_TSM",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_train_weights": None,
         "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES50_TSM",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
-        "encoder_vfal_ecapa_pretrain_weights": "/hdd1/ckm/pretrain-model/ECAPA_TDNN/results/ecapa_acc0.9854.pkl",
         # encoder 优化配置
         "encoder_batch_size": 128,
         "encoder_learning_rate": 3e-4,

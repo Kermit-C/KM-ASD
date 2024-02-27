@@ -23,7 +23,7 @@ from active_speaker_detection.datasets.dataset_encoder import EncoderDataset
 from active_speaker_detection.datasets.dataset_end2end import End2endDataset
 from active_speaker_detection.datasets.dataset_graph import GraphDataset
 from active_speaker_detection.datasets.gen_emb import gen_embedding
-from active_speaker_detection.models.graph_model import get_backbone
+from active_speaker_detection.models.model import get_backbone
 from active_speaker_detection.optimizers.optimizer_encoder import optimize_encoder
 from active_speaker_detection.optimizers.optimizer_end2end import optimize_end2end
 from active_speaker_detection.optimizers.optimizer_graph import optimize_graph
@@ -56,14 +56,13 @@ def train():
     # 创建网络并转移到GPU
     pretrain_weightds_path = param_config["encoder_video_pretrain_weights"]
     audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
-    vfal_ecapa_pretrain_weights = param_config["encoder_vfal_ecapa_pretrain_weights"]
     encoder_train_weights = param_config["encoder_train_weights"]
     asd_net, encoder_net = get_backbone(
         param_config["encoder_type"],
+        param_config["graph_type"],
         param_config["encoder_enable_vf"],
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
-        vfal_ecapa_pretrain_weights,
         encoder_train_weights,
     )
 
@@ -90,6 +89,8 @@ def train():
         # 输出配置
         model_name = (
             param_config["encoder_type"]
+            + "_"
+            + param_config["graph_type"]
             + "_stage_"
             + stage
             + "_vf"
@@ -170,6 +171,8 @@ def train():
         # 输出配置
         model_name = (
             param_config["encoder_type"]
+            + "_"
+            + param_config["graph_type"]
             + "_stage_"
             + stage
             + "_vf"
@@ -240,6 +243,8 @@ def train():
         # 输出配置
         model_name = (
             param_config["encoder_type"]
+            + "_"
+            + param_config["graph_type"]
             + "_stage_"
             + stage
             + "_vf"

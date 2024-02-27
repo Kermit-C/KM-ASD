@@ -15,7 +15,7 @@ from torch.nn import functional as F
 from torch_geometric.data import Data
 from torchvision import transforms
 
-from active_speaker_detection.models.graph_model import get_backbone
+from active_speaker_detection.models.model import get_backbone
 
 from . import asd_config as asd_conf
 from .models.graph_layouts import (
@@ -67,6 +67,7 @@ class ActiveSpeakerDetector:
         torch.set_grad_enabled(False)
         self.model, _ = get_backbone(
             infer_config["encoder_type"],
+            infer_config["graph_type"],
             infer_config["encoder_enable_vf"],
             train_weights=trained_model,
         )
