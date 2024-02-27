@@ -6,8 +6,6 @@
 @Date: 2024-02-10 15:46:54
 """
 
-from typing import Optional, Tuple
-
 import torch
 import torch.nn as nn
 import torch.nn.parameter
@@ -40,10 +38,9 @@ class LinearPathPreact(nn.Module):
 
 class GraphAllEdgeNet(nn.Module):
 
-    def __init__(self, encoder, channels):
+    def __init__(self, channels):
         super().__init__()
 
-        self.encoder = encoder
         self.av_fusion = nn.Linear(128 * 2, 128)
 
         self.layer_1 = EdgeConv(LinearPathPreact(128 * 2, channels))
@@ -61,11 +58,7 @@ class GraphAllEdgeNet(nn.Module):
         self.dropout = nn.Dropout(0.2)
         self.dropout_edge = 0.2
 
-    def forward(
-        self,
-        data,
-        audio_size: Optional[Tuple[int, int, int]] = None,
-    ):
+    def forward(self, data):
         x, edge_index, edge_attr, _ = (
             data.x,
             data.edge_index,
@@ -73,30 +66,9 @@ class GraphAllEdgeNet(nn.Module):
             data.batch,
         )
 
-        if len(x.shape) > 3:
-            # 从数据中提取音频和视频特征
-            assert audio_size is not None
-            audio_data = (
-                x[:, 0, 0, 0, : audio_size[1], : audio_size[2]]
-                .unsqueeze(1)
-                .unsqueeze(1)
-            )
-            video_data = x[:, 1, :, :, :, :].unsqueeze(1)
-            audio_feats, video_feats, audio_out, video_out, _, vf_a_emb, vf_v_emb = (
-                self.encoder(audio_data, video_data)
-            )
-
-            # 图特征
-            graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
-        else:
-            # 输入的就是 encoder 出来的 128 维特征
-            audio_out = None
-            video_out = None
-            vf_a_emb = None
-            vf_v_emb = None
-            graph_feats = self.av_fusion(
-                torch.cat([x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1)], dim=1)
-            )
+        graph_feats = self.av_fusion(
+            torch.cat([x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1)], dim=1)
+        )
 
         edge_index_1, edge_attr_1 = dropout_adj(
             edge_index=edge_index,
@@ -126,4 +98,4 @@ class GraphAllEdgeNet(nn.Module):
 
         out = self.fc(graph_feats_4)
 
-        return out, audio_out, video_out, vf_a_emb, vf_v_emb
+        return out
