@@ -72,7 +72,7 @@ class EncoderDataset(Dataset):
             video_id, entity_id = self.store.entity_list[index]
             target_entity_metadata = self.store.entity_data[video_id][entity_id]
             # 随机选择一个中间时间戳的索引
-            # TODO: 这样是不是没把所有的时间戳都用上
+            # TODO: 这样没把所有的时间戳都用上，影响大吗？
             center_index = random.randint(0, len(target_entity_metadata) - 1)
             timestamp = target_entity_metadata[center_index][1]
 

@@ -42,3 +42,6 @@ def gen_embedding(
                 pickle.dump(audio_np[idx], f)
             with open(os.path.join(dir, f"video_{timestamp}.pkl"), "wb") as f:
                 pickle.dump(video_np[idx], f)
+
+    print("\t Gen emb iter {:d}/{:d}".format(len(dataloader), len(dataloader)))
+    print(f"\t Done! Save to {out_path}")

@@ -66,19 +66,16 @@ class End2endDataset(Dataset):
         return len(self.store.entity_list)
 
     def __getitem__(self, index):
-        """根据 entity_list 的索引，获取数据集中的一个数据
-        那么，数据集中单个数据的定义是，以单个实体为中心，上下文大小为上下文，取一个实体的时间上下文中，获取视频和音频特征，以及标签
-        """
+        """数据集中单个数据的定义是，以单个实体为中心，取实体时间线上所有相关实体的特征和标签，构成一个图"""
         video_id, entity_id = self.store.entity_list[index]
         target_entity_metadata = self.store.entity_data[video_id][entity_id]
         # 随机选择一个中间时间戳的索引
-        # TODO: 这样是不是没把所有的时间戳都用上
         center_index = random.randint(0, len(target_entity_metadata) - 1)
         # 获取时间上下文，时间戳列表
         time_context: List[str] = self.store.get_time_context(
             target_entity_metadata,
             center_index,
-            self.graph_time_steps,
+            0,  # 原来是 self.graph_time_steps，这是为了形成一整个大图
             self.graph_time_stride,
         )
 
@@ -139,10 +136,12 @@ class End2endDataset(Dataset):
                 if i == j:
                     continue
 
+                # 超过了时间步数，不连接
+                if abs(i - j) > self.graph_time_steps:
+                    continue
+
                 # 只单向连接
-                if not self.is_edge_double and float(timestamp_list[i]) > float(
-                    timestamp_list[j]
-                ):
+                if not self.is_edge_double and i > j:
                     continue
 
                 if timestamp_list[i] == timestamp_list[j]:

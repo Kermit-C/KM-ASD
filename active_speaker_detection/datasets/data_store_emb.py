@@ -89,7 +89,9 @@ class EmbeddingDataStore:
         graph_time_steps: int,
         graph_time_stride: int,
     ) -> List[str]:
-        """获取时间上下文，返回时间戳列表"""
+        """获取时间上下文，返回时间戳列表
+        :param graph_time_steps 0 表示取所有时间戳
+        """
         # 所有时间戳
         all_ts = [ed[1] for ed in entity_data]
         # 中心时间戳，即目标时间戳
@@ -97,22 +99,35 @@ class EmbeddingDataStore:
         # 中心时间戳的索引
         center_ts_idx = all_ts.index(str(center_ts))
 
-        half_time_steps = int(graph_time_steps / 2)
-        start = center_ts_idx - (half_time_steps * graph_time_stride)
-        end = center_ts_idx + ((half_time_steps + 1) * graph_time_stride)
-        # 选取的时间戳索引
-        selected_ts_idx = list(range(start, end, graph_time_stride))
+        if graph_time_steps > 0:
+            half_time_steps = graph_time_steps // 2
+            start = center_ts_idx - (half_time_steps * graph_time_stride)
+            end = center_ts_idx + ((half_time_steps + 1) * graph_time_stride)
+            # 选取的时间戳索引
+            selected_ts_idx = list(range(start, end, graph_time_stride))
 
-        selected_ts = []
-        for i, idx in enumerate(selected_ts_idx):
-            # 保证不越界，时间上下文中都要当前所表示的实体，越界就取边界值
-            if idx < 0:
-                idx = 0
-            if idx >= len(all_ts):
-                idx = len(all_ts) - 1
-            selected_ts.append(all_ts[idx])
+            selected_ts = []
+            for i, idx in enumerate(selected_ts_idx):
+                # 保证不越界，时间上下文中都要当前所表示的实体，越界就取边界值
+                if idx < 0:
+                    idx = 0
+                if idx >= len(all_ts):
+                    idx = len(all_ts) - 1
+                selected_ts.append(all_ts[idx])
 
-        return selected_ts
+            return selected_ts
+        else:
+            start = (
+                center_ts_idx - (center_ts_idx // graph_time_stride) * graph_time_stride
+            )
+            end = (
+                center_ts_idx
+                + ((len(all_ts) - center_ts_idx) // graph_time_stride)
+                * graph_time_stride
+            )
+            # 选取的时间戳索引
+            selected_ts_idx = list(range(start, end, graph_time_stride))
+            return [all_ts[i] for i in selected_ts_idx]
 
     def search_ts_in_meta_data(
         self, entity_metadata: List[Tuple[str, str, int]], ts: str
