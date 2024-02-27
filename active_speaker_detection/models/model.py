@@ -62,7 +62,6 @@ class MyModel(nn.Module):
 def _load_weights_into_model(model: nn.Module, ws_file):
     """加载训练权重"""
     model.load_state_dict(torch.load(ws_file), strict=False)
-    print("loaded model weights")
 
 
 ############### 以下是模型的工厂函数 ###############
@@ -88,12 +87,14 @@ def get_backbone(
     model = MyModel(encoder, graph_net)
 
     # 加载模型权重
-    # 先加载整个的，如果有单独的 encoder 的权重，再加载 encoder 的权重
     if train_weights is not None:
         _load_weights_into_model(model, train_weights)
+        print("loaded model weights")
         model.eval()
-    if encoder_train_weights is not None:
-        _load_weights_into_model(encoder, encoder_train_weights)
+        # 先加载整个的，如果有单独的 encoder 的权重，再覆盖一次 encoder 的权重
+        if encoder_train_weights is not None:
+            _load_weights_into_model(encoder, encoder_train_weights)
+            print("loaded encoder weights")
 
     return model, encoder
 

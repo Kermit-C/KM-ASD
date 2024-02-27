@@ -68,17 +68,15 @@ class GraphDataset(Dataset):
         position_list: list[Tuple[float, float, float, float]] = []
 
         # 对每个上下文时间戳，获取视频特征和标签
+        cache = {}
         for time_idx, timestamp in enumerate(time_context):
             # 获取视频特征和标签
             video_data, target_v, entities_v, positions = self.store.get_video_data(
-                video_id,
-                entity_id,
-                timestamp,
-                self.max_context,
+                video_id, entity_id, timestamp, self.max_context, cache
             )
             # 获取音频特征和标签
             audio_data, target_a, entity_a = self.store.get_audio_data(
-                video_id, entity_id, timestamp
+                video_id, entity_id, timestamp, cache
             )
 
             a_feat = torch.from_numpy(audio_data)
@@ -138,7 +136,7 @@ class GraphDataset(Dataset):
 
         return Data(
             # 维度为 [节点数量, 2, 128]，表示每个节点的音频和视频特征
-            x=torch.tensor(feature_list),
+            x=torch.stack(feature_list, dim=0),
             # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long

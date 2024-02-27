@@ -139,13 +139,23 @@ class EmbeddingDataStore:
         raise Exception("Bad Context")
 
     def get_audio_data(
-        self, video_id: str, entity_id: str, timestamp: str
+        self,
+        video_id: str,
+        entity_id: str,
+        timestamp: str,
+        cache: dict,
     ) -> Tuple[np.ndarray, int, str]:
         """根据实体 ID 和某刻时间戳，获取音频嵌入和标签"""
         target_audio = self.speech_data[video_id][timestamp]
-        dir = os.path.join(self.embedding_root, entity_id.replace(":", "_"))
-        with open(os.path.join(dir, f"audio_{timestamp}.pkl"), "rb") as f:
-            audio_data = pickle.load(f)
+        if entity_id not in self.entity_data[video_id]:
+            pkl_path = os.path.join(
+                self.embedding_root, entity_id.replace(":", "_") + ".pkl"
+            )
+            with open(pkl_path, "rb") as f:
+                entity_emb = pickle.load(f)
+            cache[entity_id] = entity_emb
+        audio_data = cache[entity_id][timestamp][0]
+
         mid_index = self.search_ts_in_meta_data(
             self.entity_data[video_id][entity_id], timestamp
         )
@@ -174,6 +184,7 @@ class EmbeddingDataStore:
         entity_id: str,
         timestamp: str,
         max_context: Optional[int],
+        cache: dict,
     ) -> Tuple[
         list[np.ndarray], list[int], list[str], list[Tuple[float, float, float, float]]
     ]:
@@ -196,9 +207,14 @@ class EmbeddingDataStore:
             target_ctx = int(entity_metadata[ts_idx][-1])
             pos_ctx = entity_pos_data[ts_idx]
 
-            dir = os.path.join(self.embedding_root, ctx_entity.replace(":", "_"))
-            with open(os.path.join(dir, f"video_{timestamp}.pkl"), "rb") as f:
-                video_data.append(pickle.load(f))
+            if ctx_entity not in self.entity_data[video_id]:
+                pkl_path = os.path.join(
+                    self.embedding_root, ctx_entity.replace(":", "_") + ".pkl"
+                )
+                with open(pkl_path, "rb") as f:
+                    entity_emb = pickle.load(f)
+                cache[ctx_entity] = entity_emb
+            video_data.append(cache[ctx_entity][timestamp][1])
 
             targets.append(target_ctx)
             entities.append(ctx_entity)

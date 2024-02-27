@@ -165,7 +165,7 @@ class End2endDataset(Dataset):
 
         return Data(
             # 维度为 [节点数量, 2, 通道数 , clip数 , 高度 , 宽度]，表示每个节点的音频和视频特征
-            x=torch.tensor(feature_list),
+            x=torch.stack(feature_list, dim=0),
             # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long

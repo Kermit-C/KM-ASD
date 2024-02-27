@@ -77,6 +77,7 @@ class EncoderDataset(Dataset):
             timestamp = target_entity_metadata[center_index][1]
 
         # 获取视频特征和标签
+        cache = {}
         video_data, targets, entities, positions = self.store.get_video_data(
             video_id,
             entity_id,
@@ -86,7 +87,7 @@ class EncoderDataset(Dataset):
             self.video_transform,
             video_temporal_crop if self.do_video_augment else None,
             self.crop_ratio if self.do_video_augment else None,
-            None,
+            cache,
         )
         # 获取音频特征和标签
         audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
