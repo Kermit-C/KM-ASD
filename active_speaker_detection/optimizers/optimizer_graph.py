@@ -13,12 +13,6 @@ import torch.nn as nn
 from sklearn.metrics import average_precision_score
 from torch.cuda.amp.autocast_mode import autocast
 
-from active_speaker_detection.models.graph_layouts import (
-    generate_av_mask,
-    generate_temporal_video_center_mask,
-    generate_temporal_video_mask,
-)
-
 
 def optimize_graph(
     model,
@@ -60,7 +54,7 @@ def optimize_graph(
         scheduler.step()
 
         train_loss, ta_loss, tv_loss, train_ap = outs_train
-        val_loss, va_loss, vv_loss, val_ap, val_tap, val_cap = outs_val
+        val_loss, va_loss, vv_loss, val_ap = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
             # 保存当前最优模型
@@ -83,8 +77,6 @@ def optimize_graph(
                     vv_loss,
                     0,
                     val_ap,
-                    val_tap,
-                    val_cap,
                 ]
             )
 
@@ -107,12 +99,6 @@ def _train_model_amp_avl(
     pred_lst = []
     label_lst = []
 
-    pred_time_lst = []
-    label_time_lst = []
-
-    pred_center_lst = []
-    label_center_lst = []
-
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
@@ -130,23 +116,11 @@ def _train_model_amp_avl(
         graph_data = dl
         graph_data = graph_data.to(device)
         targets = graph_data.y
-        entities = graph_data.y2
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
-            # 生成掩码, 用于计算辅助损失, 包括单独的音频和视频损失
-            audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
-            # 生成单人时序上的掩码，仅用来计算单人时序上的损失，仅用于评估
-            temporal_video_mask = generate_temporal_video_mask(
-                ctx_size, graph_data.x.size(0)
-            )
-            # 生成中心帧的掩码，仅用来计算中心帧的损失，仅用于评估
-            center_mask = generate_temporal_video_center_mask(
-                ctx_size, graph_data.x.size(0), time_len
-            )
-
             with autocast(True):
-                outputs, _, _, _, _ = model(graph_data, ctx_size)
+                outputs, _, _, _, _ = model(graph_data)
                 # 图的损失
                 loss: torch.Tensor = criterion(outputs, targets)
 
@@ -155,20 +129,8 @@ def _train_model_amp_avl(
             scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets[video_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_time_lst.extend(targets[temporal_video_mask].cpu().numpy().tolist())
-            pred_time_lst.extend(
-                softmax_layer(outputs[temporal_video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_center_lst.extend(targets[center_mask].cpu().numpy().tolist())
-            pred_center_lst.extend(
-                softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
-            )
+            label_lst.extend(targets.cpu().numpy().tolist())
+            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss.item()
@@ -179,16 +141,12 @@ def _train_model_amp_avl(
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
-    epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
-    epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_ap,
-            epoch_time_ap,
-            epoch_center_ap,
         )
     )
     return epoch_loss_g, epoch_loss_a, epoch_loss_v, epoch_ap
@@ -209,17 +167,9 @@ def _test_model_graph_losses(
     pred_lst = []
     label_lst = []
 
-    pred_time_lst = []
-    label_time_lst = []
-
-    pred_center_lst = []
-    label_center_lst = []
-
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
-
-    audio_size, vfal_size = dataloader.dataset.get_audio_size()
 
     for idx, dl in enumerate(dataloader):
         print(
@@ -232,34 +182,13 @@ def _test_model_graph_losses(
         graph_data = dl
         graph_data = graph_data.to(device)
         targets = graph_data.y
-        entities = graph_data.y2
 
         with torch.set_grad_enabled(False):
-            audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
-            temporal_video_mask = generate_temporal_video_mask(
-                ctx_size, graph_data.x.size(0)
-            )
-            center_mask = generate_temporal_video_center_mask(
-                ctx_size, graph_data.x.size(0), time_len
-            )
-
-            outputs, _, _, _, _ = model(graph_data, ctx_size, audio_size, vfal_size)
+            outputs, _, _, _, _ = model(graph_data)
             loss = criterion(outputs, targets)
 
-            label_lst.extend(targets[video_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_time_lst.extend(targets[temporal_video_mask].cpu().numpy().tolist())
-            pred_time_lst.extend(
-                softmax_layer(outputs[temporal_video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_center_lst.extend(targets[center_mask].cpu().numpy().tolist())
-            pred_center_lst.extend(
-                softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
-            )
+            label_lst.extend(targets.cpu().numpy().tolist())
+            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss.item()
@@ -270,16 +199,12 @@ def _test_model_graph_losses(
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
-    epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
-    epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_ap,
-            epoch_time_ap,
-            epoch_center_ap,
         )
     )
     return (
@@ -287,6 +212,4 @@ def _test_model_graph_losses(
         epoch_loss_a,
         epoch_loss_v,
         epoch_ap,
-        epoch_time_ap,
-        epoch_center_ap,
     )

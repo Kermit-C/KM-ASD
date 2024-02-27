@@ -83,8 +83,6 @@ def optimize_encoder(
                     vv_loss,
                     vvf_loss,
                     val_ap,
-                    0,
-                    0,
                 ]
             )
 

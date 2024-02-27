@@ -13,12 +13,6 @@ import torch.nn as nn
 from sklearn.metrics import average_precision_score
 from torch.cuda.amp.autocast_mode import autocast
 
-from active_speaker_detection.models.graph_layouts import (
-    generate_av_mask,
-    generate_temporal_video_center_mask,
-    generate_temporal_video_mask,
-)
-
 
 def optimize_end2end(
     model,
@@ -69,7 +63,7 @@ def optimize_end2end(
         scheduler.step()
 
         train_loss, ta_loss, tv_loss, tvfal_loss, train_ap = outs_train
-        val_loss, va_loss, vv_loss, vvfal_loss, val_ap, val_tap, val_cap = outs_val
+        val_loss, va_loss, vv_loss, vvfal_loss, val_ap = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
             # 保存当前最优模型
@@ -92,8 +86,6 @@ def optimize_end2end(
                     vv_loss,
                     vvfal_loss,
                     val_ap,
-                    val_tap,
-                    val_cap,
                 ]
             )
 
@@ -120,18 +112,12 @@ def _train_model_amp_avl(
     pred_lst = []
     label_lst = []
 
-    pred_time_lst = []
-    label_time_lst = []
-
-    pred_center_lst = []
-    label_center_lst = []
-
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
     running_loss_vf = 0.0
 
-    audio_size, vfal_size = dataloader.dataset.get_audio_size()
+    audio_size, _ = dataloader.dataset.get_audio_size()
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
 
     for idx, dl in enumerate(dataloader):
@@ -144,42 +130,45 @@ def _train_model_amp_avl(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets = graph_data.y
-        entities = graph_data.y2
+        targets_a = graph_data.y[:, 0].unsqueeze(1)
+        targets = graph_data.y[:, 1].unsqueeze(1)
+        entities = graph_data.y[:, 2].unsqueeze(1)
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
-            # 生成掩码, 用于计算辅助损失, 包括单独的音频和视频损失
-            audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
-            # 生成单人时序上的掩码，仅用来计算单人时序上的损失，仅用于评估
-            temporal_video_mask = generate_temporal_video_mask(
-                ctx_size, graph_data.x.size(0)
-            )
-            # 生成中心帧的掩码，仅用来计算中心帧的损失，仅用于评估
-            center_mask = generate_temporal_video_center_mask(
-                ctx_size, graph_data.x.size(0), time_len
-            )
-
             with autocast(True):
                 outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
-                    graph_data, ctx_size, audio_size, vfal_size
+                    graph_data, audio_size
                 )
                 # 单独音频和视频的损失
-                aux_loss_a: torch.Tensor = criterion(audio_out, targets[audio_mask])
-                aux_loss_v: torch.Tensor = criterion(video_out, targets[video_mask])
-                # TODO: 音脸关系标签的抽取
-                # aux_loss_vf: torch.Tensor = vf_critierion(
-                #     torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                #     torch.cat([entities[audio_mask], entities[video_mask]], dim=0),
-                # )
-                # 图的损失
-                loss_graph: torch.Tensor = criterion(outputs, targets)
-                loss = (
-                    a_weight * aux_loss_a
-                    + v_weight * aux_loss_v
-                    # + vfal_weight * aux_loss_vf
-                    + loss_graph
-                )
+                aux_loss_a: torch.Tensor = criterion(audio_out, targets_a)
+                aux_loss_v: torch.Tensor = criterion(video_out, targets)
+                if vf_a_emb is not None and vf_v_emb is not None:
+                    # 音脸损失
+                    target_vf, target_vf_a = _create_vf_target(
+                        targets, targets_a, entities
+                    )
+                    aux_loss_vf: torch.Tensor = vf_critierion(
+                        torch.cat([vf_a_emb, vf_v_emb], dim=0),
+                        torch.cat([target_vf_a, target_vf], dim=0),
+                    )
+                    # 图的损失
+                    loss_graph: torch.Tensor = criterion(outputs, targets)
+                    loss = (
+                        a_weight * aux_loss_a
+                        + v_weight * aux_loss_v
+                        + vfal_weight * aux_loss_vf
+                        + loss_graph
+                    )
+                else:
+                    # 图的损失
+                    loss_graph: torch.Tensor = criterion(outputs, targets)
+                    loss = (
+                        a_weight * aux_loss_a
+                        + v_weight * aux_loss_v
+                        # + vfal_weight * aux_loss_vf
+                        + loss_graph
+                    )
 
             optimizer.zero_grad()  # 重置梯度，不加会爆显存
             scaler.scale(loss).backward()  # type: ignore
@@ -187,26 +176,16 @@ def _train_model_amp_avl(
             scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets[video_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_time_lst.extend(targets[temporal_video_mask].cpu().numpy().tolist())
-            pred_time_lst.extend(
-                softmax_layer(outputs[temporal_video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_center_lst.extend(targets[center_mask].cpu().numpy().tolist())
-            pred_center_lst.extend(
-                softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
-            )
+            label_lst.extend(targets.cpu().numpy().tolist())
+            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()
-        # running_loss_vf += aux_loss_vf.item()
+        running_loss_vf += (
+            aux_loss_vf.item() if vf_a_emb is not None and vf_v_emb is not None else 0
+        )
         if idx == len(dataloader) - 2:
             break
 
@@ -215,17 +194,13 @@ def _train_model_amp_avl(
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
-    epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
-    epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
-            epoch_time_ap,
-            epoch_center_ap,
         )
     )
     return epoch_loss_g, epoch_loss_a, epoch_loss_v, epoch_loss_vf, epoch_ap
@@ -247,18 +222,12 @@ def _test_model_graph_losses(
     pred_lst = []
     label_lst = []
 
-    pred_time_lst = []
-    label_time_lst = []
-
-    pred_center_lst = []
-    label_center_lst = []
-
     running_loss_g = 0.0
     running_loss_a = 0.0
     running_loss_v = 0.0
     running_loss_vf = 0.0
 
-    audio_size, vfal_size = dataloader.dataset.get_audio_size()
+    audio_size, _ = dataloader.dataset.get_audio_size()
 
     for idx, dl in enumerate(dataloader):
         print(
@@ -271,50 +240,34 @@ def _test_model_graph_losses(
         graph_data = dl
         graph_data = graph_data.to(device)
         targets = graph_data.y
-        entities = graph_data.y2
+        targets_a = graph_data.y[:, 0].unsqueeze(1)
+        targets = graph_data.y[:, 1].unsqueeze(1)
+        entities = graph_data.y[:, 2].unsqueeze(1)
 
         with torch.set_grad_enabled(False):
-            audio_mask, video_mask = generate_av_mask(ctx_size, graph_data.x.size(0))
-            temporal_video_mask = generate_temporal_video_mask(
-                ctx_size, graph_data.x.size(0)
-            )
-            center_mask = generate_temporal_video_center_mask(
-                ctx_size, graph_data.x.size(0), time_len
-            )
-
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
-                graph_data, ctx_size, audio_size, vfal_size
+                graph_data, audio_size
             )
             loss_graph = criterion(outputs, targets)
-            aux_loss_a = criterion(audio_out, targets[audio_mask])
-            aux_loss_v = criterion(video_out, targets[video_mask])
-            # aux_loss_vf: torch.Tensor = vf_critierion(
-            #     torch.cat([vf_a_emb, vf_v_emb], dim=0),
-            #     torch.cat(
-            #         [entities[audio_mask], entities[video_mask]], dim=0
-            #     ).squeeze(),
-            # )
+            aux_loss_a = criterion(audio_out, targets_a)
+            aux_loss_v = criterion(video_out, targets)
+            if vf_a_emb is not None and vf_v_emb is not None:
+                target_vf, target_vf_a = _create_vf_target(targets, targets_a, entities)
+                aux_loss_vf: torch.Tensor = vf_critierion(
+                    torch.cat([vf_a_emb, vf_v_emb], dim=0),
+                    torch.cat([target_vf_a, target_vf], dim=0),
+                )
 
-            label_lst.extend(targets[video_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_time_lst.extend(targets[temporal_video_mask].cpu().numpy().tolist())
-            pred_time_lst.extend(
-                softmax_layer(outputs[temporal_video_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            label_center_lst.extend(targets[center_mask].cpu().numpy().tolist())
-            pred_center_lst.extend(
-                softmax_layer(outputs[center_mask]).cpu().numpy()[:, 1].tolist()
-            )
+            label_lst.extend(targets.cpu().numpy().tolist())
+            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
         running_loss_v += aux_loss_v.item()
-        # running_loss_vf += aux_loss_vf.item()
+        running_loss_vf += (
+            aux_loss_vf.item() if vf_a_emb is not None and vf_v_emb is not None else 0
+        )
 
         if idx == len(dataloader) - 2:
             break
@@ -324,17 +277,13 @@ def _test_model_graph_losses(
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
-    epoch_time_ap = average_precision_score(label_time_lst, pred_time_lst)
-    epoch_center_ap = average_precision_score(label_center_lst, pred_center_lst)
     print(
-        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, VmAP: {:.4f}, TVmAP: {:.4f}, CVmAP: {:.4f}".format(
+        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
-            epoch_time_ap,
-            epoch_center_ap,
         )
     )
     return (
@@ -343,6 +292,30 @@ def _test_model_graph_losses(
         epoch_loss_v,
         epoch_loss_vf,
         epoch_ap,
-        epoch_time_ap,
-        epoch_center_ap,
     )
+
+
+def _create_vf_target(target, target_a, entities):
+    """创建音脸的目标标签"""
+    target_vf = torch.zeros_like(target)
+    target_vf_a = torch.zeros_like(target_a)
+    entity_to_i_dict = {}
+    unknown_entity = -1
+    for i, entity in enumerate(entities):
+        if entity not in entity_to_i_dict:
+            entity_to_i_dict[entity] = len(entity_to_i_dict) + 1
+        target_vf[i] = entity_to_i_dict[entity]
+        if target[i] == 1:
+            # 有声音的实体
+            target_vf_a[i] = entity_to_i_dict[entity]
+        elif target[i] == 0 and target_a[i] == 1:
+            # 无声音的实体，但是有其他人声音
+            target_vf_a[i] = unknown_entity
+            unknown_entity -= 1
+        else:
+            # 没有人声音，环境音
+            target_vf_a[i] = 0
+    # 变为非负
+    target_vf -= unknown_entity
+    target_vf_a -= unknown_entity
+    return target_vf, target_vf_a

@@ -47,8 +47,8 @@ train_params = [
         # 网络架构
         "encoder_type": "R3D18",
         "encoder_enable_vf": True,
-        "encoder_train_weights": None,
-        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D18",
+        "encoder_train_weights": "/hdd1/ckm/asd/active_speaker_detection/results/R3D18_stage_encoder_vf1_clip13.0/23.pth",
+        "encoder_embedding_dir": "/hdd1/ckm2/embeddings/R3D18",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",

@@ -56,8 +56,6 @@ def setup_optim_outputs(
                 "val_video_loss",
                 "val_vfal_loss",
                 "val_map",
-                "val_tmap",
-                "val_cmap",
             ]
         )
     else:

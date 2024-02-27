@@ -84,42 +84,42 @@ from typing import List, Tuple
 #     return cp
 
 
-def generate_av_mask(ctx_size: int, total_len: int) -> Tuple[List[int], List[int]]:
-    """
-    Deprecated
-    生成音频和视频的 mask，即音频和视频所在 batch 第零维的索引的列表
-    """
-    stride = ctx_size + 1
-    audio_mask: List[int] = []
-    video_mask: List[int] = []
-    for i in range(0, total_len):
-        if i % stride == 0:
-            audio_mask.append(i)
-        else:
-            video_mask.append(i)
-    return audio_mask, video_mask
+# def generate_av_mask(ctx_size: int, total_len: int) -> Tuple[List[int], List[int]]:
+#     """
+#     Deprecated
+#     生成音频和视频的 mask，即音频和视频所在 batch 第零维的索引的列表
+#     """
+#     stride = ctx_size + 1
+#     audio_mask: List[int] = []
+#     video_mask: List[int] = []
+#     for i in range(0, total_len):
+#         if i % stride == 0:
+#             audio_mask.append(i)
+#         else:
+#             video_mask.append(i)
+#     return audio_mask, video_mask
 
 
-def generate_temporal_video_mask(ctx_size: int, total_len: int) -> List[int]:
-    """
-    Deprecated
-    生成视频的单个人时序上的 mask，即视频所在 batch 第零维的索引的列表
-    """
-    stride = ctx_size + 1
-    video_mask = [i for i in range(1, total_len, stride)]
-    return video_mask
+# def generate_temporal_video_mask(ctx_size: int, total_len: int) -> List[int]:
+#     """
+#     Deprecated
+#     生成视频的单个人时序上的 mask，即视频所在 batch 第零维的索引的列表
+#     """
+#     stride = ctx_size + 1
+#     video_mask = [i for i in range(1, total_len, stride)]
+#     return video_mask
 
 
-def generate_temporal_video_center_mask(
-    ctx_size: int, total_len: int, time_len: int
-) -> List[int]:
-    """
-    Deprecated
-    生成视频的单个人时序上的中心帧 mask，即视频所在 batch 第零维的索引的列表
-    """
-    stride = ctx_size + 1
-    video_mask = [
-        i + stride * math.floor(time_len / 2)
-        for i in range(1, total_len, stride * time_len)
-    ]
-    return video_mask
+# def generate_temporal_video_center_mask(
+#     ctx_size: int, total_len: int, time_len: int
+# ) -> List[int]:
+#     """
+#     Deprecated
+#     生成视频的单个人时序上的中心帧 mask，即视频所在 batch 第零维的索引的列表
+#     """
+#     stride = ctx_size + 1
+#     video_mask = [
+#         i + stride * math.floor(time_len / 2)
+#         for i in range(1, total_len, stride * time_len)
+#     ]
+#     return video_mask

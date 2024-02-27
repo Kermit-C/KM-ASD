@@ -93,15 +93,6 @@ class End2endDataset(Dataset):
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
 
-        # # 图节点的特征数据
-        # feature_set: Optional[torch.Tensor] = None
-        # # vfal 特征数据
-        # vfal_feature_set: Optional[torch.Tensor] = None
-        # # 图节点的标签数据
-        # target_set: List[int] = []
-        # # 图节点的实体数据
-        # entities_set: List[str] = []
-
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
         cache = {}
@@ -180,10 +171,10 @@ class End2endDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [2, 边的数量, 4]，表示每条边的两侧节点的位置信息
+            # 维度为 [边的数量, 2, 4]，表示每条边的两侧节点的位置信息
             edge_attr=torch.tensor(
                 [source_vertices_pos, target_vertices_pos], dtype=torch.float
-            ),
+            ).transpose(0, 1),
             # 维度为 [节点数量, 3]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是实体标签
             y=torch.tensor(
                 [

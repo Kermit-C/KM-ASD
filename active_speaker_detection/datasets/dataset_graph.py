@@ -144,10 +144,10 @@ class GraphDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [2, 边的数量, 4]，表示每条边的两侧节点的位置信息
+            # 维度为 [边的数量, 2, 4]，表示每条边的两侧节点的位置信息
             edge_attr=torch.tensor(
                 [source_vertices_pos, target_vertices_pos], dtype=torch.float
-            ),
+            ).transpose(0, 1),
             # 维度为 [节点数量]，表示每个节点的标签
             y=torch.tensor(target_list),
         )
