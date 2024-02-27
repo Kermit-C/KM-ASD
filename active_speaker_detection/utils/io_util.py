@@ -7,7 +7,7 @@
 """
 
 import os
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -68,22 +68,31 @@ def load_v_clip_from_metadata_cache(
     clip_meta_data: List[Tuple[str, str, int]],
     frames_source: str,
     cache: dict,
-    silent_fail=False,
+    entity_cache: Optional[dict] = None,
 ) -> List[Image.Image]:
     """从视频图片序列加载 Image，使用缓存"""
     ts_sequence = [str(meta[1]) for meta in clip_meta_data]
     entity_id = clip_meta_data[0][0]
 
-    selected_frames = [
-        os.path.join(frames_source, entity_id.replace(":", "_"), ts + ".jpg")
-        for ts in ts_sequence
-    ]
-    if silent_fail:
-        video_data = [
-            # _cached_pil_loader_silent_fail(sf, cache) for sf in selected_frames
-        ]
-    else:
-        video_data = [_cached_pil_loader(sf, cache) for sf in selected_frames]
+    video_data = []
+    for ts in ts_sequence:
+        if entity_cache is not None and entity_id + "_" + ts in entity_cache.keys():
+            video_data.append(entity_cache[entity_id + "_" + ts])
+        else:
+            video_data.append(
+                _cached_pil_loader(
+                    os.path.join(
+                        frames_source, entity_id.replace(":", "_"), ts + ".jpg"
+                    ),
+                    cache,
+                )
+            )
+
+    if entity_cache is not None:
+        for img, meta in zip(video_data, clip_meta_data):
+            ts = meta[1]
+            entity_cache[entity_id + "_" + ts] = img
+
     return video_data
 
 
@@ -92,7 +101,6 @@ def load_a_clip_from_metadata(
     frames_source,
     audio_source,
     audio_offset: float,
-    fail_silent=False,
 ) -> Tuple[np.ndarray, torch.Tensor]:
     """从片段元数据中获得音频梅尔特征"""
     # 从片段元数据中获得时间戳序列

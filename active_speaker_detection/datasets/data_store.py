@@ -212,6 +212,7 @@ class DataStore:
         video_augment: Optional[Callable] = None,
         video_augment_crop_ratio: Optional[float] = None,
         cache: Optional[dict] = None,
+        entity_cache: Optional[dict] = None,
     ) -> Tuple[
         List[List[torch.Tensor]],
         List[int],
@@ -255,7 +256,7 @@ class DataStore:
             # 从片段元数据中获得视频 Image list
             video_data.append(
                 io.load_v_clip_from_metadata_cache(
-                    clip_meta_data, self.video_root, cache
+                    clip_meta_data, self.video_root, cache, entity_cache
                 )
                 if cache is not None
                 else io.load_v_clip_from_metadata(clip_meta_data, self.video_root)

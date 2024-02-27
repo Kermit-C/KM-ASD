@@ -263,7 +263,7 @@ class LightTwoStreamNet(nn.Module):
         # 音脸分支
         self.encoder_enable_vf = encoder_enable_vf
         self.vf_layer = VfalSlEncoder(
-            voice_size=128, face_size=128, embedding_size=128, shared=True
+            voice_size=128, face_size=128, embedding_size=128, shared=False
         )
 
         # 分类器

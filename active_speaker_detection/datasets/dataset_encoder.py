@@ -51,6 +51,8 @@ class EncoderDataset(Dataset):
 
         self.eval = eval
 
+        self.global_cache = {}  # 主要用于依次计算特征的缓存
+
     def __len__(self):
         if self.eval:
             # 是 eval 就用全部
@@ -88,7 +90,11 @@ class EncoderDataset(Dataset):
             video_temporal_crop if self.do_video_augment else None,
             self.crop_ratio if self.do_video_augment else None,
             cache,
+            self.global_cache,
         )
+        # 限制 self.global_cache 长度，最大 1000，从旧的开始删除
+        while len(self.global_cache) > 1000:
+            self.global_cache.pop(list(self.global_cache.keys())[0])
         # 获取音频特征和标签
         audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
             video_id, entity_id, center_index, self.half_clip_length

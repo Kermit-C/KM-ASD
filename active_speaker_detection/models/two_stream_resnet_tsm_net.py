@@ -89,7 +89,7 @@ class TwoStreamResNet(nn.Module):
             voice_size=512 * block.expansion,
             face_size=512 * block.expansion,
             embedding_size=128,
-            shared=True,
+            shared=False,
         )
 
         self.tsm = TemporalShift(n_div=8)
