@@ -297,7 +297,7 @@ def _create_vf_target(target, target_a, entities):
     unknown_entity = -1
     for i, entity in enumerate(entities):
         if entity not in entity_to_i_dict:
-            entity_to_i_dict[entity] = len(entity_to_i_dict)
+            entity_to_i_dict[entity] = len(entity_to_i_dict) + 1
         target_vf[i] = entity_to_i_dict[entity]
         if target[i] == 1:
             # 有声音的实体
@@ -309,4 +309,7 @@ def _create_vf_target(target, target_a, entities):
         else:
             # 没有人声音，环境音
             target_vf_a[i] = 0
+    # 变为非负
+    target_vf -= unknown_entity
+    target_vf_a -= unknown_entity
     return target_vf, target_vf_a

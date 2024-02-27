@@ -53,26 +53,6 @@ def train():
         [transforms.Resize(image_size), ct.video_val]
     )
 
-    # 输出配置
-    model_name = (
-        param_config["encoder_type"]
-        + "_stage_"
-        + stage
-        + "_vf"
-        + str(1 if param_config["encoder_enable_vf"] else 0)
-        + "_clip"
-        + str(frames_per_clip)
-        + "_ctx"
-        + str(ctx_size)
-        + "_len"
-        + str(n_clips)
-        + "_str"
-        + str(strd)
-    )
-    log, target_models = setup_optim_outputs(
-        dataset_config["models_out"], param_config, model_name
-    )
-
     # 创建网络并转移到GPU
     pretrain_weightds_path = param_config["encoder_video_pretrain_weights"]
     audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
@@ -94,8 +74,8 @@ def train():
 
     # loss
     criterion = nn.CrossEntropyLoss()
-    vf_critierion = losses.MultiSimilarityLoss(alpha=2.0, beta=50.0, base=1.0)  # type: ignore
-    # losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
+    # vf_critierion = losses.MultiSimilarityLoss(alpha=2, beta=50, base=1)
+    vf_critierion = losses.LiftedStructureLoss(neg_margin=1, pos_margin=0)
 
     # 数据路径
     video_train_path = dataset_config["video_train_dir"]
@@ -107,6 +87,26 @@ def train():
     encoder_embedding_path = param_config["encoder_embedding_dir"]
 
     if stage == "end2end":
+        # 输出配置
+        model_name = (
+            param_config["encoder_type"]
+            + "_stage_"
+            + stage
+            + "_vf"
+            + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_clip"
+            + str(frames_per_clip)
+            + "_ctx"
+            + str(ctx_size)
+            + "_len"
+            + str(n_clips)
+            + "_str"
+            + str(strd)
+        )
+        log, target_models = setup_optim_outputs(
+            dataset_config["models_out"], param_config, model_name
+        )
+
         epochs = param_config["epochs"]
         lr = param_config["learning_rate"]
         milestones = param_config["milestones"]
@@ -167,6 +167,26 @@ def train():
         )
 
     elif stage == "graph":
+        # 输出配置
+        model_name = (
+            param_config["encoder_type"]
+            + "_stage_"
+            + stage
+            + "_vf"
+            + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_clip"
+            + str(frames_per_clip)
+            + "_ctx"
+            + str(ctx_size)
+            + "_len"
+            + str(n_clips)
+            + "_str"
+            + str(strd)
+        )
+        log, target_models = setup_optim_outputs(
+            dataset_config["models_out"], param_config, model_name
+        )
+
         epochs = param_config["epochs"]
         lr = param_config["learning_rate"]
         milestones = param_config["milestones"]
@@ -217,6 +237,20 @@ def train():
         )
 
     elif stage == "encoder":
+        # 输出配置
+        model_name = (
+            param_config["encoder_type"]
+            + "_stage_"
+            + stage
+            + "_vf"
+            + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_clip"
+            + str(frames_per_clip)
+        )
+        log, target_models = setup_optim_outputs(
+            dataset_config["models_out"], param_config, model_name
+        )
+
         epochs = param_config["encoder_epochs"]
         lr = param_config["encoder_learning_rate"]
         milestones = param_config["encoder_milestones"]

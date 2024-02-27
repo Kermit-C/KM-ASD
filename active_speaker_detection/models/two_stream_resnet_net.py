@@ -140,7 +140,7 @@ class ResnetTwoStreamNet(nn.Module):
         # 音脸分支
         self.encoder_enable_vf = encoder_enable_vf
         self.vf_layer = VfalSlEncoder(
-            voice_size=512, face_size=512, embedding_size=128, shared=True
+            voice_size=512, face_size=512, embedding_size=128, shared=False
         )
 
         # 共享
