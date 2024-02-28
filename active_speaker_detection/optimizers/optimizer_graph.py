@@ -64,7 +64,7 @@ def optimize_graph(
             torch.save(model.state_dict(), model_target)
 
         if log is not None:
-            log.writeDataLog(
+            log.write_data_log(
                 [
                     epoch + 1,
                     train_loss,

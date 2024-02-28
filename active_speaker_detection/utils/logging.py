@@ -16,13 +16,13 @@ class Logger:
         self.targetFile = targetFile
         self.separator = separator
 
-    def writeHeaders(self, headers):
+    def write_headers(self, headers):
         with open(self.targetFile, "a") as fh:
             for aHeader in headers:
                 fh.write(aHeader + self.separator)
             fh.write("\n")
 
-    def writeDataLog(self, dataArray):
+    def write_data_log(self, dataArray):
         with open(self.targetFile, "a") as fh:
             for dataItem in dataArray:
                 fh.write(str(dataItem) + self.separator)
@@ -43,7 +43,7 @@ def setup_optim_outputs(
     log = Logger(target_logs, ";")
 
     if headers is None:
-        log.writeHeaders(
+        log.write_headers(
             [
                 "epoch",
                 "train_loss",
@@ -59,7 +59,7 @@ def setup_optim_outputs(
             ]
         )
     else:
-        log.writeHeaders(headers)
+        log.write_headers(headers)
 
     # Dump cfg to json
     dump_cfg = opt_config.copy()

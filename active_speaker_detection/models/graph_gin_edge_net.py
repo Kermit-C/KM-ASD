@@ -11,14 +11,14 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.parameter
-from torch_geometric.nn import BatchNorm, EdgeConv, GATConv, GATv2Conv
+from torch_geometric.nn import BatchNorm, EdgeConv, GINConv, GINEConv
 from torch_geometric.utils import dropout_adj
 
 from .graph_all_edge_net import LinearPathPreact
 from .spatial_extract.spatial_grayscale_util import batch_create_spatial_grayscale
 
 
-class GraphGatEdgeNet(nn.Module):
+class GraphGinEdgeNet(nn.Module):
 
     def __init__(
         self,
@@ -27,7 +27,6 @@ class GraphGatEdgeNet(nn.Module):
         spatial_feature_dim: int = 64,
         spatial_grayscale_width: int = 112,
         spatial_grayscale_height: int = 112,
-        is_gatv2: bool = False,
     ):
         super().__init__()
 
@@ -37,33 +36,18 @@ class GraphGatEdgeNet(nn.Module):
         self.spatial_grayscale_height = spatial_grayscale_height
 
         self.av_fusion = nn.Linear(128 * 2, 128)
+        self.edge_weight_fc = nn.Linear(spatial_feature_dim, 1)
 
-        if not is_gatv2:
-            self.layer_1 = GATConv(
-                channels,
-                channels,
-                heads=8,
+        if spatial_net is not None:
+            self.layer_1 = GINEConv(
+                LinearPathPreact(channels, channels),
+                train_eps=True,
                 edge_dim=spatial_feature_dim,
-                dropout=0.2,
-                concat=True,
-                negative_slope=0.2,
-                bias=True,
             )
         else:
-            self.layer_1 = GATv2Conv(
-                channels,
-                channels,
-                heads=8,
-                edge_dim=spatial_feature_dim,
-                dropout=0.2,
-                concat=True,
-                negative_slope=0.2,
-                bias=True,
-            )
-        self.batch_1 = BatchNorm(channels * 8)
-        self.layer_2 = EdgeConv(
-            LinearPathPreact(channels * 8 * 2, channels), aggr="mean"
-        )
+            self.layer_1 = GINConv(LinearPathPreact(channels, channels), train_eps=True)
+        self.batch_1 = BatchNorm(channels)
+        self.layer_2 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
         self.batch_2 = BatchNorm(channels)
         self.layer_3 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
         self.batch_3 = BatchNorm(channels)
@@ -108,7 +92,10 @@ class GraphGatEdgeNet(nn.Module):
             p=self.dropout_edge,
             training=self.training,
         )
-        graph_feats_1 = self.layer_1(graph_feats, edge_index_1, edge_attr_1)
+        if self.spatial_net is not None:
+            graph_feats_1 = self.layer_1(graph_feats, edge_index_1, edge_attr_1)
+        else:
+            graph_feats_1 = self.layer_1(graph_feats, edge_index_1)
         graph_feats_1 = self.batch_1(graph_feats_1)
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)

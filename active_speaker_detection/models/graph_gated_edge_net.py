@@ -37,6 +37,7 @@ class GraphGatedEdgeNet(nn.Module):
 
         self.av_fusion = nn.Linear(128 * 2, 128)
         self.edge_weight_fc = nn.Linear(spatial_feature_dim, 1)
+        self.edge_weight_sig = nn.Sigmoid()
 
         self.layer_1 = GatedGraphConv(channels, num_layers=2, aggr="mean", bias=True)
         self.batch_1 = BatchNorm(channels)
@@ -69,12 +70,11 @@ class GraphGatedEdgeNet(nn.Module):
                 3,
             )
             edge_attr = self.spatial_net(spatial_grayscale_imgs)
+            edge_attr = self.edge_weight_fc(edge_attr)
+            edge_attr = self.edge_weight_sig(edge_attr)
         else:
-            # 权重全为 0，代表没有空间关系
-            edge_attr = torch.zeros(
-                edge_index.size(1), self.spatial_feature_dim, device=x.device
-            )
-        edge_attr = self.edge_weight_fc(edge_attr)
+            # 权重全为 1，代表没有空间关系
+            edge_attr = torch.ones(edge_index.size(1), 1, device=x.device)
 
         graph_feats = self.av_fusion(
             torch.cat([x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1)], dim=1)
