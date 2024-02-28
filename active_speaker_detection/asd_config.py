@@ -3,7 +3,7 @@
 """
 @Description: 
 @Author: chenkeming
-@Date: 2024-02-05 23:05:15
+@Date: 2012-02-05 23:05:15
 """
 
 
@@ -53,8 +53,9 @@ train_params = [
         "graph_enable_spatial": True,
         "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf1_clip13.0/23.pth",
         # "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf0_clip13.0/15.pth",
-        "encoder_embedding_dir": "/hdd1/ckm2/embeddings/R3D18",
+        "encoder_feature_dir": "/hdd1/ckm2/featureR3D18",
         # 预训练权重
+        "encoder_enable_grad": False,
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -71,7 +72,7 @@ train_params = [
         "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 24,
+        "threads": 12,
     },
     {
         "name": "R3D50",
@@ -81,8 +82,9 @@ train_params = [
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": None,
-        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/R3D50",
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/R3D50",
         # 预训练权重
+        "encoder_enable_grad": False,
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -99,7 +101,7 @@ train_params = [
         "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 24,
+        "threads": 12,
     },
     {
         "name": "LIGHT",
@@ -109,8 +111,9 @@ train_params = [
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
-        "encoder_embedding_dir": "/hdd1/ckm2/embeddings/LIGHT",
+        "encoder_feature_dir": "/hdd1/ckm2/featureLIGHT",
         # 预训练权重
+        "encoder_enable_grad": True,
         "encoder_audio_pretrain_weights": None,
         "encoder_video_pretrain_weights": None,
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -127,18 +130,19 @@ train_params = [
         "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 24,
+        "threads": 12,
     },
     {
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
         "graph_type": "GraphAllEdgeNet",
-        "encoder_enable_vf": True,
+        "encoder_enable_vf": False,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/encoder_RES18_TSM_vf1_clip13.0/51.pth",
-        "encoder_embedding_dir": "/hdd1/ckm2/embeddings/RES18_TSM",
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
+        "encoder_enable_grad": False,
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -155,7 +159,7 @@ train_params = [
         "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 24,
+        "threads": 12,
     },
     {
         "name": "RES50_TSM",
@@ -165,8 +169,9 @@ train_params = [
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": None,
-        "encoder_embedding_dir": "active_speaker_detection/datasets/resources/embeddings/RES50_TSM",
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RES50_TSM",
         # 预训练权重
+        "encoder_enable_grad": False,
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -183,6 +188,6 @@ train_params = [
         "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 24,
+        "threads": 12,
     },
 ]

@@ -92,8 +92,8 @@ class EncoderDataset(Dataset):
             cache,
             self.entity_cache,
         )
-        # 限制 self.entity_cache 长度，最大 10000，从旧的开始删除
-        while len(self.entity_cache) > 10000:
+        # 限制 self.entity_cache 长度，最大 1000，从旧的开始删除
+        while len(self.entity_cache) > 1000:
             self.entity_cache.pop(list(self.entity_cache.keys())[0])
         # 获取音频特征和标签
         audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(

@@ -30,6 +30,7 @@ class TwoStreamResNet(nn.Module):
         replace_stride_with_dilation=None,
         norm_layer=None,
         encoder_enable_vf=True,
+        encoder_enable_grad=False,
     ):
         super(TwoStreamResNet, self).__init__()
         if norm_layer is None:
@@ -82,6 +83,11 @@ class TwoStreamResNet(nn.Module):
         self.v_layer4 = self._make_layer(
             block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
         )
+
+        if not encoder_enable_grad:
+            # 冻结上面参数
+            for param in self.parameters():
+                param.requires_grad = False
 
         # 音脸分支
         self.encoder_enable_vf = encoder_enable_vf
@@ -204,34 +210,36 @@ class TwoStreamResNet(nn.Module):
         v = v.squeeze(-1).squeeze(-1)
         v = v.mean(2)
 
+        # 降维到 128
+        a_emb = self.fc_128_a(a)
+        a_emb = self.relu(a_emb)
+        v_emb = self.fc_128_v(v)
+        v_emb = self.relu(v_emb)
+
         if self.encoder_enable_vf:
             # 音脸分支
             vf_a_emb, vf_v_emb = self.vf_layer(a, v)
 
-            # 降维到 128，然后加上音脸分支的特征
-            a = self.fc_128_a(a) + vf_a_emb
-            a = self.relu(a)
-            v = self.fc_128_v(v) + vf_v_emb
-            v = self.relu(v)
+            # sim 的维度是 (B, )
+            sim = torch.cosine_similarity(
+                F.normalize(vf_a_emb, p=2, dim=1),
+                F.normalize(vf_v_emb, p=2, dim=1),
+                dim=1,
+            )
+            a_emb = a_emb * sim.unsqueeze(1)
 
             audio_out, video_out, av_out = (
-                self.fc_a(a),
-                self.fc_v(v),
-                self.fc_av(torch.cat([a, v], dim=1)),
+                self.fc_a(a_emb),
+                self.fc_v(v_emb),
+                self.fc_av(torch.cat([a_emb, v_emb], dim=1)),
             )
 
             return a, v, audio_out, video_out, av_out, vf_a_emb, vf_v_emb
         else:
-            # 降维到 128
-            a = self.fc_128_a(a)
-            a = self.relu(a)
-            v = self.fc_128_v(v)
-            v = self.relu(v)
-
             audio_out, video_out, av_out = (
-                self.fc_a(a),
-                self.fc_v(v),
-                self.fc_av(torch.cat([a, v], dim=1)),
+                self.fc_a(a_emb),
+                self.fc_v(v_emb),
+                self.fc_av(torch.cat([a_emb, v_emb], dim=1)),
             )
 
             return a, v, audio_out, video_out, av_out, None, None
@@ -274,26 +282,37 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 def get_resnet_tsm_encoder(
     type: str,
     encoder_enable_vf: bool,
+    encoder_enable_grad: bool = False,
     pretrained_weigths=None,
     encoder_train_weights=None,
 ):
     if type == "resnet18":
         block, layers = BasicBlock2D, [2, 2, 2, 2]
-        model = TwoStreamResNet(block, layers, encoder_enable_vf=encoder_enable_vf)
+        model = TwoStreamResNet(
+            block,
+            layers,
+            encoder_enable_vf=encoder_enable_vf,
+            encoder_enable_grad=encoder_enable_grad,
+        )
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
             model.eval()
-        return model
+        return model, 512 * block.expansion, 512 * block.expansion
     elif type == "resnet50":
         block, layers = Bottleneck2D, [3, 4, 6, 3]
-        model = TwoStreamResNet(block, layers, encoder_enable_vf=encoder_enable_vf)
+        model = TwoStreamResNet(
+            block,
+            layers,
+            encoder_enable_vf=encoder_enable_vf,
+            encoder_enable_grad=encoder_enable_grad,
+        )
         if pretrained_weigths is not None:
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
             model.eval()
-        return model
+        return model, 512 * block.expansion, 512 * block.expansion
     else:
         raise ValueError("Unknown resnet type: {}".format(type))

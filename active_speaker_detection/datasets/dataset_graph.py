@@ -10,16 +10,17 @@ import random
 from typing import List, Optional, Tuple
 
 import torch
+import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
 
-from .data_store_emb import EmbeddingDataStore
+from .data_store_feat import FeatureDataStore
 
 
 class GraphDataset(Dataset):
 
     def __init__(
         self,
-        embedding_root,
+        feature_root,
         data_store_cache,
         graph_time_steps: int,  # 图的时间步数
         graph_time_stride: int,  # 步长
@@ -28,7 +29,7 @@ class GraphDataset(Dataset):
         max_context: Optional[int] = None,  # 最大上下文大小，即上下文中有多少个实体
     ):
         super().__init__()
-        self.store = EmbeddingDataStore(embedding_root, data_store_cache)
+        self.store = FeatureDataStore(feature_root, data_store_cache)
 
         # 时序层配置
         self.graph_time_steps = graph_time_steps  # 图的时间步数
@@ -72,26 +73,51 @@ class GraphDataset(Dataset):
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
             # 获取视频特征和标签
-            video_data, target_v, entities_v, positions = self.store.get_video_data(
-                video_id, entity_id, timestamp, self.max_context, self.cache
+            video_data, video_vf_data, target_v, entities_v, positions = (
+                self.store.get_video_data(
+                    video_id, entity_id, timestamp, self.max_context, self.cache
+                )
             )
             # 获取音频特征和标签
-            audio_data, target_a, entity_a = self.store.get_audio_data(
+            audio_data, audio_vf_data, target_a, entity_a = self.store.get_audio_data(
                 video_id, entity_id, timestamp, self.cache
             )
-            # 生成的 train emb 总共在磁盘里约 3G，这里可以大一点
+            # 生成的 train feat 总共在磁盘里约 16G
             # 总共的帧数约为 100,0000，实体数约为 3,0000
             # 限制 self.entity_cache 长度，最大 30000，从旧的开始删除
             while len(self.cache) > 30000:
                 self.cache.pop(list(self.cache.keys())[0])
 
             a_feat = torch.from_numpy(audio_data)
-            for v_np, target, entity, pos in zip(
-                video_data, target_v, entities_v, positions
+            a_vf_feat = (
+                torch.from_numpy(audio_vf_data) if audio_vf_data is not None else None
+            )
+            for v_np, v_vf_np, target, entity, pos in zip(
+                video_data, video_vf_data, target_v, entities_v, positions
             ):
                 v_feat = torch.from_numpy(v_np)
-                # 一个特征是 2 * 128 维的，音频特征和视频特征
-                feature_list.append(torch.stack([a_feat, v_feat], dim=0))
+                v_vf_feat = torch.from_numpy(v_vf_np) if v_vf_np is not None else None
+                a_feat_dim = a_feat.size(0)
+                v_feat_dim = v_feat.size(0)
+                if a_vf_feat is not None and v_vf_feat is not None:
+                    a_vf_feat_dim = a_vf_feat.size(0)
+                    v_vf_feat_dim = v_vf_feat.size(0)
+                    max_feat_dim = max(
+                        a_feat_dim, v_feat_dim, a_vf_feat_dim, v_vf_feat_dim
+                    )
+                    # 维度不够的在后面填充 0
+                    a_feat = F.pad(a_feat, (0, max_feat_dim - a_feat_dim))
+                    v_feat = F.pad(v_feat, (0, max_feat_dim - v_feat_dim))
+                    a_vf_feat = F.pad(a_vf_feat, (0, max_feat_dim - a_vf_feat_dim))
+                    v_vf_feat = F.pad(v_vf_feat, (0, max_feat_dim - v_vf_feat_dim))
+                    feature_list.append(
+                        torch.stack([a_feat, v_feat, a_vf_feat, v_vf_feat], dim=0)
+                    )
+                else:
+                    max_feat_dim = max(a_feat_dim, v_feat_dim)
+                    a_feat = F.pad(a_feat, (0, max_feat_dim - a_feat_dim))
+                    v_feat = F.pad(v_feat, (0, max_feat_dim - v_feat_dim))
+                    feature_list.append(torch.stack([a_feat, v_feat], dim=0))
                 target_list.append(target)
                 entity_list.append(entity)
                 timestamp_list.append(timestamp)
@@ -141,7 +167,7 @@ class GraphDataset(Dataset):
                     target_vertices_pos.append(position_list[j])
 
         return Data(
-            # 维度为 [节点数量, 2, 128]，表示每个节点的音频和视频特征
+            # 维度为 [节点数量, 4 or 2, n]，表示每个节点的音频、视频特征、音频音脸嵌入、视频音脸嵌入
             x=torch.stack(feature_list, dim=0),
             # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
             edge_index=torch.tensor(

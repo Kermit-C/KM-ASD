@@ -12,7 +12,7 @@ import pickle
 import torch
 
 
-def gen_embedding(
+def gen_feature(
     model,
     dataloader,
     out_path,
@@ -26,7 +26,7 @@ def gen_embedding(
     curr_data = {}
     for idx, dl in enumerate(dataloader):
         print(
-            "\t Gen emb iter {:d}/{:d}".format(idx, len(dataloader)),
+            "\t Gen feat iter {:d}/{:d}".format(idx, len(dataloader)),
             end="\r",
         )
 
@@ -35,9 +35,13 @@ def gen_embedding(
         audio_data = audio_data.to(device)
 
         with torch.set_grad_enabled(False):
-            audio_out, video_out, _, _, _, _, _ = model(audio_data, video_data)
+            audio_out, video_out, _, _, _, vf_a_emb, vf_v_emb = model(
+                audio_data, video_data
+            )
             audio_np = audio_out.cpu().numpy()
             video_np = video_out.cpu().numpy()
+            vf_a_emb_np = vf_a_emb.cpu().numpy() if vf_a_emb is not None else None
+            vf_v_emb_np = vf_v_emb.cpu().numpy() if vf_v_emb is not None else None
 
         for idx, entity in enumerate(entities):
             if entity != curr_entity:
@@ -53,7 +57,12 @@ def gen_embedding(
                 curr_data = {}
 
             timestamp = ts[idx]
-            curr_data[timestamp] = [audio_np[idx], video_np[idx]]
+            curr_data[timestamp] = [
+                audio_np[idx],
+                video_np[idx],
+                vf_a_emb_np[idx] if vf_a_emb_np is not None else None,
+                vf_v_emb_np[idx] if vf_v_emb_np is not None else None,
+            ]
 
     # 保存最后一个 entity 的数据
     if curr_entity is not None:
@@ -62,5 +71,5 @@ def gen_embedding(
         ) as f:
             pickle.dump(curr_data, f)
 
-    print("\t Gen emb iter {:d}/{:d}".format(len(dataloader), len(dataloader)))
+    print("\t Gen feat iter {:d}/{:d}".format(len(dataloader), len(dataloader)))
     print(f"\t Done! Save to {out_path}")

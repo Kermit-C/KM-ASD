@@ -8,6 +8,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
 
@@ -299,13 +300,19 @@ class LightTwoStreamNet(nn.Module):
             # 音脸分支
             vf_a_emb, vf_v_emb = self.vf_layer(audio_embed, visual_embed)
 
-            audio_embed += vf_a_emb
-            visual_embed += vf_v_emb
+            # sim 的维度是 (B, )
+            sim = torch.cosine_similarity(
+                F.normalize(vf_a_emb, p=2, dim=1),
+                F.normalize(vf_v_emb, p=2, dim=1),
+                dim=1,
+            )
 
             audio_out, video_out, av_out = (
                 self.fc_a(audio_embed),
                 self.fc_v(visual_embed),
-                self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
+                self.fc_av(
+                    torch.cat([audio_embed * sim.unsqueeze(1), visual_embed], dim=1)
+                ),
             )
 
             # audio_embed: (B, C), visual_embed: (B, C)
@@ -355,4 +362,4 @@ def get_light_encoder(
     if encoder_train_weights:
         _load_weights_into_model(model, encoder_train_weights)
         model.eval()
-    return model
+    return model, 128, 128

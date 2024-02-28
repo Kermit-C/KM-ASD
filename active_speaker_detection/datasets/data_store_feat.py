@@ -14,12 +14,12 @@ from typing import Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 
-class EmbeddingDataStore:
-    """embedding 存储"""
+class FeatureDataStore:
+    """feature 存储"""
 
-    def __init__(self, embedding_root: str, data_store_cache: str):
+    def __init__(self, feature_root: str, data_store_cache: str):
         # 数据根目录
-        self.embedding_root = embedding_root
+        self.feature_root = feature_root
 
         # 一个实体对应 video+entity
 
@@ -144,17 +144,18 @@ class EmbeddingDataStore:
         entity_id: str,
         timestamp: str,
         cache: dict,
-    ) -> Tuple[np.ndarray, int, str]:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], int, str]:
         """根据实体 ID 和某刻时间戳，获取音频嵌入和标签"""
         target_audio = self.speech_data[video_id][timestamp]
         if entity_id not in cache:
             pkl_path = os.path.join(
-                self.embedding_root, entity_id.replace(":", "_") + ".pkl"
+                self.feature_root, entity_id.replace(":", "_") + ".pkl"
             )
             with open(pkl_path, "rb") as f:
                 entity_emb = pickle.load(f)
             cache[entity_id] = entity_emb
         audio_data = cache[entity_id][timestamp][0]
+        audio_vf_data = cache[entity_id][timestamp][2]
 
         mid_index = self.search_ts_in_meta_data(
             self.entity_data[video_id][entity_id], timestamp
@@ -174,6 +175,7 @@ class EmbeddingDataStore:
                     break
         return (
             audio_data,
+            audio_vf_data,
             target_audio,
             target_entity,
         )
@@ -186,7 +188,11 @@ class EmbeddingDataStore:
         max_context: Optional[int],
         cache: dict,
     ) -> Tuple[
-        list[np.ndarray], list[int], list[str], list[Tuple[float, float, float, float]]
+        list[np.ndarray],
+        list[Optional[np.ndarray]],
+        list[int],
+        list[str],
+        list[Tuple[float, float, float, float]],
     ]:
         """根据实体 ID 和某刻时间戳，获取所有人视频嵌入和标签"""
         # 获取上下文的实体 id list
@@ -194,6 +200,7 @@ class EmbeddingDataStore:
 
         # 视频数据，同一个人的是 List 的一个元素
         video_data: List[np.ndarray] = []
+        video_vf_data: List[Optional[np.ndarray]] = []
         # 标签，索引和 video_data 对应
         targets: list[int] = []
         # 实体
@@ -209,15 +216,16 @@ class EmbeddingDataStore:
 
             if ctx_entity not in cache:
                 pkl_path = os.path.join(
-                    self.embedding_root, ctx_entity.replace(":", "_") + ".pkl"
+                    self.feature_root, ctx_entity.replace(":", "_") + ".pkl"
                 )
                 with open(pkl_path, "rb") as f:
                     entity_emb = pickle.load(f)
                 cache[ctx_entity] = entity_emb
             video_data.append(cache[ctx_entity][timestamp][1])
+            video_vf_data.append(cache[ctx_entity][timestamp][3])
 
             targets.append(target_ctx)
             entities.append(ctx_entity)
             positions.append(pos_ctx)
 
-        return (video_data, targets, entities, positions)
+        return (video_data, video_vf_data, targets, entities, positions)

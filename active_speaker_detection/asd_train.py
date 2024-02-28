@@ -22,7 +22,7 @@ from active_speaker_detection import asd_config
 from active_speaker_detection.datasets.dataset_encoder import EncoderDataset
 from active_speaker_detection.datasets.dataset_end2end import End2endDataset
 from active_speaker_detection.datasets.dataset_graph import GraphDataset
-from active_speaker_detection.datasets.gen_emb import gen_embedding
+from active_speaker_detection.datasets.gen_feat import gen_feature
 from active_speaker_detection.models.model import get_backbone
 from active_speaker_detection.optimizers.optimizer_encoder import optimize_encoder
 from active_speaker_detection.optimizers.optimizer_end2end import optimize_end2end
@@ -54,6 +54,7 @@ def train():
     )
 
     # 创建网络并转移到GPU
+    encoder_enable_grad = param_config["encoder_enable_grad"]
     pretrain_weightds_path = param_config["encoder_video_pretrain_weights"]
     audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
     spatial_pretrained_weights = param_config["graph_spatial_pretrain_weights"]
@@ -63,6 +64,7 @@ def train():
         param_config["graph_type"],
         param_config["encoder_enable_vf"],
         param_config["graph_enable_spatial"],
+        encoder_enable_grad,
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
         spatial_pretrained_weights,
@@ -86,7 +88,7 @@ def train():
     audio_val_path = dataset_config["audio_val_dir"]
     data_store_train_cache = dataset_config["data_store_train_cache"]
     data_store_val_cache = dataset_config["data_store_val_cache"]
-    encoder_embedding_path = param_config["encoder_embedding_dir"]
+    encoder_feature_path = param_config["encoder_feature_dir"]
 
     if stage == "end2end":
         # 输出配置
@@ -204,14 +206,14 @@ def train():
         optimizer = optim.Adam(asd_net.parameters(), lr=lr)
         scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = GraphDataset(
-            os.path.join(encoder_embedding_path, "train"),
+            os.path.join(encoder_feature_path, "train"),
             data_store_train_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
             max_context=ctx_size,
         )
         d_val = GraphDataset(
-            os.path.join(encoder_embedding_path, "val"),
+            os.path.join(encoder_feature_path, "val"),
             data_store_val_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
@@ -349,15 +351,15 @@ def train():
             num_workers=param_config["threads"],
             pin_memory=True,
         )
-        gen_embedding(
+        gen_feature(
             encoder_net,
             dl_train,
-            os.path.join(encoder_embedding_path, "train"),
+            os.path.join(encoder_feature_path, "train"),
             device,
         )
-        gen_embedding(
+        gen_feature(
             encoder_net,
             dl_val,
-            os.path.join(encoder_embedding_path, "val"),
+            os.path.join(encoder_feature_path, "val"),
             device,
         )
