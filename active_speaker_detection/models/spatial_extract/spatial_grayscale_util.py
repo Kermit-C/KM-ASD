@@ -41,6 +41,9 @@ def batch_create_spatial_grayscale(
         [target_w, target_h, target_w, target_h], device=positions.device
     ).view(1, 1, 4)
     positions = positions.int()
-    spatial_grayscale[:, :, positions[:, 0, 0] : positions[:, 0, 2], positions[:, 0, 1] : positions[:, 0, 3]] = 1
-    spatial_grayscale[:, :, positions[:, 1, 0] : positions[:, 1, 2], positions[:, 1, 1] : positions[:, 1, 3]] = 1
+    for i in range(positions.size(0)):
+        x1, y1, x2, y2 = positions[i, 0, :]
+        spatial_grayscale[i, :, x1:x2, y1:y2] = 1
+        x1, y1, x2, y2 = positions[i, 1, :]
+        spatial_grayscale[i, :, x1:x2, y1:y2] = 1
     return spatial_grayscale

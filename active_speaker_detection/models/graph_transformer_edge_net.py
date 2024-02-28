@@ -34,6 +34,7 @@ class GraphTransformerEdgeNet(nn.Module):
         self.spatial_feature_dim = spatial_feature_dim
         self.spatial_grayscale_width = spatial_grayscale_width
         self.spatial_grayscale_height = spatial_grayscale_height
+        self.spatial_mini_batch = 32  # 空间网络的 mini batch 大小，因为图节点数太大了（上千），所以需要分批次计算
 
         self.av_fusion = nn.Linear(128 * 2, 128)
 
@@ -77,6 +78,14 @@ class GraphTransformerEdgeNet(nn.Module):
                 self.spatial_grayscale_height,
                 3,
             )
+            spatial_feats = []
+            for i in range(0, spatial_grayscale_imgs.size(0), self.spatial_mini_batch):
+                spatial_feats.append(
+                    self.spatial_net(
+                        spatial_grayscale_imgs[i : i + self.spatial_mini_batch]
+                    )
+                )
+            edge_attr = torch.cat(spatial_feats, dim=0)
             edge_attr = self.spatial_net(spatial_grayscale_imgs)
         else:
             # 权重全为 0，代表没有空间关系
@@ -85,7 +94,7 @@ class GraphTransformerEdgeNet(nn.Module):
             )
 
         graph_feats = self.av_fusion(
-            torch.cat([x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1)], dim=1)
+            torch.cat([x[:, 0, :].squeeze(1), x[:, 1, :].squeeze(1)], dim=1)
         )
 
         edge_index_1, edge_attr_1 = dropout_adj(

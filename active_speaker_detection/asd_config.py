@@ -65,10 +65,10 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 17,
-        "learning_rate": 3e-4,
-        "epochs": 15,
-        "milestones": [6, 8],
+        "batch_size": 128,
+        "learning_rate": 1e-3,
+        "epochs": 70,
+        "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
         "threads": 24,
@@ -93,10 +93,10 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 17,
-        "learning_rate": 3e-4,
-        "epochs": 15,
-        "milestones": [6, 8],
+        "batch_size": 128,
+        "learning_rate": 1e-3,
+        "epochs": 70,
+        "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
         "threads": 24,
@@ -121,10 +121,10 @@ train_params = [
         "encoder_milestones": list(range(30)),
         "encoder_gamma": 0.95,
         # 优化配置
-        "batch_size": 17,
-        "learning_rate": 3e-4,
-        "epochs": 15,
-        "milestones": [6, 8],
+        "batch_size": 128,
+        "learning_rate": 1e-3,
+        "epochs": 70,
+        "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
         "threads": 24,
@@ -149,10 +149,10 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 17,
-        "learning_rate": 3e-4,
-        "epochs": 15,
-        "milestones": [6, 8],
+        "batch_size": 128,
+        "learning_rate": 1e-3,
+        "epochs": 70,
+        "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
         "threads": 24,
@@ -177,10 +177,10 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 17,
-        "learning_rate": 3e-4,
-        "epochs": 15,
-        "milestones": [6, 8],
+        "batch_size": 128,
+        "learning_rate": 1e-3,
+        "epochs": 70,
+        "milestones": list(range(0, 70, 30)),
         "gamma": 0.1,
         # 数据集加载器
         "threads": 24,

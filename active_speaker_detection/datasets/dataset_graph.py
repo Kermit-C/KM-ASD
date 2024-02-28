@@ -39,6 +39,8 @@ class GraphDataset(Dataset):
         # 图上下文
         self.max_context = max_context  # 上下文大小，即上下文中有多少个实体
 
+        self.cache = {}
+
     def __len__(self):
         return len(self.store.entity_list)
 
@@ -68,16 +70,20 @@ class GraphDataset(Dataset):
         position_list: list[Tuple[float, float, float, float]] = []
 
         # 对每个上下文时间戳，获取视频特征和标签
-        cache = {}
         for time_idx, timestamp in enumerate(time_context):
             # 获取视频特征和标签
             video_data, target_v, entities_v, positions = self.store.get_video_data(
-                video_id, entity_id, timestamp, self.max_context, cache
+                video_id, entity_id, timestamp, self.max_context, self.cache
             )
             # 获取音频特征和标签
             audio_data, target_a, entity_a = self.store.get_audio_data(
-                video_id, entity_id, timestamp, cache
+                video_id, entity_id, timestamp, self.cache
             )
+            # 生成的 train emb 总共在磁盘里约 3G，这里可以大一点
+            # 总共的帧数约为 100,0000，实体数约为 3,0000
+            # 限制 self.entity_cache 长度，最大 30000，从旧的开始删除
+            while len(self.cache) > 30000:
+                self.cache.pop(list(self.cache.keys())[0])
 
             a_feat = torch.from_numpy(audio_data)
             for v_np, target, entity, pos in zip(
