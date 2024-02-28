@@ -56,13 +56,16 @@ def train():
     # 创建网络并转移到GPU
     pretrain_weightds_path = param_config["encoder_video_pretrain_weights"]
     audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
+    spatial_pretrained_weights = param_config["graph_spatial_pretrain_weights"]
     encoder_train_weights = param_config["encoder_train_weights"]
     asd_net, encoder_net = get_backbone(
         param_config["encoder_type"],
         param_config["graph_type"],
         param_config["encoder_enable_vf"],
+        param_config["graph_enable_spatial"],
         pretrain_weightds_path,
         audio_pretrain_weightds_path,
+        spatial_pretrained_weights,
         encoder_train_weights,
     )
 
@@ -95,6 +98,8 @@ def train():
             + stage
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_sp"
+            + str(1 if param_config["graph_enable_spatial"] else 0)
             + "_clip"
             + str(frames_per_clip)
             + "_ctx"
@@ -177,6 +182,8 @@ def train():
             + stage
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_sp"
+            + str(1 if param_config["graph_enable_spatial"] else 0)
             + "_clip"
             + str(frames_per_clip)
             + "_ctx"

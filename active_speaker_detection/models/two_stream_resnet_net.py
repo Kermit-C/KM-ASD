@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.parameter
 from torch.nn import functional as F
 
-from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
+from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
 
 from .resnet.shared_2d import BasicBlock2D, conv1x1
 from .resnet.shared_3d import BasicBlock3D, Bottleneck3D, conv1x1x1, get_inplanes

@@ -13,6 +13,10 @@ import torch
 import torch.nn as nn
 import torch.nn.parameter
 
+from active_speaker_detection.models.spatial_extract.spatial_mobilenet_net import (
+    get_spatial_mobilenet_net,
+)
+
 from .graph_all_edge_net import GraphAllEdgeNet
 from .two_stream_light_net import get_light_encoder
 from .two_stream_resnet_net import get_resnet_encoder
@@ -71,8 +75,10 @@ def get_backbone(
     encoder_type: str,
     graph_type: str,
     encoder_enable_vf: bool,
+    graph_enable_spatial: bool,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
+    spatial_pretrained_weights=None,
     encoder_train_weights=None,
     train_weights=None,
 ):
@@ -83,7 +89,7 @@ def get_backbone(
         audio_pretrained_weights,
         encoder_train_weights,
     )
-    graph_net = get_graph(graph_type)
+    graph_net = get_graph(graph_type, graph_enable_spatial, spatial_pretrained_weights)
     model = MyModel(encoder, graph_net)
 
     # 加载模型权重
@@ -144,9 +150,19 @@ def get_encoder(
     return encoder
 
 
-def get_graph(graph_type: str):
+def get_graph(
+    graph_type: str,
+    graph_enable_spatial: bool,
+    spatial_pretrained_weights: Optional[str] = None,
+):
+    spatial_feature_dim = 64
+    spatial_net = (
+        get_spatial_mobilenet_net(spatial_feature_dim, spatial_pretrained_weights)
+        if graph_enable_spatial
+        else None
+    )
     if graph_type == "GraphAllEdgeNet":
-        graph_net = GraphAllEdgeNet(128)
+        graph_net = GraphAllEdgeNet(128, spatial_net, spatial_feature_dim)
     else:
         raise ValueError(f"Unknown graph type: {graph_type}")
 

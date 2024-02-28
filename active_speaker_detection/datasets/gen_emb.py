@@ -44,7 +44,8 @@ def gen_embedding(
                 # 保存当前 entity 的数据
                 if curr_entity is not None:
                     with open(
-                        os.path.join(out_path, entity.replace(":", "_") + ".pkl"), "wb"
+                        os.path.join(out_path, curr_entity.replace(":", "_") + ".pkl"),
+                        "wb",
                     ) as f:
                         pickle.dump(curr_data, f)
 
@@ -56,7 +57,9 @@ def gen_embedding(
 
     # 保存最后一个 entity 的数据
     if curr_entity is not None:
-        with open(os.path.join(out_path, entity.replace(":", "_") + ".pkl"), "wb") as f:
+        with open(
+            os.path.join(out_path, curr_entity.replace(":", "_") + ".pkl"), "wb"
+        ) as f:
             pickle.dump(curr_data, f)
 
     print("\t Gen emb iter {:d}/{:d}".format(len(dataloader), len(dataloader)))

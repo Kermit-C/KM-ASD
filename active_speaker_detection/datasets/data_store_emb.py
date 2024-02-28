@@ -147,7 +147,7 @@ class EmbeddingDataStore:
     ) -> Tuple[np.ndarray, int, str]:
         """根据实体 ID 和某刻时间戳，获取音频嵌入和标签"""
         target_audio = self.speech_data[video_id][timestamp]
-        if entity_id not in self.entity_data[video_id]:
+        if entity_id not in cache:
             pkl_path = os.path.join(
                 self.embedding_root, entity_id.replace(":", "_") + ".pkl"
             )
@@ -207,7 +207,7 @@ class EmbeddingDataStore:
             target_ctx = int(entity_metadata[ts_idx][-1])
             pos_ctx = entity_pos_data[ts_idx]
 
-            if ctx_entity not in self.entity_data[video_id]:
+            if ctx_entity not in cache:
                 pkl_path = os.path.join(
                     self.embedding_root, ctx_entity.replace(":", "_") + ".pkl"
                 )

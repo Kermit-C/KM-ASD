@@ -69,6 +69,7 @@ class ActiveSpeakerDetector:
             infer_config["encoder_type"],
             infer_config["graph_type"],
             infer_config["encoder_enable_vf"],
+            infer_config["graph_enable_spatial"],
             train_weights=trained_model,
         )
         self.model = self.model.to(self.device)

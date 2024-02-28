@@ -9,7 +9,7 @@
 import torch
 import torch.nn as nn
 
-from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
+from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
 
 
 class AudioBlock(nn.Module):

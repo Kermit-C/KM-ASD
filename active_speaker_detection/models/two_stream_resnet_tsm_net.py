@@ -13,7 +13,7 @@ import torch.nn.parameter
 from torch.nn import functional as F
 
 from active_speaker_detection.models.tsm.temporal_shift_layout import TemporalShift
-from active_speaker_detection.models.vfal.vfal_sl_encoder import VfalSlEncoder
+from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
 
 from .resnet.shared_2d import BasicBlock2D, Bottleneck2D, conv1x1
 
