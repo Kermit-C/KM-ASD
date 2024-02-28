@@ -11,36 +11,14 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.parameter
-from torch_geometric.nn import BatchNorm, EdgeConv
+from torch_geometric.nn import BatchNorm, EdgeConv, GatedGraphConv
 from torch_geometric.utils import dropout_adj
 
+from .graph_all_edge_net import LinearPathPreact
 from .spatial_extract.spatial_grayscale_util import batch_create_spatial_grayscale
 
 
-class LinearPathPreact(nn.Module):
-    """EdgeConv 的线性路径预激活模块"""
-
-    def __init__(self, in_channels, hidden_channels):
-        super(LinearPathPreact, self).__init__()
-        self.fc1 = nn.Linear(in_channels, hidden_channels, bias=False)
-        self.bn1 = nn.BatchNorm1d(in_channels)
-        self.fc2 = nn.Linear(hidden_channels, hidden_channels, bias=False)
-        self.bn2 = nn.BatchNorm1d(hidden_channels)
-        self.relu = nn.ReLU(inplace=True)
-
-    def forward(self, x):
-        x1 = self.bn1(x)
-        x1 = self.relu(x1)
-        x1 = self.fc1(x1)
-
-        x2 = self.bn2(x1)
-        x2 = self.relu(x2)
-        x2 = self.fc2(x2)
-
-        return x2
-
-
-class GraphAllEdgeNet(nn.Module):
+class GraphGatedEdgeNet(nn.Module):
 
     def __init__(
         self,
@@ -58,8 +36,9 @@ class GraphAllEdgeNet(nn.Module):
         self.spatial_grayscale_height = spatial_grayscale_height
 
         self.av_fusion = nn.Linear(128 * 2, 128)
+        self.edge_weight_fc = nn.Linear(spatial_feature_dim, 1)
 
-        self.layer_1 = EdgeConv(LinearPathPreact(128 * 2, channels), aggr="mean")
+        self.layer_1 = GatedGraphConv(channels, num_layers=2, aggr="mean", bias=True)
         self.batch_1 = BatchNorm(channels)
         self.layer_2 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
         self.batch_2 = BatchNorm(channels)
@@ -95,6 +74,7 @@ class GraphAllEdgeNet(nn.Module):
             edge_attr = torch.zeros(
                 edge_index.size(1), self.spatial_feature_dim, device=x.device
             )
+        edge_attr = self.edge_weight_fc(edge_attr)
 
         graph_feats = self.av_fusion(
             torch.cat([x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1)], dim=1)
@@ -106,7 +86,7 @@ class GraphAllEdgeNet(nn.Module):
             p=self.dropout_edge,
             training=self.training,
         )
-        graph_feats_1 = self.layer_1(graph_feats, edge_index)
+        graph_feats_1 = self.layer_1(graph_feats, edge_index_1, edge_attr_1)
         graph_feats_1 = self.batch_1(graph_feats_1)
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)

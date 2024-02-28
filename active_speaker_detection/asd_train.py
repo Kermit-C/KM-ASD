@@ -91,11 +91,11 @@ def train():
     if stage == "end2end":
         # 输出配置
         model_name = (
-            param_config["encoder_type"]
+            stage
+            + "_"
+            + param_config["encoder_type"]
             + "_"
             + param_config["graph_type"]
-            + "_stage_"
-            + stage
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
@@ -175,11 +175,11 @@ def train():
     elif stage == "graph":
         # 输出配置
         model_name = (
-            param_config["encoder_type"]
+            stage
+            + "_"
+            + param_config["encoder_type"]
             + "_"
             + param_config["graph_type"]
-            + "_stage_"
-            + stage
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
@@ -249,11 +249,9 @@ def train():
     elif stage == "encoder":
         # 输出配置
         model_name = (
-            param_config["encoder_type"]
+            stage
             + "_"
-            + param_config["graph_type"]
-            + "_stage_"
-            + stage
+            + param_config["encoder_type"]
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_clip"

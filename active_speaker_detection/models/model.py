@@ -13,11 +13,10 @@ import torch
 import torch.nn as nn
 import torch.nn.parameter
 
-from active_speaker_detection.models.spatial_extract.spatial_mobilenet_net import (
-    get_spatial_mobilenet_net,
-)
-
 from .graph_all_edge_net import GraphAllEdgeNet
+from .graph_gat_edge_net import GraphGatEdgeNet
+from .graph_gated_edge_net import GraphGatedEdgeNet
+from .spatial_extract.spatial_mobilenet_net import get_spatial_mobilenet_net
 from .two_stream_light_net import get_light_encoder
 from .two_stream_resnet_net import get_resnet_encoder
 from .two_stream_resnet_tsm_net import get_resnet_tsm_encoder
@@ -163,6 +162,10 @@ def get_graph(
     )
     if graph_type == "GraphAllEdgeNet":
         graph_net = GraphAllEdgeNet(128, spatial_net, spatial_feature_dim)
+    elif graph_type == "GraphGatEdgeNet":
+        graph_net = GraphGatEdgeNet(128, spatial_net, spatial_feature_dim)
+    elif graph_type == "GraphGatedEdgeNet":
+        graph_net = GraphGatedEdgeNet(128, spatial_net, spatial_feature_dim)
     else:
         raise ValueError(f"Unknown graph type: {graph_type}")
 

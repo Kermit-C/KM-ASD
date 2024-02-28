@@ -51,8 +51,8 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/R3D18_stage_encoder_vf1_clip13.0/23.pth",
-        # "encoder_train_weights": "active_speaker_detection/results/R3D18_stage_encoder_vf0_clip13.0/15.pth",
+        "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf1_clip13.0/23.pth",
+        # "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf0_clip13.0/15.pth",
         "encoder_embedding_dir": "/hdd1/ckm2/embeddings/R3D18",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
@@ -108,7 +108,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/LIGHT_stage_encoder_clip13.0_ctx3_len7_str3/26.pth",
+        "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_embedding_dir": "/hdd1/ckm2/embeddings/LIGHT",
         # 预训练权重
         "encoder_audio_pretrain_weights": None,
@@ -136,7 +136,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/RES18_TSM_GraphAllEdgeNet_stage_encoder_vf1_clip13.0/51.pth",
+        "encoder_train_weights": "active_speaker_detection/results/encoder_RES18_TSM_vf1_clip13.0/51.pth",
         "encoder_embedding_dir": "/hdd1/ckm2/embeddings/RES18_TSM",
         # 预训练权重
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
