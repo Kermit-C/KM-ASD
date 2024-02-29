@@ -108,6 +108,7 @@ class EncoderDataset(Dataset):
             audio_fbank,
             targets[0],  # 视频标签
             target_a,  # 音频标签
+            # TODO: 改成实体索引
             entities[0],  # 视频实体
             timestamp,
         )

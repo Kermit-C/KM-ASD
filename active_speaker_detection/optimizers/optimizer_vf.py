@@ -15,6 +15,8 @@ import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch.cuda.amp.autocast_mode import autocast
 
+from active_speaker_detection.utils.vf_util import cosine_similarity
+
 
 def optimize_vf(
     model,
@@ -134,14 +136,7 @@ def _train_model_amp_avl(
                 (audio_entity_idxes == video_entity_idxes).int().cpu().numpy().tolist()
             )
             pred_lst.extend(
-                torch.cosine_similarity(
-                    F.normalize(vf_a_emb, p=2, dim=1),
-                    F.normalize(vf_v_emb, p=2, dim=1),
-                    dim=1,
-                )
-                .cpu()
-                .numpy()
-                .tolist()
+                cosine_similarity(vf_a_emb, vf_v_emb).cpu().numpy().tolist()
             )
 
         # 统计
@@ -211,14 +206,7 @@ def _test_model_vf_losses(
                 (audio_entity_idxes == video_entity_idxes).int().cpu().numpy().tolist()
             )
             pred_lst.extend(
-                torch.cosine_similarity(
-                    F.normalize(vf_a_emb, p=2, dim=1),
-                    F.normalize(vf_v_emb, p=2, dim=1),
-                    dim=1,
-                )
-                .cpu()
-                .numpy()
-                .tolist()
+                cosine_similarity(vf_a_emb, vf_v_emb).cpu().numpy().tolist()
             )
 
         # 统计

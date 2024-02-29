@@ -179,7 +179,8 @@ class End2endDataset(Dataset):
                 [
                     (target[0], target[1], entity)
                     for target, entity in zip(
-                        target_list, self._parse_entities_to_int(entity_list)
+                        target_list,
+                        self._parse_entities_to_int(entity_list),  # TODO: 改成实体索引
                     )
                 ]
             ),

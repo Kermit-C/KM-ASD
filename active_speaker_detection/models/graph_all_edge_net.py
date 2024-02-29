@@ -13,6 +13,8 @@ import torch.nn.parameter
 from torch_geometric.nn import BatchNorm, EdgeConv
 from torch_geometric.utils import dropout_adj
 
+from active_speaker_detection.utils.vf_util import cosine_similarity
+
 
 class LinearPathPreact(nn.Module):
     """EdgeConv 的线性路径预激活模块"""
@@ -87,11 +89,7 @@ class GraphAllEdgeNet(nn.Module):
         )
         if audio_vf_emb is not None and video_vf_emb is not None:
             # sim 的维度是 (B, )
-            sim = torch.cosine_similarity(
-                F.normalize(audio_vf_emb, p=2, dim=1),
-                F.normalize(video_vf_emb, p=2, dim=1),
-                dim=1,
-            )
+            sim = cosine_similarity(audio_vf_emb, video_vf_emb)
             audio_feats = audio_feats * sim.unsqueeze(1)
         graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
 

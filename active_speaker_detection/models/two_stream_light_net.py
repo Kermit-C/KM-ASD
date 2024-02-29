@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
+from active_speaker_detection.utils.vf_util import cosine_similarity
 
 
 class AudioBlock(nn.Module):
@@ -301,11 +302,7 @@ class LightTwoStreamNet(nn.Module):
             vf_a_emb, vf_v_emb = self.vf_layer(audio_embed, visual_embed)
 
             # sim 的维度是 (B, )
-            sim = torch.cosine_similarity(
-                F.normalize(vf_a_emb, p=2, dim=1),
-                F.normalize(vf_v_emb, p=2, dim=1),
-                dim=1,
-            )
+            sim = cosine_similarity(vf_a_emb, vf_v_emb)
 
             audio_out, video_out, av_out = (
                 self.fc_a(audio_embed),

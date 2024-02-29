@@ -252,6 +252,77 @@ def train():
             log=log,
         )
 
+    elif stage == "encoder":
+        # 输出配置
+        model_name = (
+            stage
+            + "_"
+            + param_config["encoder_type"]
+            + "_pregrad"
+            + str(1 if encoder_enable_grad else 0)
+            + "_vf"
+            + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_clip"
+            + str(frames_per_clip)
+        )
+        log, target_models = setup_optim_outputs(
+            dataset_config["models_out"], param_config, model_name
+        )
+
+        epochs = param_config["encoder_epochs"]
+        lr = param_config["encoder_learning_rate"]
+        milestones = param_config["encoder_milestones"]
+        gamma = param_config["encoder_gamma"]
+        optimizer = optim.Adam(encoder_net.parameters(), lr=lr)
+        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
+        d_train = EncoderDataset(
+            audio_train_path,
+            video_train_path,
+            data_store_train_cache,
+            frames_per_clip,
+            video_train_transform,
+            do_video_augment=True,
+            crop_ratio=0.95,
+        )
+        d_val = EncoderDataset(
+            audio_val_path,
+            video_val_path,
+            data_store_val_cache,
+            frames_per_clip,
+            video_val_transform,
+            do_video_augment=False,
+        )
+        dl_train = EncoderDataLoader(
+            d_train,
+            batch_size=param_config["encoder_batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        dl_val = EncoderDataLoader(
+            d_val,
+            batch_size=param_config["encoder_batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        optimize_encoder(
+            encoder_net,
+            dl_train,
+            dl_val,
+            device,
+            criterion,
+            vf_critierion,
+            optimizer,
+            scheduler,
+            num_epochs=epochs,
+            a_weight=0.2,
+            v_weight=0.5,
+            vf_weight=0.5,
+            models_out=target_models,
+            log=log,
+        )
+
     elif stage == "encoder_vf":
         # 输出配置
         model_name = (
@@ -324,77 +395,6 @@ def train():
             optimizer,
             scheduler,
             num_epochs=epochs,
-            models_out=target_models,
-            log=log,
-        )
-
-    elif stage == "encoder":
-        # 输出配置
-        model_name = (
-            stage
-            + "_"
-            + param_config["encoder_type"]
-            + "_pregrad"
-            + str(1 if encoder_enable_grad else 0)
-            + "_vf"
-            + str(1 if param_config["encoder_enable_vf"] else 0)
-            + "_clip"
-            + str(frames_per_clip)
-        )
-        log, target_models = setup_optim_outputs(
-            dataset_config["models_out"], param_config, model_name
-        )
-
-        epochs = param_config["encoder_epochs"]
-        lr = param_config["encoder_learning_rate"]
-        milestones = param_config["encoder_milestones"]
-        gamma = param_config["encoder_gamma"]
-        optimizer = optim.Adam(encoder_net.parameters(), lr=lr)
-        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
-        d_train = EncoderDataset(
-            audio_train_path,
-            video_train_path,
-            data_store_train_cache,
-            frames_per_clip,
-            video_train_transform,
-            do_video_augment=True,
-            crop_ratio=0.95,
-        )
-        d_val = EncoderDataset(
-            audio_val_path,
-            video_val_path,
-            data_store_val_cache,
-            frames_per_clip,
-            video_val_transform,
-            do_video_augment=False,
-        )
-        dl_train = EncoderDataLoader(
-            d_train,
-            batch_size=param_config["encoder_batch_size"],
-            shuffle=True,
-            num_workers=param_config["threads"],
-            pin_memory=True,
-        )
-        dl_val = EncoderDataLoader(
-            d_val,
-            batch_size=param_config["encoder_batch_size"],
-            shuffle=True,
-            num_workers=param_config["threads"],
-            pin_memory=True,
-        )
-        optimize_encoder(
-            encoder_net,
-            dl_train,
-            dl_val,
-            device,
-            criterion,
-            vf_critierion,
-            optimizer,
-            scheduler,
-            num_epochs=epochs,
-            a_weight=0.2,
-            v_weight=0.5,
-            vf_weight=0.5,
             models_out=target_models,
             log=log,
         )

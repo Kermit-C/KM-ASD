@@ -15,6 +15,7 @@ import torch.nn.parameter
 from torch.nn import functional as F
 
 from active_speaker_detection.models.vf_extract.vfal_sl_encoder import VfalSlEncoder
+from active_speaker_detection.utils.vf_util import cosine_similarity
 
 from .resnet.shared_2d import BasicBlock2D, conv1x1
 from .resnet.shared_3d import BasicBlock3D, Bottleneck3D, conv1x1x1, get_inplanes
@@ -323,11 +324,7 @@ class ResnetTwoStreamNet(nn.Module):
             vf_a_emb, vf_v_emb = self.vf_layer(audio_feats, video_feats)
 
             # sim 的维度是 (B, )
-            sim = torch.cosine_similarity(
-                F.normalize(vf_a_emb, p=2, dim=1),
-                F.normalize(vf_v_emb, p=2, dim=1),
-                dim=1,
-            )
+            sim = cosine_similarity(vf_a_emb, vf_v_emb)
             audio_emb = audio_emb * sim.unsqueeze(1)
 
             audio_out, video_out, av_out = (
