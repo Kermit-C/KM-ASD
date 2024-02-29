@@ -22,11 +22,13 @@ from active_speaker_detection import asd_config
 from active_speaker_detection.datasets.dataset_encoder import EncoderDataset
 from active_speaker_detection.datasets.dataset_end2end import End2endDataset
 from active_speaker_detection.datasets.dataset_graph import GraphDataset
+from active_speaker_detection.datasets.dataset_vf import VoiceFaceDataset
 from active_speaker_detection.datasets.gen_feat import gen_feature
 from active_speaker_detection.models.model import get_backbone
 from active_speaker_detection.optimizers.optimizer_encoder import optimize_encoder
 from active_speaker_detection.optimizers.optimizer_end2end import optimize_end2end
 from active_speaker_detection.optimizers.optimizer_graph import optimize_graph
+from active_speaker_detection.optimizers.optimizer_vf import optimize_vf
 from active_speaker_detection.utils.command_line import (
     get_default_arg_parser,
     unpack_command_line_args,
@@ -98,6 +100,8 @@ def train():
             + param_config["encoder_type"]
             + "_"
             + param_config["graph_type"]
+            + "_pregrad"
+            + str(1 if encoder_enable_grad else 0)
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
@@ -248,12 +252,90 @@ def train():
             log=log,
         )
 
+    elif stage == "encoder_vf":
+        # 输出配置
+        model_name = (
+            stage
+            + "_"
+            + param_config["encoder_type"]
+            + "_pregrad"
+            + str(1 if encoder_enable_grad else 0)
+            + "_vf"
+            + str(1 if param_config["encoder_enable_vf"] else 0)
+            + "_clip"
+            + str(frames_per_clip)
+        )
+        log, target_models = setup_optim_outputs(
+            dataset_config["models_out"],
+            param_config,
+            model_name,
+            headers=[
+                "epoch",
+                "train_vfal_loss",
+                "train_auc",
+                "val_vfal_loss",
+                "val_auc",
+            ],
+        )
+
+        epochs = param_config["encoder_epochs"]
+        lr = param_config["encoder_learning_rate"]
+        milestones = param_config["encoder_milestones"]
+        gamma = param_config["encoder_gamma"]
+        optimizer = optim.Adam(encoder_net.parameters(), lr=lr)
+        scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
+        d_train = VoiceFaceDataset(
+            audio_train_path,
+            video_train_path,
+            data_store_train_cache,
+            frames_per_clip,
+            video_train_transform,
+            do_video_augment=True,
+            crop_ratio=0.95,
+        )
+        d_val = VoiceFaceDataset(
+            audio_val_path,
+            video_val_path,
+            data_store_val_cache,
+            frames_per_clip,
+            video_val_transform,
+            do_video_augment=False,
+        )
+        dl_train = EncoderDataLoader(
+            d_train,
+            batch_size=param_config["encoder_batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        dl_val = EncoderDataLoader(
+            d_val,
+            batch_size=param_config["encoder_batch_size"],
+            shuffle=True,
+            num_workers=param_config["threads"],
+            pin_memory=True,
+        )
+        optimize_vf(
+            encoder_net,
+            dl_train,
+            dl_val,
+            device,
+            vf_critierion,
+            optimizer,
+            scheduler,
+            num_epochs=epochs,
+            models_out=target_models,
+            log=log,
+        )
+
     elif stage == "encoder":
         # 输出配置
         model_name = (
             stage
             + "_"
             + param_config["encoder_type"]
+            + "_pregrad"
+            + str(1 if encoder_enable_grad else 0)
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_clip"
@@ -317,7 +399,7 @@ def train():
             log=log,
         )
 
-    elif stage == "encoder_gen_emb":
+    elif stage == "encoder_gen_feat":
         d_train = EncoderDataset(
             audio_train_path,
             video_train_path,

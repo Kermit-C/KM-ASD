@@ -160,7 +160,7 @@ class FeatureDataStore:
         mid_index = self.search_ts_in_meta_data(
             self.entity_data[video_id][entity_id], timestamp
         )
-        # 获取目标时刻谁说话，计算 md5 作为 int 编号
+        # 获取目标时刻谁说话
         target_entity = ""
         if target_audio == 1:
             # 获取包含自己的上下文实体列表

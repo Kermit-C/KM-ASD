@@ -172,7 +172,7 @@ class DataStore:
         midone: Tuple[str, str, int] = entity_metadata[mid_index]
         # 获取目标时刻是否说话
         target_audio = self.speech_data[video_id][midone[1]]
-        # 获取目标时刻谁说话，计算 md5 作为 int 编号
+        # 获取目标时刻谁说话
         target_entity = ""
         if target_audio == 1:
             # 获取包含自己的上下文实体列表

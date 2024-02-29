@@ -11,7 +11,8 @@ from active_speaker_detection import asd_train
 """
 ```Bash
 python train_asd.py --name=R3D18 --stage=encoder --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
-python train_asd.py --name=R3D18 --stage=encoder_gen_emb --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
+python train_asd.py --name=R3D18 --stage=encoder_vf --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
+python train_asd.py --name=R3D18 --stage=encoder_gen_feat --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
 python train_asd.py --name=R3D18 --stage=graph --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
 python train_asd.py --name=R3D18 --stage=end2end --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
 ```

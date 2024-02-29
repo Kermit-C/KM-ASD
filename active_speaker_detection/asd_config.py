@@ -51,8 +51,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf1_clip13.0/23.pth",
-        # "encoder_train_weights": "active_speaker_detection/results/encoder_R3D18_vf0_clip13.0/15.pth",
+        "encoder_train_weights": None,
         "encoder_feature_dir": "/hdd1/ckm2/featureR3D18",
         # 预训练权重
         "encoder_enable_grad": False,
@@ -166,7 +165,7 @@ train_params = [
         # 网络架构
         "encoder_type": "RES50_TSM",
         "graph_type": "GraphAllEdgeNet",
-        "encoder_enable_vf": True,
+        "encoder_enable_vf": False,
         "graph_enable_spatial": True,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RES50_TSM",

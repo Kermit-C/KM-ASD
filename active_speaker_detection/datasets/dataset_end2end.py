@@ -26,7 +26,7 @@ class End2endDataset(Dataset):
         audio_root,
         video_root,
         data_store_train_cache,
-        clip_lenght,  # 片段长度，短时序上下文片段的长度
+        clip_length,  # 片段长度，短时序上下文片段的长度
         graph_time_steps: int,  # 图的时间步数
         graph_time_stride: int,  # 步长
         is_edge_double=False,  # 是否边是双向的
@@ -50,7 +50,7 @@ class End2endDataset(Dataset):
         # 图节点的配置
         self.norm_audio = norm_audio  # 是否归一化音频
         self.half_clip_length = math.floor(
-            clip_lenght / 2
+            clip_length / 2
         )  # 每刻计算特征的帧数一半的长度
 
         # 时序层配置

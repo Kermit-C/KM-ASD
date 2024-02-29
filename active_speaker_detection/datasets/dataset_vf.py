@@ -19,7 +19,7 @@ from active_speaker_detection.utils.augmentations import video_temporal_crop
 from .data_store import DataStore
 
 
-class EncoderDataset(Dataset):
+class VoiceFaceDataset(Dataset):
 
     def __init__(
         self,
@@ -31,7 +31,6 @@ class EncoderDataset(Dataset):
         do_video_augment=False,  # 是否视频增强
         crop_ratio=0.95,  # 视频裁剪比例
         norm_audio=False,  # 是否归一化音频
-        eval=False,
     ):
         super().__init__()
         self.store = DataStore(audio_root, video_root, data_store_train_cache)
@@ -51,32 +50,49 @@ class EncoderDataset(Dataset):
 
         self.eval = eval
 
-        self.entity_cache = {}  # 主要用于依次计算特征的缓存
-
     def __len__(self):
-        if self.eval:
-            # 是 eval 就用全部
-            return len(self.store.feature_list)
-        else:
-            # 训练的话用实体列表
-            return len(self.store.entity_list)
+        # 训练的话用实体列表
+        return len(self.store.entity_list)
 
     def __getitem__(self, index):
-        if self.eval:
-            video_id, entity_id, timestamp, entity_label = self.store.feature_list[
-                index
-            ]
-            target_entity_metadata = self.store.entity_data[video_id][entity_id]
-            center_index = self.store.search_ts_in_meta_data(
-                target_entity_metadata, timestamp
+        video_id, entity_id = self.store.entity_list[index]
+        target_entity_metadata = self.store.entity_data[video_id][entity_id]
+
+        # 找到有说话的索引列表
+        target_entity_metadata_speak_idx_list = [
+            idx if metadata[-1] == 1 else -1
+            for idx, metadata in enumerate(target_entity_metadata)
+        ]
+        target_entity_metadata_speak_idx_list = list(
+            filter(lambda x: x != -1, target_entity_metadata_speak_idx_list)
+        )
+
+        # 选择一个有说话片段中间时间戳的索引
+        if len(target_entity_metadata_speak_idx_list) > 0:
+            target_entity_metadata_speak_start_idx = (
+                target_entity_metadata_speak_idx_list[0]
+            )
+            target_entity_metadata_speak_end_idx = (
+                target_entity_metadata_speak_idx_list[0]
+            )
+            for i, idx in enumerate(target_entity_metadata_speak_idx_list):
+                if idx - target_entity_metadata_speak_start_idx == i:
+                    # 如果是连续的才记录
+                    target_entity_metadata_speak_end_idx = idx
+                else:
+                    break
+            # 从中后部分随机选
+            center_index = random.randint(
+                (
+                    target_entity_metadata_speak_start_idx
+                    + target_entity_metadata_speak_end_idx
+                )
+                // 2,
+                target_entity_metadata_speak_end_idx,
             )
         else:
-            video_id, entity_id = self.store.entity_list[index]
-            target_entity_metadata = self.store.entity_data[video_id][entity_id]
-            # 随机选择一个中间时间戳的索引
-            # TODO: 这样没把所有的时间戳都用上，影响大吗？
             center_index = random.randint(0, len(target_entity_metadata) - 1)
-            timestamp = target_entity_metadata[center_index][1]
+        timestamp = target_entity_metadata[center_index][1]
 
         # 获取视频特征和标签
         cache = {}
@@ -90,11 +106,7 @@ class EncoderDataset(Dataset):
             video_temporal_crop if self.do_video_augment else None,
             self.crop_ratio if self.do_video_augment else None,
             cache,
-            self.entity_cache,
         )
-        # 限制 self.entity_cache 长度，最大 1000，从旧的开始删除
-        while len(self.entity_cache) > 1000:
-            self.entity_cache.pop(list(self.entity_cache.keys())[0])
         # 获取音频特征和标签
         audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
             video_id, entity_id, center_index, self.half_clip_length
@@ -102,12 +114,15 @@ class EncoderDataset(Dataset):
         audio_data = torch.from_numpy(audio_data)
         audio_fbank = torch.from_numpy(audio_fbank)
 
+        audio_index = (
+            self.store.entity_list.index((video_id, entity_a)) if entity_a != "" else -1
+        )  # 音频实体序号，-1 代表没有，则是环境音
+
         return (
             torch.stack(video_data[0], dim=1),  # video_data: (3, T, H, W)
             audio_data,
             audio_fbank,
-            targets[0],  # 视频标签
-            target_a,  # 音频标签
-            entities[0],  # 视频实体
+            audio_index,  # 音频实体序号，-1 代表没有，则是环境音
+            index,  # 视频实体序号
             timestamp,
         )
