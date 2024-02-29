@@ -14,11 +14,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
-from active_speaker_detection.utils.spatial_grayscale_util import (
-    batch_create_spatial_grayscale,
-)
-
+from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from .graph_all_edge_net import GraphAllEdgeNet
+from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
 from .graph_gat_edge_net import GraphGatEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
@@ -264,7 +262,11 @@ def get_graph(
     vf_emb_dim: int,
     edge_attr_dim: int,
 ):
-    if graph_type == "GraphAllEdgeNet":
+    if graph_type == "GraphAllEdgeWeightNet":
+        graph_net = GraphAllEdgeWeightNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphAllEdgeNet":
         graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
     elif graph_type == "GraphGatEdgeNet":
         graph_net = GraphGatEdgeNet(

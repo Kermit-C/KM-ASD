@@ -48,6 +48,7 @@ class GraphAllEdgeWeightNet(nn.Module):
         in_v_channels,
         in_vf_channels,
         channels,
+        edge_attr_dim,
     ):
         super().__init__()
 
@@ -60,28 +61,28 @@ class GraphAllEdgeWeightNet(nn.Module):
         self.layer_1 = EdgeWeightConv(
             LinearPathPreact(channels * 2, channels),
             node_dim=channels,
-            edge_dim=in_vf_channels,
+            edge_dim=edge_attr_dim,
             aggr="mean",
         )
         self.batch_1 = BatchNorm(channels)
         self.layer_2 = EdgeWeightConv(
             LinearPathPreact(channels * 2, channels),
             node_dim=channels,
-            edge_dim=in_vf_channels,
+            edge_dim=edge_attr_dim,
             aggr="mean",
         )
         self.batch_2 = BatchNorm(channels)
         self.layer_3 = EdgeWeightConv(
             LinearPathPreact(channels * 2, channels),
             node_dim=channels,
-            edge_dim=in_vf_channels,
+            edge_dim=edge_attr_dim,
             aggr="mean",
         )
         self.batch_3 = BatchNorm(channels)
         self.layer_4 = EdgeWeightConv(
             LinearPathPreact(channels * 2, channels),
             node_dim=channels,
-            edge_dim=in_vf_channels,
+            edge_dim=edge_attr_dim,
             aggr="mean",
         )
 

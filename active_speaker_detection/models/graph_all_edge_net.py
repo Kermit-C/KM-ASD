@@ -93,13 +93,12 @@ class GraphAllEdgeNet(nn.Module):
             audio_feats = audio_feats * sim.unsqueeze(1)
         graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
 
-        edge_index_1, edge_attr_1 = dropout_adj(
+        edge_index_1, _ = dropout_adj(
             edge_index=edge_index,
-            edge_attr=edge_attr,
             p=self.dropout_edge,
             training=self.training,
         )
-        graph_feats_1 = self.layer_1(graph_feats, edge_index)
+        graph_feats_1 = self.layer_1(graph_feats, edge_index_1)
         graph_feats_1 = self.batch_1(graph_feats_1)
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)
