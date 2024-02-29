@@ -82,9 +82,8 @@ def _train_model_amp_avl(
     vf_critierion,
     device,
 ):
-    """训练一个 epoch 的模型，返回图的损失和音频视频的辅助损失"""
+    """训练一个 epoch 的模型"""
     model.train()
-    softmax_layer = torch.nn.Softmax(dim=1)
 
     pred_lst = []
     label_lst = []
@@ -163,7 +162,6 @@ def _test_model_vf_losses(
 ):
     """测试模型"""
     model.eval()
-    softmax_layer = torch.nn.Softmax(dim=1)
 
     pred_lst = []
     label_lst = []
