@@ -22,6 +22,7 @@ from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
 from .graph_transformer_edge_net import GraphTransformerEdgeNet
 from .spatial_mobilenet_net import get_spatial_mobilenet_net
+from .spatial_net import get_spatial_net
 from .two_stream_light_net import get_light_encoder
 from .two_stream_resnet_net import get_resnet_encoder
 from .two_stream_resnet_tsm_net import get_resnet_tsm_encoder
@@ -177,7 +178,8 @@ def get_backbone(
     )
     spatial_feature_dim = 64
     spatial_net = (
-        get_spatial_mobilenet_net(spatial_feature_dim, spatial_pretrained_weights)
+        # get_spatial_mobilenet_net(spatial_feature_dim, spatial_pretrained_weights)
+        get_spatial_net(spatial_feature_dim)
         if graph_enable_spatial
         else None
     )

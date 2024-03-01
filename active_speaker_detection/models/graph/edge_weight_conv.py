@@ -38,6 +38,7 @@ class EdgeWeightConv(MessagePassing):
 
     def message(self, x_i: Tensor, x_j: Tensor, edge_attr: OptTensor) -> Tensor:
         edge_attr = self.lin_edge(edge_attr)
+        # TODO
         edge_attr = (self.bn_edge(edge_attr) + 1) / 2
         return self.nn(torch.cat([x_i, edge_attr * (x_j - x_i)], dim=-1))
 

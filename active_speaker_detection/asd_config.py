@@ -48,13 +48,13 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
-        "graph_type": "GraphAllEdgeWeightNet",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
-        "graph_enable_spatial": True,
+        "graph_enable_spatial": False,
         "encoder_train_weights": "active_speaker_detection/results/encoder_vf_R3D18_pregrad0_vf1_clip13/30.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
-        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -72,7 +72,7 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
-        "threads": 3,
+        "threads": 2,
     },
     {
         "name": "R3D50",
@@ -84,7 +84,7 @@ train_params = [
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/R3D50",
         # 预训练权重
-        "encoder_enable_grad": False,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d50_K_200ep.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -114,7 +114,7 @@ train_params = [
         "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
         # 预训练权重
-        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": None,
         "encoder_video_pretrain_weights": None,
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -144,7 +144,7 @@ train_params = [
         "encoder_train_weights": "active_speaker_detection/results/encoder_vf_RES18_TSM_pregrad0_vf1_clip13/39.pth",
         "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
-        "encoder_enable_grad": False,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -174,7 +174,7 @@ train_params = [
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RES50_TSM",
         # 预训练权重
-        "encoder_enable_grad": False,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet50-19c8e357.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",

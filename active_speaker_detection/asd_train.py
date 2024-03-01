@@ -153,14 +153,14 @@ def train():
             batch_size=param_config["batch_size"],
             shuffle=True,
             num_workers=param_config["threads"],
-            pin_memory=True,
+            pin_memory=False,
         )
         dl_val = GeometricDataLoader(
             d_val,
             batch_size=param_config["batch_size"],
             shuffle=True,
             num_workers=param_config["threads"],
-            pin_memory=True,
+            pin_memory=False,
         )
         optimize_end2end(
             asd_net,
