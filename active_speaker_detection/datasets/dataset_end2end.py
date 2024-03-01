@@ -75,7 +75,7 @@ class End2endDataset(Dataset):
         time_context: List[str] = self.store.get_time_context(
             target_entity_metadata,
             center_index,
-            0,  # 原来是 self.graph_time_steps，这是为了形成一整个大图
+            self.graph_time_steps,  # 和 dataset_graph.py 不同，这里如果形成大图的话，内存不够
             self.graph_time_stride,
         )
 
@@ -92,7 +92,7 @@ class End2endDataset(Dataset):
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
-        cache = {}
+        cache = {}  # 以图片路径为 key 的缓存
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
             target_index = all_ts.index(timestamp)

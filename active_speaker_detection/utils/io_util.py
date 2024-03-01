@@ -101,6 +101,7 @@ def load_a_clip_from_metadata(
     frames_source,
     audio_source,
     audio_offset: float,
+    entity_cache: Optional[dict] = None,
 ) -> Tuple[np.ndarray, torch.Tensor]:
     """从片段元数据中获得音频梅尔特征"""
     # 从片段元数据中获得时间戳序列
@@ -112,10 +113,16 @@ def load_a_clip_from_metadata(
     # 实体ID
     entity_id = clip_meta_data[0][0]
 
-    # 音频文件
-    audio_file = os.path.join(audio_source, entity_id.replace(":", "_") + ".wav")
-    # audio_data 是一个 numpy.ndarray，int16 pcm格式
-    sample_rate, audio_data = wavfile.read(audio_file)
+    if entity_cache is not None and entity_id in entity_cache.keys():
+        sample_rate, audio_data = entity_cache[entity_id]
+    else:
+        # 音频文件
+        audio_file = os.path.join(audio_source, entity_id.replace(":", "_") + ".wav")
+        # audio_data 是一个 numpy.ndarray，int16 pcm格式
+        sample_rate, audio_data = wavfile.read(audio_file)
+
+    if entity_cache is not None:
+        entity_cache[entity_id] = (sample_rate, audio_data)
 
     # 通过时间戳和采样率计算音频起始和结束位置，位置是采样点
     audio_start = int((min_ts - audio_offset) * sample_rate)

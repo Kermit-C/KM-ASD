@@ -82,10 +82,10 @@ class GraphDataset(Dataset):
             audio_data, audio_vf_data, target_a, entity_a = self.store.get_audio_data(
                 video_id, entity_id, timestamp, self.cache
             )
-            # 生成的 train feat 总共在磁盘里约 16G
+            # 生成的 train feat 总共在磁盘里约 11G，valid feat 总共在磁盘里约 3G
             # 总共的帧数约为 100,0000，实体数约为 3,0000
-            # 限制 self.entity_cache 长度，最大 30000，从旧的开始删除
-            while len(self.cache) > 30000:
+            # 限制 self.entity_cache 长度，最大 40000(全部加载进内存)，从旧的开始删除
+            while len(self.cache) > 40000:
                 self.cache.pop(list(self.cache.keys())[0])
 
             a_feat = torch.from_numpy(audio_data)

@@ -37,8 +37,8 @@ class MyModel(nn.Module):
         graph_enable_spatial: bool,
         spatial_net: Optional[nn.Module] = None,  # 为空则不使用空间关系网络
         spatial_feature_dim: int = 64,
-        spatial_grayscale_width: int = 112,
-        spatial_grayscale_height: int = 112,
+        spatial_grayscale_width: int = 32,
+        spatial_grayscale_height: int = 32,
     ):
         super().__init__()
 
@@ -49,6 +49,8 @@ class MyModel(nn.Module):
         self.graph_enable_spatial = graph_enable_spatial
 
         self.spatial_net = spatial_net
+        self.spatial_bn = nn.BatchNorm1d(spatial_feature_dim)
+
         self.spatial_feature_dim = spatial_feature_dim
         self.spatial_grayscale_width = spatial_grayscale_width
         self.spatial_grayscale_height = spatial_grayscale_height
@@ -64,12 +66,8 @@ class MyModel(nn.Module):
         if len(x.shape) > 3:
             # 从数据中提取音频和视频特征
             assert audio_size is not None
-            audio_data = (
-                x[:, 0, 0, 0, : audio_size[1], : audio_size[2]]
-                .unsqueeze(1)
-                .unsqueeze(1)
-            )
-            video_data = x[:, 1, :, :, :, :].unsqueeze(1)
+            audio_data = x[:, 0, 0, 0, : audio_size[1], : audio_size[2]].unsqueeze(1)
+            video_data = x[:, 1, :, :, :, :]
             audio_feats, video_feats, audio_out, video_out, _, vf_a_emb, vf_v_emb = (
                 self.encoder(audio_data, video_data)
             )
@@ -116,13 +114,22 @@ class MyModel(nn.Module):
             )
             spatial_feats = []
             for i in range(0, spatial_grayscale_imgs.size(0), self.spatial_mini_batch):
-                spatial_feats.append(
-                    self.spatial_net(
-                        spatial_grayscale_imgs[i : i + self.spatial_mini_batch]
+                # 避免留下单个节点，导致无法 batch norm
+                mini_spatial_grayscale_imgs = spatial_grayscale_imgs[
+                    i : i + self.spatial_mini_batch
+                ]
+                if mini_spatial_grayscale_imgs.size(0) == 1:
+                    mini_spatial_grayscale_imgs = torch.cat(
+                        [mini_spatial_grayscale_imgs, mini_spatial_grayscale_imgs],
+                        dim=0,
                     )
-                )
+                    spatial_feats.append(
+                        self.spatial_net(mini_spatial_grayscale_imgs)[0].unsqueeze(0)
+                    )
+                else:
+                    spatial_feats.append(self.spatial_net(mini_spatial_grayscale_imgs))
             edge_attr = torch.cat(spatial_feats, dim=0)
-            edge_attr = F.normalize(edge_attr, p=2, dim=1)
+            edge_attr = self.spatial_bn(edge_attr)
         else:
             # 权重全为 1，代表没有空间关系
             edge_attr = torch.ones(

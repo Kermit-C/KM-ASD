@@ -227,15 +227,15 @@ def train():
             d_train,
             batch_size=param_config["batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
-            pin_memory=True,
+            num_workers=0,  # 不为 0 的话，工作进程里就没有 cache 了
+            pin_memory=False,  # 用数据集自己实现的 Cache
         )
         dl_val = GeometricDataLoader(
             d_val,
             batch_size=param_config["batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
-            pin_memory=True,
+            num_workers=0,  # 不为 0 的话，工作进程里就没有 cache 了
+            pin_memory=False,  # 用数据集自己实现的 Cache
         )
         optimize_graph(
             asd_net,
@@ -296,14 +296,14 @@ def train():
             d_train,
             batch_size=param_config["encoder_batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         dl_val = EncoderDataLoader(
             d_val,
             batch_size=param_config["encoder_batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         optimize_encoder(
@@ -376,14 +376,14 @@ def train():
             d_train,
             batch_size=param_config["encoder_batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         dl_val = EncoderDataLoader(
             d_val,
             batch_size=param_config["encoder_batch_size"],
             shuffle=True,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         optimize_vf(
@@ -423,14 +423,14 @@ def train():
             d_train,
             batch_size=param_config["encoder_batch_size"],
             shuffle=False,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         dl_val = EncoderDataLoader(
             d_val,
             batch_size=param_config["encoder_batch_size"],
             shuffle=False,
-            num_workers=param_config["threads"],
+            num_workers=param_config["encoder_threads"],
             pin_memory=True,
         )
         gen_feature(

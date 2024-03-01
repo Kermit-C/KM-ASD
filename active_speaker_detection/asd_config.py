@@ -48,13 +48,13 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphAllEdgeWeightNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": None,
-        "encoder_feature_dir": "/hdd1/ckm2/featureR3D18",
+        "encoder_train_weights": "active_speaker_detection/results/encoder_vf_R3D18_pregrad0_vf1_clip13/30.pth",
+        "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
-        "encoder_enable_grad": False,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
         "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/3D-ResNets-PyTorch/results/r3d18_K_200ep.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
@@ -65,13 +65,14 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 128,
+        "batch_size": 16,
         "learning_rate": 1e-3,
-        "epochs": 70,
-        "milestones": list(range(0, 70, 30)),
+        "epochs": 15,
+        "milestones": [6, 9],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 12,
+        "encoder_threads": 12,
+        "threads": 3,
     },
     {
         "name": "R3D50",
@@ -94,13 +95,14 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 128,
+        "batch_size": 16,
         "learning_rate": 1e-3,
-        "epochs": 70,
-        "milestones": list(range(0, 70, 30)),
+        "epochs": 15,
+        "milestones": [6, 9],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 12,
+        "encoder_threads": 12,
+        "threads": 4,
     },
     {
         "name": "LIGHT",
@@ -110,7 +112,7 @@ train_params = [
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
-        "encoder_feature_dir": "/hdd1/ckm2/featureLIGHT",
+        "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
         # 预训练权重
         "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
         "encoder_audio_pretrain_weights": None,
@@ -123,22 +125,23 @@ train_params = [
         "encoder_milestones": list(range(30)),
         "encoder_gamma": 0.95,
         # 优化配置
-        "batch_size": 128,
+        "batch_size": 16,
         "learning_rate": 1e-3,
-        "epochs": 70,
-        "milestones": list(range(0, 70, 30)),
+        "epochs": 15,
+        "milestones": [6, 9],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 12,
+        "encoder_threads": 12,
+        "threads": 4,
     },
     {
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
         "graph_type": "GraphAllEdgeNet",
-        "encoder_enable_vf": False,
+        "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": None,
+        "encoder_train_weights": "active_speaker_detection/results/encoder_vf_RES18_TSM_pregrad0_vf1_clip13/39.pth",
         "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
         "encoder_enable_grad": False,  # 开的情况：整个网络端到端、encoder 端到端；关的情况：只训练音脸，然后二阶段训练图
@@ -152,13 +155,14 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 128,
+        "batch_size": 16,
         "learning_rate": 1e-3,
-        "epochs": 70,
-        "milestones": list(range(0, 70, 30)),
+        "epochs": 15,
+        "milestones": [6, 9],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 12,
+        "encoder_threads": 12,
+        "threads": 4,
     },
     {
         "name": "RES50_TSM",
@@ -181,12 +185,13 @@ train_params = [
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
         # 优化配置
-        "batch_size": 128,
+        "batch_size": 16,
         "learning_rate": 1e-3,
-        "epochs": 70,
-        "milestones": list(range(0, 70, 30)),
+        "epochs": 15,
+        "milestones": [6, 9],
         "gamma": 0.1,
         # 数据集加载器
-        "threads": 12,
+        "encoder_threads": 12,
+        "threads": 4,
     },
 ]

@@ -22,9 +22,8 @@ class EdgeWeightConv(MessagePassing):
     ):
         super().__init__(aggr=aggr, **kwargs)
         self.nn = nn
-        self.lin_edge = nn.Linear(
-            edge_dim, node_dim, bias=False, weight_initializer="glorot"
-        )
+        self.lin_edge = torch.nn.Linear(edge_dim, node_dim)
+        self.bn_edge = torch.nn.BatchNorm1d(node_dim)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -39,7 +38,8 @@ class EdgeWeightConv(MessagePassing):
 
     def message(self, x_i: Tensor, x_j: Tensor, edge_attr: OptTensor) -> Tensor:
         edge_attr = self.lin_edge(edge_attr)
-        return self.nn(torch.cat([x_i, edge_attr + x_j - x_i], dim=-1))
+        edge_attr = (self.bn_edge(edge_attr) + 1) / 2
+        return self.nn(torch.cat([x_i, edge_attr * (x_j - x_i)], dim=-1))
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(nn={self.nn})"

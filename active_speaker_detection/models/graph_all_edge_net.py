@@ -54,7 +54,10 @@ class GraphAllEdgeNet(nn.Module):
         self.in_v_channels = in_v_channels
         self.in_vf_channels = in_vf_channels
 
-        self.av_fusion = nn.Linear(in_a_channels + in_v_channels, channels)
+        self.layer_0_a = nn.Linear(in_a_channels, channels)
+        self.layer_0_v = nn.Linear(in_v_channels, channels)
+        self.av_fusion = nn.Linear(channels * 2, channels)
+        self.batch_0 = BatchNorm(channels)
 
         self.layer_1 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
         self.batch_1 = BatchNorm(channels)
@@ -91,7 +94,12 @@ class GraphAllEdgeNet(nn.Module):
             # sim 的维度是 (B, )
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
             audio_feats = audio_feats * sim.unsqueeze(1)
-        graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
+        audio_feats = self.layer_0_a(audio_feats)
+        video_feats = self.layer_0_v(video_feats)
+        # graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
+        graph_feats = audio_feats + video_feats
+        graph_feats = self.batch_0(graph_feats)
+        graph_feats = self.relu(graph_feats)
 
         edge_index_1, _ = dropout_adj(
             edge_index=edge_index,

@@ -163,7 +163,12 @@ class DataStore:
         return np.float32(audio_data).shape, np.float32(audio_fbank).shape  # type: ignore
 
     def get_audio_data(
-        self, video_id: str, entity_id: str, mid_index: int, half_clip_length: int
+        self,
+        video_id: str,
+        entity_id: str,
+        mid_index: int,
+        half_clip_length: int,
+        entity_cache: Optional[dict] = None,
     ) -> Tuple[np.ndarray, np.ndarray, int, str]:
         """根据实体 ID 和某刻时间戳索引，获取音频梅尔特征(1, 13, T)、fbank(1, 80, T)和标签"""
         entity_metadata = self.entity_data[video_id][entity_id]
@@ -192,7 +197,7 @@ class DataStore:
         )
         # 从片段元数据中获得音频梅尔特征
         audio_data, audio_fbank = io.load_a_clip_from_metadata(
-            clip_meta_data, self.video_root, self.audio_root, audio_offset
+            clip_meta_data, self.video_root, self.audio_root, audio_offset, entity_cache
         )
         return (
             np.float32(audio_data),

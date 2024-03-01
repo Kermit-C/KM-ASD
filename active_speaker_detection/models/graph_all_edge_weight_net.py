@@ -126,19 +126,19 @@ class GraphAllEdgeWeightNet(nn.Module):
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)
 
-        graph_feats_2 = self.layer_2(graph_feats_1, edge_index)
+        graph_feats_2 = self.layer_2(graph_feats_1, edge_index, edge_attr)
         graph_feats_2 += graph_feats_1
         graph_feats_2 = self.batch_2(graph_feats_2)
         graph_feats_2 = self.relu(graph_feats_2)
         graph_feats_2 = self.dropout(graph_feats_2)
 
-        graph_feats_3 = self.layer_3(graph_feats_2, edge_index)
+        graph_feats_3 = self.layer_3(graph_feats_2, edge_index, edge_attr)
         graph_feats_3 += graph_feats_2
         graph_feats_3 = self.batch_3(graph_feats_3)
         graph_feats_3 = self.relu(graph_feats_3)
         graph_feats_3 = self.dropout(graph_feats_3)
 
-        graph_feats_4 = self.layer_4(graph_feats_3, edge_index)
+        graph_feats_4 = self.layer_4(graph_feats_3, edge_index, edge_attr)
         graph_feats_4 += graph_feats_3
 
         out = self.fc(graph_feats_4)

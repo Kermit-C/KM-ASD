@@ -95,7 +95,7 @@ class VoiceFaceDataset(Dataset):
         timestamp = target_entity_metadata[center_index][1]
 
         # 获取视频特征和标签
-        cache = {}
+        cache = {}  # 以图片路径为 key 的缓存
         video_data, targets, entities, positions = self.store.get_video_data(
             video_id,
             entity_id,

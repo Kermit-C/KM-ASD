@@ -130,9 +130,9 @@ def _train_model_amp_avl(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets_a = graph_data.y[:, 0].unsqueeze(1)
-        targets = graph_data.y[:, 1].unsqueeze(1)
-        entities = graph_data.y[:, 2].unsqueeze(1)
+        targets_a = graph_data.y[:, 0]
+        targets = graph_data.y[:, 1]
+        entities = graph_data.y[:, 2]
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -240,9 +240,9 @@ def _test_model_graph_losses(
         graph_data = dl
         graph_data = graph_data.to(device)
         targets = graph_data.y
-        targets_a = graph_data.y[:, 0].unsqueeze(1)
-        targets = graph_data.y[:, 1].unsqueeze(1)
-        entities = graph_data.y[:, 2].unsqueeze(1)
+        targets_a = graph_data.y[:, 0]
+        targets = graph_data.y[:, 1]
+        entities = graph_data.y[:, 2]
 
         with torch.set_grad_enabled(False):
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(

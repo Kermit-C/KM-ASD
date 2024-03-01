@@ -17,11 +17,11 @@ def get_default_arg_parser():
     # 每刻计算特征的帧数
     parser.add_argument("--frmc", default="13")
     # 上下文大小，每刻的实体数
-    parser.add_argument("--ctx", default="3")
+    parser.add_argument("--ctx", default="2")
     # 图的时间上下文步数，即 clip 数
-    parser.add_argument("--nclp", default="7")
+    parser.add_argument("--nclp", default="21")
     # 图的时间上下文步长，即 clip 之间的间隔，单位为帧
-    parser.add_argument("--strd", default="3")
+    parser.add_argument("--strd", default="1")
     # 图像大小，将把人脸 crop resize 到这个大小的正方形
     parser.add_argument("--size", default="112")
 
@@ -31,7 +31,7 @@ def get_default_arg_parser():
 def unpack_command_line_args(args):
     name = args.name
     stage = args.stage
-    frames_per_clip = float(args.frmc)
+    frames_per_clip = int(args.frmc)
     ctx_size = int(args.ctx)
     n_clips = int(args.nclp)
     strd = int(args.strd)

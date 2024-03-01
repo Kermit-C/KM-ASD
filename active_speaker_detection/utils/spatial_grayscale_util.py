@@ -17,7 +17,9 @@ def create_spatial_grayscale(
     target_channels: int = 3,
 ) -> torch.Tensor:
     """生成空间位置关系灰度图"""
-    spatial_grayscale = torch.zeros(target_channels, target_w, target_h, device=device)
+    spatial_grayscale = torch.zeros(
+        target_channels, target_w, target_h, device=device, dtype=torch.float32
+    )
     for x1, y1, x2, y2 in positions:
         x1 = int(x1 * target_w)
         y1 = int(y1 * target_h)
@@ -35,10 +37,17 @@ def batch_create_spatial_grayscale(
 ) -> torch.Tensor:
     """批量生成空间位置关系灰度图"""
     spatial_grayscale = torch.zeros(
-        positions.size(0), target_channels, target_w, target_h, device=positions.device
+        positions.size(0),
+        target_channels,
+        target_h,
+        target_w,
+        device=positions.device,
+        dtype=torch.float32,
     )
     positions = positions[:, :, :] * torch.tensor(
-        [target_w, target_h, target_w, target_h], device=positions.device
+        [target_h, target_w, target_h, target_w],
+        device=positions.device,
+        dtype=positions.dtype,
     ).view(1, 1, 4)
     positions = positions.int()
     for i in range(positions.size(0)):
