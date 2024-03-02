@@ -38,6 +38,7 @@ class GraphGatedEdgeNet(nn.Module):
         self.in_vf_channels = in_vf_channels
 
         self.av_fusion = nn.Linear(in_a_channels + in_v_channels, channels)
+        self.batch_0 = BatchNorm(channels)
         self.edge_weight_fc = nn.Linear(edge_attr_dim, 1)
         self.edge_weight_sig = nn.Sigmoid()
 
@@ -77,6 +78,8 @@ class GraphGatedEdgeNet(nn.Module):
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
             audio_feats = audio_feats * sim.unsqueeze(1)
         graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
+        graph_feats = self.batch_0(graph_feats)
+        graph_feats = self.relu(graph_feats)
         edge_attr = self.edge_weight_fc(edge_attr)
         edge_attr = self.edge_weight_sig(edge_attr)
 

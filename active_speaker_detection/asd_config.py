@@ -119,43 +119,6 @@ train_params = [
         "threads": 4,
     },
     {
-        "name": "LIGHT",
-        # 网络架构
-        "encoder_type": "LIGHT",
-        "graph_type": "GraphAllEdgeNet",
-        "encoder_enable_vf": True,
-        "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
-        "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
-        # 预训练权重
-        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
-        "encoder_audio_pretrain_weights": None,
-        "encoder_video_pretrain_weights": None,
-        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
-        # encoder 优化配置
-        "encoder_batch_size": 128,
-        "encoder_learning_rate": 1e-3,
-        "encoder_epochs": 30,
-        "encoder_milestones": list(range(30)),
-        "encoder_gamma": 0.95,
-        # graph 优化配置
-        "graph_batch_size": 64,
-        "graph_learning_rate": 3e-6,
-        "graph_epochs": 10,
-        "graph_milestones": [5],
-        "graph_gamma": 0.1,
-        # 端到端优化配置
-        "batch_size": 16,
-        "learning_rate": 1e-3,
-        "epochs": 15,
-        "milestones": [6, 9],
-        "gamma": 0.1,
-        # 数据集加载器
-        "encoder_threads": 12,
-        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
-        "threads": 4,
-    },
-    {
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
@@ -397,6 +360,43 @@ train_params = [
         "encoder_epochs": 70,
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "LIGHT",
+        # 网络架构
+        "encoder_type": "LIGHT",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
+        "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": None,
+        "encoder_video_pretrain_weights": None,
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 1e-3,
+        "encoder_epochs": 30,
+        "encoder_milestones": list(range(30)),
+        "encoder_gamma": 0.95,
         # graph 优化配置
         "graph_batch_size": 64,
         "graph_learning_rate": 3e-6,

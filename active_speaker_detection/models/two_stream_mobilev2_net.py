@@ -299,9 +299,45 @@ def _load_audio_pretrained_weights_into_model(model: nn.Module, ws_file):
     print("loaded audio weights from resnet")
 
 
-def _load_video_pretrained_weights_into_model(model: nn.Module, ws_file):
+def _load_video_pretrained_weights_into_model(model: nn.Module, model_path):
     """加载预训练权重"""
-    model.video_backbone.load_state_dict(torch.load(ws_file), strict=False)  # type: ignore
+    model = model.video_backbone  # type: ignore
+
+    checkpoint = torch.load(model_path, map_location=lambda storage, loc: storage)
+    # print("loaded {}, epoch {}".format(model_path, checkpoint["epoch"]))
+    state_dict_ = checkpoint["state_dict"]
+    # state_dict_ = checkpoint
+    state_dict = {}
+
+    # convert data_parallal to model
+    for k in state_dict_:
+        if k.startswith("module") and not k.startswith("module_list"):
+            state_dict[k[7:]] = state_dict_[k]
+        else:
+            state_dict[k] = state_dict_[k]
+    model_state_dict = model.state_dict()
+
+    # check loaded parameters and created model parameters
+    for k in state_dict:
+        if k in model_state_dict:
+            if state_dict[k].shape != model_state_dict[k].shape:
+                print(
+                    "Skip loading parameter {}, required shape{}, "
+                    "loaded shape{}.".format(
+                        k, model_state_dict[k].shape, state_dict[k].shape
+                    )
+                )
+                state_dict[k] = model_state_dict[k]
+        else:
+            print("Drop parameter {}.".format(k))
+    for k in model_state_dict:
+        # num_batches_tracked need to be filtered out (a version problem
+        # see https://stackoverflow.com/questions/53678133/load-pytorch-model-from-0-4-1-to-0-4-0)
+        if not (k in state_dict) and "num_batches_tracked" not in k:
+            print("No param {}.".format(k))
+            state_dict[k] = model_state_dict[k]
+
+    model.load_state_dict(state_dict, strict=False)  # type: ignore
     print("loaded video weights from 3d-mobilev2")
 
 

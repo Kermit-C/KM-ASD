@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
+from active_speaker_detection.models.graph_rnn_net import GraphRnnNet
 from active_speaker_detection.models.two_stream_mobilev1_net import get_mobilev1_encoder
 from active_speaker_detection.models.two_stream_mobilev2_net import get_mobilev2_encoder
 from active_speaker_detection.models.two_stream_resnext_net import get_resnext_encoder
@@ -339,6 +340,14 @@ def get_graph(
     elif graph_type == "GraphTransformerEdgeNet":
         graph_net = GraphTransformerEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphRnnGruNet":
+        graph_net = GraphRnnNet(
+            "GRU", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphRnnLstmNet":
+        graph_net = GraphRnnNet(
+            "LSTM", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
     else:
         raise ValueError(f"Unknown graph type: {graph_type}")
