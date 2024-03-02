@@ -23,7 +23,11 @@ class EdgeWeightConv(MessagePassing):
         super().__init__(aggr=aggr, **kwargs)
         self.nn = nn
         self.lin_edge = torch.nn.Linear(edge_dim, node_dim)
-        self.bn_edge = torch.nn.BatchNorm1d(node_dim)
+        self.fusion_edge = torch.nn.Linear(node_dim, node_dim)
+
+        self.relu = torch.nn.ReLU(inplace=True)
+        self.bn = torch.nn.BatchNorm1d(node_dim)
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -37,10 +41,16 @@ class EdgeWeightConv(MessagePassing):
         return self.propagate(edge_index, x=x, edge_attr=edge_attr, size=None)
 
     def message(self, x_i: Tensor, x_j: Tensor, edge_attr: OptTensor) -> Tensor:
-        edge_attr = self.lin_edge(edge_attr)
-        # TODO
-        edge_attr = (self.bn_edge(edge_attr) + 1) / 2
-        return self.nn(torch.cat([x_i, edge_attr * (x_j - x_i)], dim=-1))
+        edge_attr = self.relu(self.lin_edge(edge_attr))
+
+        x_i_edge = x_i + edge_attr
+        x_i_edge = self.fusion_edge(x_i_edge)
+        x_i_edge = self.relu(self.bn(x_i_edge))
+        x_j_edge = x_j + edge_attr
+        x_j_edge = self.fusion_edge(x_j_edge)
+        x_j_edge = self.relu(self.bn(x_j_edge))
+
+        return self.nn(torch.cat([x_i, x_j_edge - x_i_edge], dim=-1))
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(nn={self.nn})"

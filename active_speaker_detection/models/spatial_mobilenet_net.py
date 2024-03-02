@@ -12,7 +12,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .mobilenet.shared import ConvNormActivation, InvertedResidual, _make_divisible
+from .mobilenet.shared_v2_2d import (
+    ConvNormActivation,
+    InvertedResidual,
+    _make_divisible,
+)
 
 
 class SpatialMobileNet(nn.Module):

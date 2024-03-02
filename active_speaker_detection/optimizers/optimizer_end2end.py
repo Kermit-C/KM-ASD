@@ -132,7 +132,8 @@ def _train_model_amp_avl(
         graph_data = graph_data.to(device)
         targets_a = graph_data.y[:, 0]
         targets = graph_data.y[:, 1]
-        entities = graph_data.y[:, 2]
+        entities_a = graph_data.y[:, 2]
+        entities = graph_data.y[:, 3]
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -145,12 +146,9 @@ def _train_model_amp_avl(
                 aux_loss_v: torch.Tensor = criterion(video_out, targets)
                 if vf_a_emb is not None and vf_v_emb is not None:
                     # 音脸损失
-                    target_vf, target_vf_a = _create_vf_target(
-                        targets, targets_a, entities
-                    )
                     aux_loss_vf: torch.Tensor = vf_critierion(
                         torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                        torch.cat([target_vf_a, target_vf], dim=0),
+                        torch.cat([entities_a, entities], dim=0),
                     )
                     # 图的损失
                     loss_graph: torch.Tensor = criterion(outputs, targets)
@@ -163,12 +161,7 @@ def _train_model_amp_avl(
                 else:
                     # 图的损失
                     loss_graph: torch.Tensor = criterion(outputs, targets)
-                    loss = (
-                        a_weight * aux_loss_a
-                        + v_weight * aux_loss_v
-                        # + vfal_weight * aux_loss_vf
-                        + loss_graph
-                    )
+                    loss = a_weight * aux_loss_a + v_weight * aux_loss_v + loss_graph
 
             optimizer.zero_grad()  # 重置梯度，不加会爆显存
             scaler.scale(loss).backward()  # type: ignore
@@ -242,7 +235,8 @@ def _test_model_graph_losses(
         targets = graph_data.y
         targets_a = graph_data.y[:, 0]
         targets = graph_data.y[:, 1]
-        entities = graph_data.y[:, 2]
+        entities_a = graph_data.y[:, 2]
+        entities = graph_data.y[:, 3]
 
         with torch.set_grad_enabled(False):
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
@@ -252,10 +246,9 @@ def _test_model_graph_losses(
             aux_loss_a = criterion(audio_out, targets_a)
             aux_loss_v = criterion(video_out, targets)
             if vf_a_emb is not None and vf_v_emb is not None:
-                target_vf, target_vf_a = _create_vf_target(targets, targets_a, entities)
                 aux_loss_vf: torch.Tensor = vf_critierion(
                     torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                    torch.cat([target_vf_a, target_vf], dim=0),
+                    torch.cat([entities_a, entities], dim=0),
                 )
 
             label_lst.extend(targets.cpu().numpy().tolist())
@@ -293,29 +286,3 @@ def _test_model_graph_losses(
         epoch_loss_vf,
         epoch_ap,
     )
-
-
-def _create_vf_target(target, target_a, entities):
-    """创建音脸的目标标签"""
-    target_vf = torch.zeros_like(target)
-    target_vf_a = torch.zeros_like(target_a)
-    entity_to_i_dict = {}
-    unknown_entity = -1
-    for i, entity in enumerate(entities):
-        if entity not in entity_to_i_dict:
-            entity_to_i_dict[entity] = len(entity_to_i_dict) + 1
-        target_vf[i] = entity_to_i_dict[entity]
-        if target[i] == 1:
-            # 有声音的实体
-            target_vf_a[i] = entity_to_i_dict[entity]
-        elif target[i] == 0 and target_a[i] == 1:
-            # 无声音的实体，但是有其他人声音
-            target_vf_a[i] = unknown_entity
-            unknown_entity -= 1
-        else:
-            # 没有人声音，环境音
-            target_vf_a[i] = 0
-    # 变为非负
-    target_vf -= unknown_entity
-    target_vf_a -= unknown_entity
-    return target_vf, target_vf_a

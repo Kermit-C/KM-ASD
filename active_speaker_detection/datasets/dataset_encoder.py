@@ -124,13 +124,23 @@ class EncoderDataset(Dataset):
         while self.audio_entity_cache is not None and len(self.audio_entity_cache) > 10:
             self.audio_entity_cache.pop(list(self.audio_entity_cache.keys())[0])
 
+        video_index = (
+            index
+            if self.eval
+            else self.store.entity_list.index((video_id, entities[0]))
+        )
+        audio_index = (
+            self.store.entity_list.index((video_id, entity_a)) if entity_a != "" else -1
+        )  # 音频实体序号，-1 代表没有，则是环境音
+
         return (
             torch.stack(video_data[0], dim=1),  # video_data: (3, T, H, W)
             audio_data,
             audio_fbank,
             targets[0],  # 视频标签
             target_a,  # 音频标签
-            # TODO: 改成实体索引
+            audio_index,  # 音频实体序号，-1 代表没有，则是环境音
+            video_index,  # 视频实体序号
             entities[0],  # 视频实体
             timestamp,
         )

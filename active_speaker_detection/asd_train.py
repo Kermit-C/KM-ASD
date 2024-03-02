@@ -100,8 +100,7 @@ def train():
             + param_config["encoder_type"]
             + "_"
             + param_config["graph_type"]
-            + "_pregrad"
-            + str(1 if encoder_enable_grad else 0)
+            + str("" if encoder_enable_grad else "_pregrad0")
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
@@ -203,10 +202,10 @@ def train():
             dataset_config["models_out"], param_config, model_name
         )
 
-        epochs = param_config["epochs"]
-        lr = param_config["learning_rate"]
-        milestones = param_config["milestones"]
-        gamma = param_config["gamma"]
+        epochs = param_config["graph_epochs"]
+        lr = param_config["graph_learning_rate"]
+        milestones = param_config["graph_milestones"]
+        gamma = param_config["graph_gamma"]
         optimizer = optim.Adam(asd_net.parameters(), lr=lr)
         scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
         d_train = GraphDataset(
@@ -225,16 +224,16 @@ def train():
         )
         dl_train = GeometricDataLoader(
             d_train,
-            batch_size=param_config["batch_size"],
+            batch_size=param_config["graph_batch_size"],
             shuffle=True,
-            num_workers=0,  # 不为 0 的话，工作进程里就没有 cache 了
+            num_workers=param_config["graph_threads"],
             pin_memory=False,  # 用数据集自己实现的 Cache
         )
         dl_val = GeometricDataLoader(
             d_val,
-            batch_size=param_config["batch_size"],
+            batch_size=param_config["graph_batch_size"],
             shuffle=True,
-            num_workers=0,  # 不为 0 的话，工作进程里就没有 cache 了
+            num_workers=param_config["graph_threads"],
             pin_memory=False,  # 用数据集自己实现的 Cache
         )
         optimize_graph(
@@ -258,8 +257,7 @@ def train():
             stage
             + "_"
             + param_config["encoder_type"]
-            + "_pregrad"
-            + str(1 if encoder_enable_grad else 0)
+            + str("" if encoder_enable_grad else "_pregrad0")
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_clip"
@@ -329,8 +327,7 @@ def train():
             stage
             + "_"
             + param_config["encoder_type"]
-            + "_pregrad"
-            + str(1 if encoder_enable_grad else 0)
+            + str("" if encoder_enable_grad else "_pregrad0")
             + "_vf"
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_clip"

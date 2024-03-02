@@ -85,6 +85,8 @@ class End2endDataset(Dataset):
         target_list: list[Tuple[int, int]] = []
         # 图节点的实体数据
         entity_list: list[str] = []
+        # 图节点的音频实体数据
+        audio_entity_list: list[str] = []
         # 时间戳列表
         timestamp_list: list[str] = []
         # 位置列表
@@ -117,6 +119,7 @@ class End2endDataset(Dataset):
                 feature_list.append(torch.stack([a_extend_data, v_data], dim=0))
                 target_list.append((target_a, target))
                 entity_list.append(entity)
+                audio_entity_list.append(entity_a)
                 timestamp_list.append(timestamp)
                 position_list.append(pos)
 
@@ -163,6 +166,14 @@ class End2endDataset(Dataset):
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
 
+        entity_idx_list = [
+            self.store.entity_list.index((video_id, entity)) for entity in entity_list
+        ]
+        audio_entity_idx_list = [
+            (self.store.entity_list.index((video_id, entity)) if entity != "" else -1)
+            for entity in audio_entity_list
+        ]  # 音频实体序号，-1 代表没有，则是环境音
+
         return Data(
             # 维度为 [节点数量, 2, 通道数 , clip数 , 高度 , 宽度]，表示每个节点的音频和视频特征
             x=torch.stack(feature_list, dim=0),
@@ -174,13 +185,14 @@ class End2endDataset(Dataset):
             edge_attr=torch.tensor(
                 [source_vertices_pos, target_vertices_pos], dtype=torch.float
             ).transpose(0, 1),
-            # 维度为 [节点数量, 3]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是实体标签
+            # 维度为 [节点数量, 4]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是音频实体标签和视频实体标签
             y=torch.tensor(
                 [
-                    (target[0], target[1], entity)
-                    for target, entity in zip(
+                    (target[0], target[1], entity_a, entity)
+                    for target, entity, entity_a in zip(
                         target_list,
-                        self._parse_entities_to_int(entity_list),  # TODO: 改成实体索引
+                        audio_entity_idx_list,
+                        entity_idx_list,
                     )
                 ]
             ),
@@ -225,9 +237,3 @@ class End2endDataset(Dataset):
             entities,
             positions,
         )
-
-    def _parse_entities_to_int(self, entities: list[str]) -> list[int]:
-        """将实体列表转换为 int"""
-        entities_set: set[str] = set(entities)
-        entities_list: list[str] = list(entities_set)
-        return [entities_list.index(e) for e in entities]

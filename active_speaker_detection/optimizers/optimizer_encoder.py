@@ -122,11 +122,23 @@ def _train_model_amp_avl(
             end="\r",
         )
 
-        video_data, audio_data, _, target, target_a, entities, _ = dl
+        (
+            video_data,
+            audio_data,
+            _,
+            target,
+            target_a,
+            audio_entity_idxes,
+            video_entity_idxes,
+            _,
+            _,
+        ) = dl
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
         target = target.to(device)
         target_a = target_a.to(device)
+        audio_entity_idxes = audio_entity_idxes.to(device)
+        video_entity_idxes = video_entity_idxes.to(device)
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -140,12 +152,9 @@ def _train_model_amp_avl(
                 loss_av: torch.Tensor = criterion(av_out, target)
                 if vf_a_emb is not None and vf_v_emb is not None:
                     # 音脸损失
-                    target_vf, target_vf_a = _create_vf_target(
-                        target, target_a, entities
-                    )
                     loss_vf = vf_critierion(
                         torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                        torch.cat([target_vf_a, target_vf], dim=0),
+                        torch.cat([audio_entity_idxes, video_entity_idxes], dim=0),
                     )
                     loss = (
                         vf_weight * loss_vf
@@ -221,11 +230,23 @@ def _test_model_encoder_losses(
             end="\r",
         )
 
-        video_data, audio_data, _, target, target_a, entities, _ = dl
+        (
+            video_data,
+            audio_data,
+            _,
+            target,
+            target_a,
+            audio_entity_idxes,
+            video_entity_idxes,
+            _,
+            _,
+        ) = dl
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
         target = target.to(device)
         target_a = target_a.to(device)
+        audio_entity_idxes = audio_entity_idxes.to(device)
+        video_entity_idxes = video_entity_idxes.to(device)
 
         with torch.set_grad_enabled(False):
             _, _, audio_out, video_out, av_out, vf_a_emb, vf_v_emb = model(
@@ -237,10 +258,9 @@ def _test_model_encoder_losses(
             loss_av: torch.Tensor = criterion(av_out, target)
             if vf_a_emb is not None and vf_v_emb is not None:
                 # 音脸损失
-                target_vf, target_vf_a = _create_vf_target(target, target_a, entities)
                 loss_vf = vf_critierion(
                     torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                    torch.cat([target_vf_a, target_vf], dim=0),
+                    torch.cat([audio_entity_idxes, video_entity_idxes], dim=0),
                 )
                 loss = (
                     vf_weight * loss_vf
@@ -285,29 +305,3 @@ def _test_model_encoder_losses(
         epoch_loss_vf,
         epoch_ap,
     )
-
-
-def _create_vf_target(target, target_a, entities):
-    """创建音脸的目标标签"""
-    target_vf = torch.zeros_like(target)
-    target_vf_a = torch.zeros_like(target_a)
-    entity_to_i_dict = {}
-    unknown_entity = -1
-    for i, entity in enumerate(entities):
-        if entity not in entity_to_i_dict:
-            entity_to_i_dict[entity] = len(entity_to_i_dict) + 1
-        target_vf[i] = entity_to_i_dict[entity]
-        if target[i] == 1:
-            # 有声音的实体
-            target_vf_a[i] = entity_to_i_dict[entity]
-        elif target[i] == 0 and target_a[i] == 1:
-            # 无声音的实体，但是有其他人声音
-            target_vf_a[i] = unknown_entity
-            unknown_entity -= 1
-        else:
-            # 没有人声音，环境音
-            target_vf_a[i] = 0
-    # 变为非负
-    target_vf -= unknown_entity
-    target_vf_a -= unknown_entity
-    return target_vf, target_vf_a

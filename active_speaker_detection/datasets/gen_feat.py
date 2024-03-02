@@ -30,7 +30,7 @@ def gen_feature(
             end="\r",
         )
 
-        video_data, audio_data, _, _, _, entities, ts = dl
+        video_data, audio_data, _, _, _, _, _, entities, ts = dl
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
 

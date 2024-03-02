@@ -51,7 +51,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": False,
-        "encoder_train_weights": "active_speaker_detection/results/encoder_vf_R3D18_pregrad0_vf1_clip13/30.pth",
+        "encoder_train_weights": None,
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
         "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
@@ -64,7 +64,13 @@ train_params = [
         "encoder_epochs": 70,
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
-        # 优化配置
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
         "batch_size": 16,
         "learning_rate": 1e-3,
         "epochs": 15,
@@ -72,6 +78,7 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
         "threads": 2,
     },
     {
@@ -94,7 +101,13 @@ train_params = [
         "encoder_epochs": 70,
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
-        # 优化配置
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
         "batch_size": 16,
         "learning_rate": 1e-3,
         "epochs": 15,
@@ -102,6 +115,7 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
         "threads": 4,
     },
     {
@@ -124,7 +138,13 @@ train_params = [
         "encoder_epochs": 30,
         "encoder_milestones": list(range(30)),
         "encoder_gamma": 0.95,
-        # 优化配置
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
         "batch_size": 16,
         "learning_rate": 1e-3,
         "epochs": 15,
@@ -132,6 +152,7 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
         "threads": 4,
     },
     {
@@ -141,7 +162,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "encoder_train_weights": "active_speaker_detection/results/encoder_vf_RES18_TSM_pregrad0_vf1_clip13/39.pth",
+        "encoder_train_weights": None,
         "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
         "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
@@ -154,7 +175,13 @@ train_params = [
         "encoder_epochs": 70,
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
-        # 优化配置
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
         "batch_size": 16,
         "learning_rate": 1e-3,
         "epochs": 15,
@@ -162,6 +189,7 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
         "threads": 4,
     },
     {
@@ -184,7 +212,13 @@ train_params = [
         "encoder_epochs": 70,
         "encoder_milestones": list(range(0, 70, 30)),
         "encoder_gamma": 0.1,
-        # 优化配置
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
         "batch_size": 16,
         "learning_rate": 1e-3,
         "epochs": 15,
@@ -192,6 +226,192 @@ train_params = [
         "gamma": 0.1,
         # 数据集加载器
         "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "RX3D50",
+        # 网络架构
+        "encoder_type": "RX3D50",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D50",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": None,
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
+        "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "RX3D101",
+        # 网络架构
+        "encoder_type": "RX3D101",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D101",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/Efficient-3DCNNs/results/kinetics_resnext_101_RGB_16_best.pth",
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
+        "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "RX3D152",
+        # 网络架构
+        "encoder_type": "RX3D152",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D152",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": None,
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
+        "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "MB3DV1",
+        # 网络架构
+        "encoder_type": "MB3DV1",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV1",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/Efficient-3DCNNs/results/kinetics_mobilenet_2.0x_RGB_16_best.pth",
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
+        "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
+        "threads": 4,
+    },
+    {
+        "name": "MB3DV2",
+        # 网络架构
+        "encoder_type": "MB3DV2",
+        "graph_type": "GraphAllEdgeNet",
+        "encoder_enable_vf": True,
+        "graph_enable_spatial": True,
+        "encoder_train_weights": None,
+        "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV2",
+        # 预训练权重
+        "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
+        "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/Efficient-3DCNNs/results/kinetics_mobilenetv2_1.0x_RGB_16_best.pth",
+        "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
+        # encoder 优化配置
+        "encoder_batch_size": 128,
+        "encoder_learning_rate": 3e-4,
+        "encoder_epochs": 70,
+        "encoder_milestones": list(range(0, 70, 30)),
+        "encoder_gamma": 0.1,
+        # graph 优化配置
+        "graph_batch_size": 64,
+        "graph_learning_rate": 3e-6,
+        "graph_epochs": 10,
+        "graph_milestones": [5],
+        "graph_gamma": 0.1,
+        # 端到端优化配置
+        "batch_size": 16,
+        "learning_rate": 1e-3,
+        "epochs": 15,
+        "milestones": [6, 9],
+        "gamma": 0.1,
+        # 数据集加载器
+        "encoder_threads": 12,
+        "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
         "threads": 4,
     },
 ]

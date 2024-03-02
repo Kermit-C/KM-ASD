@@ -14,6 +14,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
+from active_speaker_detection.models.two_stream_mobilev1_net import get_mobilev1_encoder
+from active_speaker_detection.models.two_stream_mobilev2_net import get_mobilev2_encoder
+from active_speaker_detection.models.two_stream_resnext_net import get_resnext_encoder
+
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
@@ -258,6 +262,49 @@ def get_encoder(
             video_pretrained_weigths,
             encoder_train_weights,
         )
+    elif encoder_type == "RX3D50":
+        encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
+            "RESNEXT50",
+            encoder_enable_vf,
+            encoder_enable_grad,
+            audio_pretrained_weights,
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
+    elif encoder_type == "RX3D101":
+        encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
+            "RESNEXT101",
+            encoder_enable_vf,
+            encoder_enable_grad,
+            audio_pretrained_weights,
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
+    elif encoder_type == "RX3D152":
+        encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
+            "RESNEXT152",
+            encoder_enable_vf,
+            encoder_enable_grad,
+            audio_pretrained_weights,
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
+    elif encoder_type == "MB3DV1":
+        encoder, a_feature_dim, v_feature_dim = get_mobilev1_encoder(
+            encoder_enable_vf,
+            encoder_enable_grad,
+            audio_pretrained_weights,
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
+    elif encoder_type == "MB3DV2":
+        encoder, a_feature_dim, v_feature_dim = get_mobilev2_encoder(
+            encoder_enable_vf,
+            encoder_enable_grad,
+            audio_pretrained_weights,
+            video_pretrained_weigths,
+            encoder_train_weights,
+        )
     else:
         raise ValueError(f"Unknown encoder type: {encoder_type}")
 
@@ -279,7 +326,7 @@ def get_graph(
         graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
     elif graph_type == "GraphGatEdgeNet":
         graph_net = GraphGatEdgeNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=False
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
         )
     elif graph_type == "GraphGatedEdgeNet":
         graph_net = GraphGatedEdgeNet(
