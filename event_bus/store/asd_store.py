@@ -38,6 +38,8 @@ class ActiveSpeakerDetectionStore:
         face_idx: int,  # 人脸索引，一个视频帧中可能有多个人脸
         face_bbox: tuple[int, int, int, int],
         frame_face_count: int,  # 人脸数量
+        frame_height: int,  # 视频帧高度
+        frame_width: int,  # 视频帧宽度
     ):
         with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
@@ -52,6 +54,8 @@ class ActiveSpeakerDetectionStore:
                 request_store["frames"][frame_count - 1] = {
                     "frame_timestamp": frame_timestamp,
                     "frame_face_count": frame_face_count,
+                    "frame_height": frame_height,
+                    "frame_width": frame_width,
                     "faces": [],
                     "audio_frame": None,
                     "is_asded": False,
@@ -63,6 +67,8 @@ class ActiveSpeakerDetectionStore:
                 request_store["frames"][frame_count - 1][
                     "frame_face_count"
                 ] = frame_face_count
+                request_store["frames"][frame_count - 1]["frame_height"] = frame_height
+                request_store["frames"][frame_count - 1]["frame_width"] = frame_width
             request_store["frames"][frame_count - 1]["faces"].append(
                 {
                     "face_idx": face_idx,
@@ -96,6 +102,8 @@ class ActiveSpeakerDetectionStore:
                 request_store["frames"][frame_count - 1] = {
                     "frame_timestamp": frame_timestamp,
                     "frame_face_count": -1,
+                    "frame_height": -1,
+                    "frame_width": -1,
                     "faces": [],
                     "audio_frame": audio_frame,
                     "is_asded": False,

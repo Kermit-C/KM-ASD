@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13model_service.proto\"%\n\x0fRequestMetaData\x12\x12\n\nrequest_id\x18\x01 \x01(\t\";\n\x10ResponseMetaData\x12\x13\n\x0bresponse_id\x18\x01 \x01(\t\x12\x12\n\nrequest_id\x18\x02 \x01(\t\"\x88\x01\n\nAsdRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nrequest_id\x18\n \x01(\t\x12\x13\n\x0b\x66rame_count\x18\x0b \x01(\x05\x12\r\n\x05\x66\x61\x63\x65s\x18\x0c \x01(\x0c\x12\x13\n\x0b\x66\x61\x63\x65_bboxes\x18\r \x01(\x0c\x12\r\n\x05\x61udio\x18\x0e \x01(\x0c\"A\n\x0b\x41sdResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\x11\n\tis_active\x18\n \x03(\x08\"J\n\x14\x46\x61\x63\x65\x44\x65tectionRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nface_image\x18\n \x01(\x0c\"P\n\x15\x46\x61\x63\x65\x44\x65tectionResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\x16\n\x0e\x66\x61\x63\x65_dets_json\x18\n \x01(\t\"_\n\x16\x46\x61\x63\x65RecognitionRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nface_image\x18\n \x01(\x0c\x12\x11\n\tface_lmks\x18\x0b \x01(\x0c\"I\n\x17\x46\x61\x63\x65RecognitionResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\r\n\x05label\x18\n \x01(\t\"P\n\x1aSpeakerVerificationRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nvoice_data\x18\n \x01(\x0c\"M\n\x1bSpeakerVerificationResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\r\n\x05label\x18\n \x01(\t\"[\n\x16RegisterSpeakerRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nvoice_data\x18\n \x01(\x0c\x12\r\n\x05label\x18\x0b \x01(\t\":\n\x17RegisterSpeakerResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData2\xf0\x02\n\x0cModelService\x12\'\n\x08\x63\x61ll_asd\x12\x0b.AsdRequest\x1a\x0c.AsdResponse\"\x00\x12\x46\n\x13\x63\x61ll_face_detection\x12\x15.FaceDetectionRequest\x1a\x16.FaceDetectionResponse\"\x00\x12L\n\x15\x63\x61ll_face_recognition\x12\x17.FaceRecognitionRequest\x1a\x18.FaceRecognitionResponse\"\x00\x12X\n\x19\x63\x61ll_speaker_verification\x12\x1b.SpeakerVerificationRequest\x1a\x1c.SpeakerVerificationResponse\"\x00\x12G\n\x10register_speaker\x12\x17.RegisterSpeakerRequest\x1a\x18.RegisterSpeakerResponse\"\x00\x42\x03\x80\x01\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13model_service.proto\"%\n\x0fRequestMetaData\x12\x12\n\nrequest_id\x18\x01 \x01(\t\";\n\x10ResponseMetaData\x12\x13\n\x0bresponse_id\x18\x01 \x01(\t\x12\x12\n\nrequest_id\x18\x02 \x01(\t\"\xb3\x01\n\nAsdRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nrequest_id\x18\n \x01(\t\x12\x13\n\x0b\x66rame_count\x18\x0b \x01(\x05\x12\r\n\x05\x66\x61\x63\x65s\x18\x0c \x01(\x0c\x12\x13\n\x0b\x66\x61\x63\x65_bboxes\x18\r \x01(\x0c\x12\r\n\x05\x61udio\x18\x0e \x01(\x0c\x12\x13\n\x0b\x66rame_width\x18\x0f \x01(\x05\x12\x14\n\x0c\x66rame_height\x18\x10 \x01(\x05\"A\n\x0b\x41sdResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\x11\n\tis_active\x18\n \x03(\x08\"J\n\x14\x46\x61\x63\x65\x44\x65tectionRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nface_image\x18\n \x01(\x0c\"P\n\x15\x46\x61\x63\x65\x44\x65tectionResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\x16\n\x0e\x66\x61\x63\x65_dets_json\x18\n \x01(\t\"_\n\x16\x46\x61\x63\x65RecognitionRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nface_image\x18\n \x01(\x0c\x12\x11\n\tface_lmks\x18\x0b \x01(\x0c\"I\n\x17\x46\x61\x63\x65RecognitionResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\r\n\x05label\x18\n \x01(\t\"P\n\x1aSpeakerVerificationRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nvoice_data\x18\n \x01(\x0c\"M\n\x1bSpeakerVerificationResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData\x12\r\n\x05label\x18\n \x01(\t\"[\n\x16RegisterSpeakerRequest\x12\x1e\n\x04meta\x18\x01 \x01(\x0b\x32\x10.RequestMetaData\x12\x12\n\nvoice_data\x18\n \x01(\x0c\x12\r\n\x05label\x18\x0b \x01(\t\":\n\x17RegisterSpeakerResponse\x12\x1f\n\x04meta\x18\x01 \x01(\x0b\x32\x11.ResponseMetaData2\xf0\x02\n\x0cModelService\x12\'\n\x08\x63\x61ll_asd\x12\x0b.AsdRequest\x1a\x0c.AsdResponse\"\x00\x12\x46\n\x13\x63\x61ll_face_detection\x12\x15.FaceDetectionRequest\x1a\x16.FaceDetectionResponse\"\x00\x12L\n\x15\x63\x61ll_face_recognition\x12\x17.FaceRecognitionRequest\x1a\x18.FaceRecognitionResponse\"\x00\x12X\n\x19\x63\x61ll_speaker_verification\x12\x1b.SpeakerVerificationRequest\x1a\x1c.SpeakerVerificationResponse\"\x00\x12G\n\x10register_speaker\x12\x17.RegisterSpeakerRequest\x1a\x18.RegisterSpeakerResponse\"\x00\x42\x03\x80\x01\x01\x62\x06proto3')
 
 
 
@@ -124,25 +124,25 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _RESPONSEMETADATA._serialized_start=62
   _RESPONSEMETADATA._serialized_end=121
   _ASDREQUEST._serialized_start=124
-  _ASDREQUEST._serialized_end=260
-  _ASDRESPONSE._serialized_start=262
-  _ASDRESPONSE._serialized_end=327
-  _FACEDETECTIONREQUEST._serialized_start=329
-  _FACEDETECTIONREQUEST._serialized_end=403
-  _FACEDETECTIONRESPONSE._serialized_start=405
-  _FACEDETECTIONRESPONSE._serialized_end=485
-  _FACERECOGNITIONREQUEST._serialized_start=487
-  _FACERECOGNITIONREQUEST._serialized_end=582
-  _FACERECOGNITIONRESPONSE._serialized_start=584
-  _FACERECOGNITIONRESPONSE._serialized_end=657
-  _SPEAKERVERIFICATIONREQUEST._serialized_start=659
-  _SPEAKERVERIFICATIONREQUEST._serialized_end=739
-  _SPEAKERVERIFICATIONRESPONSE._serialized_start=741
-  _SPEAKERVERIFICATIONRESPONSE._serialized_end=818
-  _REGISTERSPEAKERREQUEST._serialized_start=820
-  _REGISTERSPEAKERREQUEST._serialized_end=911
-  _REGISTERSPEAKERRESPONSE._serialized_start=913
-  _REGISTERSPEAKERRESPONSE._serialized_end=971
-  _MODELSERVICE._serialized_start=974
-  _MODELSERVICE._serialized_end=1342
+  _ASDREQUEST._serialized_end=303
+  _ASDRESPONSE._serialized_start=305
+  _ASDRESPONSE._serialized_end=370
+  _FACEDETECTIONREQUEST._serialized_start=372
+  _FACEDETECTIONREQUEST._serialized_end=446
+  _FACEDETECTIONRESPONSE._serialized_start=448
+  _FACEDETECTIONRESPONSE._serialized_end=528
+  _FACERECOGNITIONREQUEST._serialized_start=530
+  _FACERECOGNITIONREQUEST._serialized_end=625
+  _FACERECOGNITIONRESPONSE._serialized_start=627
+  _FACERECOGNITIONRESPONSE._serialized_end=700
+  _SPEAKERVERIFICATIONREQUEST._serialized_start=702
+  _SPEAKERVERIFICATIONREQUEST._serialized_end=782
+  _SPEAKERVERIFICATIONRESPONSE._serialized_start=784
+  _SPEAKERVERIFICATIONRESPONSE._serialized_end=861
+  _REGISTERSPEAKERREQUEST._serialized_start=863
+  _REGISTERSPEAKERREQUEST._serialized_end=954
+  _REGISTERSPEAKERRESPONSE._serialized_start=956
+  _REGISTERSPEAKERRESPONSE._serialized_end=1014
+  _MODELSERVICE._serialized_start=1017
+  _MODELSERVICE._serialized_end=1385
 # @@protoc_insertion_point(module_scope)

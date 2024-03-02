@@ -45,6 +45,8 @@ class AsdProcessor(BaseEventBusProcessor):
             assert event_message_body.frame_face_idx is not None
             assert event_message_body.frame_face_count is not None
             assert event_message_body.frame_face_bbox is not None
+            assert event_message_body.frame_height is not None
+            assert event_message_body.frame_width is not None
             self.store.save_frame(
                 request_id=self.get_request_id(),
                 frame_count=event_message_body.frame_count,
@@ -53,6 +55,8 @@ class AsdProcessor(BaseEventBusProcessor):
                 face_idx=event_message_body.frame_face_idx,
                 face_bbox=event_message_body.frame_face_bbox,
                 frame_face_count=event_message_body.frame_face_count,
+                frame_height=event_message_body.frame_height,
+                frame_width=event_message_body.frame_width,
             )
             self._process_asd(event_message_body.frame_count)
         elif event_message_body.type == "A":
@@ -130,6 +134,12 @@ class AsdProcessor(BaseEventBusProcessor):
                                 face_bboxes,
                                 audio,
                                 self.processor_timeout,
+                                self.store.get_frame_info(
+                                    self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                )["frame_height"],
+                                self.store.get_frame_info(
+                                    self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                )["frame_width"],
                             )
                         except:
                             is_active_list = [False] * len(faces)

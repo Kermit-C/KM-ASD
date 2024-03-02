@@ -33,6 +33,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
     def process(self, event_message_body: FaceCropMessageBody):
         frame = event_message_body.frame
         face_dets = event_message_body.face_dets
+        frame_height, frame_width, _ = frame.shape
 
         if len(face_dets) == 0:
             # 如果没有检测到人脸，就直接到 reduce
@@ -142,6 +143,8 @@ class FaceCropProcessor(BaseEventBusProcessor):
                     frame_face_idx=face_idx,
                     frame_face_count=len(face_dets),
                     frame_face_bbox=face_bbox,
+                    frame_height=frame_height,
+                    frame_width=frame_width,
                 ),
             )
             self.publish_next(

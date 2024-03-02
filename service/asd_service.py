@@ -45,6 +45,8 @@ def detect_active_speaker(
     faces: list[np.ndarray],
     face_bboxes: list[tuple[int, int, int, int]],
     audio: np.ndarray,
+    frame_height: int,
+    frame_width: int,
 ) -> list[bool]:
     """
     :param request_id: request id，需要区分不同的请求，因为需要保存上下文，构造图
@@ -65,31 +67,67 @@ def detect_active_speaker(
             audio_frame=audio,
         )
 
-    faces_clip_list, audio_aggregate_list = get_faces_and_audios_of_graph(
-        request_id=request_id, frame_count=frame_count
-    )
-    # TMP: 调试工程链路用
-    return [random.random() > 0.5 for _ in range(len(faces_clip_list[-1]))]
-    # TODO: 返回 emb，缓存 emb
-    p_list: list[list[float]] = detector.detect_active_speaker(
-        faces=faces_clip_list, audios=audio_aggregate_list
+    (
+        faces_clip_list,
+        audio_aggregate_list,
+        faces_rbbox_clip_list,
+        faces_bbox_clip_list,
+    ) = get_faces_and_audios_of_graph(
+        request_id=request_id,
+        frame_count=frame_count,
+        frame_height=frame_height,
+        frame_width=frame_width,
     )
 
-    return [p > config.asd_p_threshold for p in p_list[-1]]
+    # TODO: 返回 emb，缓存 emb
+    # p_list: list[list[float]] = detector.detect_active_speaker(
+    #     faces=faces_clip_list,
+    #     audios=audio_aggregate_list,
+    #     face_bboxes=faces_rbbox_clip_list,
+    # )
+    # TMP: 调试工程链路用
+    p_list = [[random.random() for _ in _] for _ in faces_clip_list]
+
+    request_faces_result_idxes = []
+    for face_bbox in face_bboxes:
+        try:
+            idx = faces_bbox_clip_list[-1].index(face_bbox)
+            request_faces_result_idxes.append(idx)
+        except ValueError:
+            request_faces_result_idxes.append(-1)
+
+    return [
+        p_list[-1][i] > config.asd_p_threshold if i != -1 else False
+        for i in request_faces_result_idxes
+    ]
 
 
 def get_faces_and_audios_of_graph(
     request_id: str,
     frame_count: int,
-):
+    frame_height: int,
+    frame_width: int,
+) -> tuple[
+    list[list[Optional[list[np.ndarray]]]],
+    list[np.ndarray],
+    list[list[Optional[tuple[float, float, float, float]]]],
+    list[list[Optional[tuple[int, int, int, int]]]],
+]:
     frames_per_clip: int = infer_config["frmc"]
-    ctx_size: int = infer_config["ctx"]
+    max_ctx_size: int = (
+        infer_config["ctx"] * 3
+    )  # 三倍的上下文大小，一次请求可以分治成三份分别请求算法
     n_clips: int = infer_config["nclp"]
     strd: int = infer_config["strd"]
 
-    # (frames_per_clip + (n_clips - 1) * strd, ctx_size)
+    # TODO: 这里刚好覆盖了 n_clips 时间步长，但图的消息传递每层要再往外 n_clips * strd 个时间步长，所以总共是需要 n * n_clips * strd 个时间步长的（n 是图的层数）
+    # (frames_per_clip + (n_clips - 1) * strd, max_ctx_size), 矩阵窗口
     faces_list: list[list[Optional[np.ndarray]]] = [
-        [None for _ in range(ctx_size)]
+        [None for _ in range(max_ctx_size)]
+        for _ in range(frames_per_clip + (n_clips - 1) * strd)
+    ]
+    faces_bbox_list: list[list[Optional[tuple[int, int, int, int]]]] = [
+        [None for _ in range(max_ctx_size)]
         for _ in range(frames_per_clip + (n_clips - 1) * strd)
     ]
     audio_list: list[Optional[np.ndarray]] = [
@@ -99,7 +137,7 @@ def get_faces_and_audios_of_graph(
 
     # 取 frame
     # 取人脸
-    last_face_boxes = None
+    last_face_boxes: Optional[list[Optional[tuple[int, int, int, int]]]] = None
     for i in range(frames_per_clip + (n_clips - 1) * strd - 1, -1, -1):
         curr_frame_count = (
             frame_count - (frames_per_clip + (n_clips - 1) * strd) + i + 1
@@ -108,42 +146,60 @@ def get_faces_and_audios_of_graph(
         if len(frame_faces) == 0:
             # 如果没有人脸，就用下一帧一样的
             faces_list[i] = faces_list[i + 1]
+            faces_bbox_list[i] = faces_bbox_list[i + 1]
             continue
 
-        frame_faces_idx_list = list(range(ctx_size))
+        frame_faces_idx_list = list(range(max_ctx_size))
         if last_face_boxes is None:
             # 最新帧，直接分配就好
-            for j in range(ctx_size):
+            for j in range(max_ctx_size):
                 if j < len(frame_faces):
                     frame_faces_idx_list[j] = j
                 else:
-                    frame_faces_idx_list[j] = random.randint(0, len(frame_faces) - 1)
+                    # frame_faces_idx_list[j] = random.randint(0, len(frame_faces) - 1)
+                    frame_faces_idx_list[j] = -1
         else:
             # 先根据 IOU 找到最接近的人脸，分配
             alloc_num = 0
             for j, frame_face in enumerate(frame_faces):
                 face_bbox = frame_face["face_bbox"]
-                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)
+                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)  # type: ignore
                 if last_face_idx != -1:
                     frame_faces_idx_list[last_face_idx] = j
                     alloc_num += 1
-            # 没有分配到的，随机分配
             if alloc_num > 0:
-                for j in range(alloc_num, ctx_size):
-                    frame_faces_idx_list[j] = frame_faces_idx_list[
-                        random.randint(0, alloc_num - 1)
-                    ]
+                # # 没有分配到的，随机分配
+                # for j in range(alloc_num, max_ctx_size):
+                #     frame_faces_idx_list[j] = frame_faces_idx_list[
+                #         random.randint(0, alloc_num - 1)
+                #     ]
+                # 没有分配到的，不分配
+                # TODO: 这里遗漏了在最新帧未出现、但在上一帧出现的人脸，按理说应当保留，但这里的矩阵窗口第二维度是固定身份的，所以这里暂不处理了
+                for j in range(alloc_num, max_ctx_size):
+                    frame_faces_idx_list[j] = -1
             else:
                 # 如果没有找到最接近的人脸，就代表切画面了，直接用下一帧一样的
                 faces_list[i] = faces_list[i + 1]
+                faces_bbox_list[i] = faces_bbox_list[i + 1]
                 continue
 
         faces_list[i] = [
-            frame_faces[frame_faces_idx_list[j]]["face_frame"] for j in range(ctx_size)
+            (
+                frame_faces[frame_faces_idx_list[j]]["face_frame"]
+                if frame_faces_idx_list[j] != -1
+                else None
+            )
+            for j in range(max_ctx_size)
         ]
-        last_face_boxes = [
-            frame_faces[frame_faces_idx_list[j]]["face_bbox"] for j in range(ctx_size)
+        faces_bbox_list[i] = [
+            (
+                frame_faces[frame_faces_idx_list[j]]["face_bbox"]
+                if frame_faces_idx_list[j] != -1
+                else None
+            )
+            for j in range(max_ctx_size)
         ]
+        last_face_boxes = faces_bbox_list[i]
     # 取音频
     for i in range(frames_per_clip + (n_clips - 1) * strd - 1, -1, -1):
         curr_frame_count = (
@@ -154,8 +210,9 @@ def get_faces_and_audios_of_graph(
             curr_frame_count += 1
 
     # 合 frame
-    # (n_clips, ctx_size, frames_per_clip)
-    faces_clip_list: list[list[list[np.ndarray]]] = []
+    # (n_clips, max_ctx_size, frames_per_clip)
+    faces_clip_list: list[list[Optional[list[np.ndarray]]]] = []
+    faces_bbox_clip_list: list[list[Optional[tuple[int, int, int, int]]]] = []
     # (n_clips,)
     audio_aggregate_list: list[np.ndarray] = []
     for i in range(
@@ -165,9 +222,29 @@ def get_faces_and_audios_of_graph(
             continue
 
         faces_clip = []
-        for j in range(ctx_size):
-            faces_clip = [i[j] for i in faces_list[i - frames_per_clip + 1 : i + 1]]
-        faces_clip_list.insert(0, faces_clip)  # type: ignore
+        for j in range(max_ctx_size):
+            if any(
+                [
+                    faces_list[i][j] is None
+                    for i in range(i - frames_per_clip + 1, i + 1)
+                ]
+            ):
+                # clips 全是 None，就不用再取了
+                faces_clip.append(None)
+            else:
+                # 取不为 None 的 clips
+                curr_faces_list = list(
+                    filter(
+                        lambda x: x[j] is not None,
+                        faces_list[i - frames_per_clip + 1 : i + 1],
+                    )
+                )
+                # 复制首部的人脸，直到填满
+                while len(curr_faces_list) < frames_per_clip:
+                    curr_faces_list.insert(0, curr_faces_list[0])
+                faces_clip.append([i[j] for i in curr_faces_list])
+        faces_clip_list.insert(0, faces_clip)
+        faces_bbox_clip_list.insert(0, faces_bbox_list[i])  # type: ignore
 
         aggregate_audio_list = []
         for j in range(frames_per_clip):
@@ -180,7 +257,31 @@ def get_faces_and_audios_of_graph(
             aggregate_audio_list.insert(0, audio_list[i - j])
         audio_aggregate_list.insert(0, np.concatenate(aggregate_audio_list, axis=0))
 
-    return faces_clip_list, audio_aggregate_list
+    # faces_bbox_clip_list 转换成相对坐标
+    faces_rbbox_clip_list = []
+    for faces_bbox_clip in faces_bbox_clip_list:
+        rbbox_list = []
+        for face_bbox in faces_bbox_clip:
+            if face_bbox is None:
+                rbbox_list.append(None)
+            else:
+                x1, y1, x2, y2 = face_bbox
+                rbbox_list.append(
+                    (
+                        x1 / frame_width,
+                        y1 / frame_height,
+                        x2 / frame_width,
+                        y2 / frame_height,
+                    )
+                )
+        faces_rbbox_clip_list.append(rbbox_list)
+
+    return (
+        faces_clip_list,
+        audio_aggregate_list,
+        faces_rbbox_clip_list,
+        faces_bbox_clip_list,
+    )
 
 
 def get_face_idx_from_last_frame(

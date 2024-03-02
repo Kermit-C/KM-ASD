@@ -36,6 +36,9 @@ message AsdRequest {
     bytes face_bboxes = 13;
     // 音频数据 np.ndarray (s,) float32 pcm 的 pkl 序列化后的数据
     bytes audio = 14;
+    // 画面的宽高
+    int32 frame_width = 15;
+    int32 frame_height = 16;
 };
 
 message AsdResponse {

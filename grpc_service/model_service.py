@@ -48,6 +48,8 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         faces = pickle.loads(request.faces)  # type: ignore
         face_bboxes = pickle.loads(request.face_bboxes)  # type: ignore
         audio = pickle.loads(request.audio)  # type: ignore
+        frame_width = request.frame_width  # type: ignore
+        frame_height = request.frame_height  # type: ignore
 
         is_acquired = self.asd_semaphore.acquire(
             blocking=True,
@@ -57,7 +59,13 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
             raise Exception("Active speaker detection worker is busy")
         try:
             is_active_list = detect_active_speaker(
-                video_id, frame_count, faces, face_bboxes, audio
+                video_id,
+                frame_count,
+                faces,
+                face_bboxes,
+                audio,
+                frame_height,
+                frame_width,
             )
         finally:
             self.asd_semaphore.release()

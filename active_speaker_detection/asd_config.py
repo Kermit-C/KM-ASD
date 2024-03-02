@@ -40,6 +40,10 @@ inference_params = {
     # 图像大小，将把人脸 crop resize 到这个大小的正方形
     "size": 112,
     "audio_sample_rate": 16000,
+    # 图的边是否双向连接
+    "is_edge_double": False,
+    # 不同实体在不同时刻之间的连接
+    "is_edge_across_entity": False,
 }
 
 

@@ -26,6 +26,8 @@ class AsdMessageBody(EventMessageBody):
         frame_face_idx: Optional[int] = None,  # 人脸索引，一个视频帧中可能有多个人脸
         frame_face_count: Optional[int] = None,  # 人脸数量
         frame_face_bbox: Optional[tuple[int, int, int, int]] = None,  # [x1, y1, x2, y2]
+        frame_height: Optional[int] = None,  # 视频帧高度
+        frame_width: Optional[int] = None,  # 视频帧宽度
         # A 音频消息体
         audio_pcm: Optional[torch.Tensor] = None,
         audio_sample_rate: Optional[int] = None,
@@ -42,6 +44,8 @@ class AsdMessageBody(EventMessageBody):
         self.frame_face_idx = frame_face_idx
         self.frame_face_count = frame_face_count
         self.frame_face_bbox = frame_face_bbox
+        self.frame_height = frame_height
+        self.frame_width = frame_width
 
         # A 音频消息体
         self.audio_pcm = audio_pcm

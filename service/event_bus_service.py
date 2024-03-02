@@ -118,6 +118,8 @@ def call_asd(
     face_bboxes: list[tuple[int, int, int, int]],
     audio: np.ndarray,
     timeout: float,
+    frame_height: int,
+    frame_width: int,
 ) -> list[bool]:
     # 调用说话人检测服务
     # TODO: 实现负载均衡
@@ -134,6 +136,8 @@ def call_asd(
                 faces=pickle.dumps(faces),
                 face_bboxes=pickle.dumps(face_bboxes),
                 audio=pickle.dumps(audio),
+                frame_height=frame_height,
+                frame_width=frame_width,
             ),
             timeout=timeout,
         )
