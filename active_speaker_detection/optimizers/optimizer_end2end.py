@@ -62,8 +62,10 @@ def optimize_end2end(
         )
         scheduler.step()
 
-        train_loss, ta_loss, tv_loss, tvfal_loss, train_ap = outs_train
-        val_loss, va_loss, vv_loss, vvfal_loss, val_ap = outs_val
+        train_loss, ta_loss, tv_loss, tvfal_loss, train_ap, train_ap_last_node = (
+            outs_train
+        )
+        val_loss, va_loss, vv_loss, vvfal_loss, val_ap, val_ap_last_node = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
             # 保存当前最优模型
@@ -81,11 +83,13 @@ def optimize_end2end(
                     tv_loss,
                     tvfal_loss,
                     train_ap,
+                    train_ap_last_node,
                     val_loss,
                     va_loss,
                     vv_loss,
                     vvfal_loss,
                     val_ap,
+                    val_ap_last_node,
                 ]
             )
 
@@ -111,6 +115,8 @@ def _train_model_amp_avl(
 
     pred_lst = []
     label_lst = []
+    last_node_pred_lst = []
+    last_node_label_lst = []
 
     running_loss_g = 0.0
     running_loss_a = 0.0
@@ -134,6 +140,7 @@ def _train_model_amp_avl(
         targets = graph_data.y[:, 1]
         entities_a = graph_data.y[:, 2]
         entities = graph_data.y[:, 3]
+        last_node_mask = graph_data.last_node_mask
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -172,6 +179,11 @@ def _train_model_amp_avl(
             label_lst.extend(targets.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
+            last_node_label_lst.extend(targets[last_node_mask].cpu().numpy().tolist())
+            last_node_pred_lst.extend(
+                softmax_layer(outputs[last_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
+
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
@@ -187,16 +199,27 @@ def _train_model_amp_avl(
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
+    epoch_ap_last_node = average_precision_score(
+        last_node_label_lst, last_node_pred_lst
+    )
     print(
-        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}".format(
+        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, Lastnode mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
+            epoch_ap_last_node,
         )
     )
-    return epoch_loss_g, epoch_loss_a, epoch_loss_v, epoch_loss_vf, epoch_ap
+    return (
+        epoch_loss_g,
+        epoch_loss_a,
+        epoch_loss_v,
+        epoch_loss_vf,
+        epoch_ap,
+        epoch_ap_last_node,
+    )
 
 
 def _test_model_graph_losses(
@@ -214,6 +237,8 @@ def _test_model_graph_losses(
 
     pred_lst = []
     label_lst = []
+    last_node_pred_lst = []
+    last_node_label_lst = []
 
     running_loss_g = 0.0
     running_loss_a = 0.0
@@ -237,6 +262,7 @@ def _test_model_graph_losses(
         targets = graph_data.y[:, 1]
         entities_a = graph_data.y[:, 2]
         entities = graph_data.y[:, 3]
+        last_node_mask = graph_data.last_node_mask
 
         with torch.set_grad_enabled(False):
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
@@ -254,6 +280,11 @@ def _test_model_graph_losses(
             label_lst.extend(targets.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
+            last_node_label_lst.extend(targets[last_node_mask].cpu().numpy().tolist())
+            last_node_pred_lst.extend(
+                softmax_layer(outputs[last_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
+
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
@@ -270,13 +301,17 @@ def _test_model_graph_losses(
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
     epoch_ap = average_precision_score(label_lst, pred_lst)
+    epoch_ap_last_node = average_precision_score(
+        last_node_label_lst, last_node_pred_lst
+    )
     print(
-        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}".format(
+        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, Lastnode mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
+            epoch_ap_last_node,
         )
     )
     return (
@@ -285,4 +320,5 @@ def _test_model_graph_losses(
         epoch_loss_v,
         epoch_loss_vf,
         epoch_ap,
+        epoch_ap_last_node,
     )

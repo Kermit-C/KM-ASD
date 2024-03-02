@@ -69,6 +69,8 @@ class GraphDataset(Dataset):
         timestamp_list: list[str] = []
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
+        # 最后一个时间戳的掩码
+        last_node_mask = []
 
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
@@ -122,6 +124,7 @@ class GraphDataset(Dataset):
                 entity_list.append(entity)
                 timestamp_list.append(timestamp)
                 position_list.append(pos)
+                last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -179,4 +182,6 @@ class GraphDataset(Dataset):
             ).transpose(0, 1),
             # 维度为 [节点数量]，表示每个节点的标签
             y=torch.tensor(target_list),
+            # 最后一个时间戳的掩码
+            last_node_mask=last_node_mask,
         )

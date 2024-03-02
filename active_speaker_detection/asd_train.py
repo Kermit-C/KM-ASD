@@ -115,7 +115,24 @@ def train():
             + str(strd)
         )
         log, target_models = setup_optim_outputs(
-            dataset_config["models_out"], param_config, model_name
+            dataset_config["models_out"],
+            param_config,
+            model_name,
+            headers=[
+                "epoch",
+                "train_loss",
+                "train_audio_loss",
+                "train_video_loss",
+                "train_vfal_loss",
+                "train_map",
+                "train_map_ln",
+                "val_loss",
+                "val_audio_loss",
+                "val_video_loss",
+                "val_vfal_loss",
+                "val_map",
+                "val_map_ln",
+            ],
         )
 
         epochs = param_config["epochs"]
@@ -199,7 +216,22 @@ def train():
             + str(strd)
         )
         log, target_models = setup_optim_outputs(
-            dataset_config["models_out"], param_config, model_name
+            dataset_config["models_out"],
+            param_config,
+            model_name,
+            headers=[
+                "epoch",
+                "train_loss",
+                "train_audio_loss",
+                "train_video_loss",
+                "train_map",
+                "train_map_ln",
+                "val_loss",
+                "val_audio_loss",
+                "val_video_loss",
+                "val_map",
+                "val_map_ln",
+            ],
         )
 
         epochs = param_config["graph_epochs"]
@@ -264,7 +296,22 @@ def train():
             + str(frames_per_clip)
         )
         log, target_models = setup_optim_outputs(
-            dataset_config["models_out"], param_config, model_name
+            dataset_config["models_out"],
+            param_config,
+            model_name,
+            headers=[
+                "epoch",
+                "train_loss",
+                "train_audio_loss",
+                "train_video_loss",
+                "train_vfal_loss",
+                "train_map",
+                "val_loss",
+                "val_audio_loss",
+                "val_video_loss",
+                "val_vfal_loss",
+                "val_map",
+            ],
         )
 
         epochs = param_config["encoder_epochs"]

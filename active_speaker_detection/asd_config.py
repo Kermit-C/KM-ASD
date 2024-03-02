@@ -55,7 +55,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": False,
-        "encoder_train_weights": None,
+        "encoder_train_weights": "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
         "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
