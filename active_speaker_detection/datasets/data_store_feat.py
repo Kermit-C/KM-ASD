@@ -154,14 +154,8 @@ class FeatureDataStore:
             with open(pkl_path, "rb") as f:
                 entity_emb = pickle.load(f)
             cache[entity_id] = entity_emb
-        if timestamp not in cache[entity_id]:
-            # TMP: 为了跑 RES18_TSM 的 graph，又不想重新生成特征
-            audio_data = np.zeros(512)
-            audio_vf_data = None
-            print("No audio data for", entity_id, timestamp)
-        else:
-            audio_data = cache[entity_id][timestamp][0]
-            audio_vf_data = cache[entity_id][timestamp][2]
+        audio_data = cache[entity_id][timestamp][0]
+        audio_vf_data = cache[entity_id][timestamp][2]
 
         mid_index = self.search_ts_in_meta_data(
             self.entity_data[video_id][entity_id], timestamp
@@ -227,14 +221,8 @@ class FeatureDataStore:
                 with open(pkl_path, "rb") as f:
                     entity_emb = pickle.load(f)
                 cache[ctx_entity] = entity_emb
-            if timestamp not in cache[ctx_entity]:
-                # TMP: 为了跑 RES18_TSM 的 graph，又不想重新生成特征
-                video_data.append(np.zeros(512))
-                video_vf_data.append(None)
-                print("No video data for", ctx_entity, timestamp)
-            else:
-                video_data.append(cache[ctx_entity][timestamp][1])
-                video_vf_data.append(cache[ctx_entity][timestamp][3])
+            video_data.append(cache[ctx_entity][timestamp][1])
+            video_vf_data.append(cache[ctx_entity][timestamp][3])
 
             targets.append(target_ctx)
             entities.append(ctx_entity)

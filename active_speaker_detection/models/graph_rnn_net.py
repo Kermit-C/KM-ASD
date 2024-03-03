@@ -71,7 +71,7 @@ class GraphRnnNet(nn.Module):
             data.edge_attr,
             data.y,
         )
-        entities = y[:, 3]
+        entities = y[:, -1]
 
         audio_feats = x[:, 0, : self.in_a_channels].squeeze(1)
         video_feats = x[:, 1, : self.in_v_channels].squeeze(1)
@@ -91,7 +91,7 @@ class GraphRnnNet(nn.Module):
 
         # entity 去重
         entity_list = list(set(entities))
-        entity_mask_list = [entities == entity for entity in enumerate(entity_list)]
+        entity_mask_list = [entities == entity for entity in entity_list]
         max_entity_mask_len = max([entities[mask].size(0) for mask in entity_mask_list])
 
         # 构造 rnn 输入
@@ -102,12 +102,12 @@ class GraphRnnNet(nn.Module):
             rnn_x[i, : entities[mask].size(0)] = graph_feats[mask]
             # TODO: 利用 edge_index 融合上下文信息
 
-        rnn_x = self.rnn(rnn_x)
+        rnn_x, _ = self.rnn(rnn_x)
 
         # 构造图的输出
-        graph_feats_out = torch.zeros(graph_feats.size(0), rnn_x.size(2)).to(
-            graph_feats.device
-        )
+        graph_feats_out = torch.zeros(
+            graph_feats.size(0), rnn_x.size(2), dtype=rnn_x.dtype
+        ).to(graph_feats.device)
         for i, mask in enumerate(entity_mask_list):
             graph_feats_out[mask] = rnn_x[i, : entities[mask].size(0)]
 

@@ -70,7 +70,7 @@ class GraphDataset(Dataset):
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
         # 最后一个时间戳的掩码
-        last_node_mask = []
+        center_node_mask = []
 
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
@@ -124,7 +124,7 @@ class GraphDataset(Dataset):
                 entity_list.append(entity)
                 timestamp_list.append(timestamp)
                 position_list.append(pos)
-                last_node_mask.append(time_idx == len(time_context) - 1)
+                center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -169,6 +169,10 @@ class GraphDataset(Dataset):
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
 
+        entity_idx_list = [
+            self.store.entity_list.index((video_id, entity)) for entity in entity_list
+        ]
+
         return Data(
             # 维度为 [节点数量, 4 or 2, n]，表示每个节点的音频、视频特征、音频音脸嵌入、视频音脸嵌入
             x=torch.stack(feature_list, dim=0),
@@ -181,7 +185,13 @@ class GraphDataset(Dataset):
                 [source_vertices_pos, target_vertices_pos], dtype=torch.float
             ).transpose(0, 1),
             # 维度为 [节点数量]，表示每个节点的标签
-            y=torch.tensor(target_list),
+            # 维度为 [节点数量, 2]，前面是每个节点的标签，后面是实体标签
+            y=torch.tensor(
+                [
+                    (target, entity)
+                    for target, entity in zip(target_list, entity_idx_list)
+                ]
+            ),
             # 最后一个时间戳的掩码
-            last_node_mask=last_node_mask,
+            center_node_mask=center_node_mask,
         )

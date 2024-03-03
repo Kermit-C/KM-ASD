@@ -125,13 +125,13 @@ def train():
                 "train_video_loss",
                 "train_vfal_loss",
                 "train_map",
-                "train_map_ln",
+                "train_map_c",
                 "val_loss",
                 "val_audio_loss",
                 "val_video_loss",
                 "val_vfal_loss",
                 "val_map",
-                "val_map_ln",
+                "val_map_c",
             ],
         )
 
@@ -225,12 +225,12 @@ def train():
                 "train_audio_loss",
                 "train_video_loss",
                 "train_map",
-                "train_map_ln",
+                "train_map_c",
                 "val_loss",
                 "val_audio_loss",
                 "val_video_loss",
                 "val_map",
-                "val_map_ln",
+                "val_map_c",
             ],
         )
 

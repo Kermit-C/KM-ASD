@@ -92,7 +92,7 @@ class End2endDataset(Dataset):
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
         # 最后一个时间戳的掩码
-        last_node_mask = []
+        center_node_mask = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
@@ -124,7 +124,7 @@ class End2endDataset(Dataset):
                 audio_entity_list.append(entity_a)
                 timestamp_list.append(timestamp)
                 position_list.append(pos)
-                last_node_mask.append(time_idx == len(time_context) - 1)
+                center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -200,7 +200,7 @@ class End2endDataset(Dataset):
                 ]
             ),
             # 最后一个时间戳的掩码
-            last_node_mask=last_node_mask,
+            center_node_mask=center_node_mask,
         )
 
     def get_audio_size(

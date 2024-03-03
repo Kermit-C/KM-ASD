@@ -117,8 +117,10 @@ def _train_model_amp_avl(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets = graph_data.y
-        last_node_mask = graph_data.last_node_mask
+        targets = graph_data.y[:, 0]
+        center_node_mask = []
+        for mask in graph_data.center_node_mask:
+            center_node_mask += mask
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -135,9 +137,9 @@ def _train_model_amp_avl(
             label_lst.extend(targets.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
-            last_node_label_lst.extend(targets[last_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
             last_node_pred_lst.extend(
-                softmax_layer(outputs[last_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
             )
 
         # 统计
@@ -191,8 +193,10 @@ def _test_model_graph_losses(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets = graph_data.y
-        last_node_mask = graph_data.last_node_mask
+        targets = graph_data.y[:, 0]
+        center_node_mask = []
+        for mask in graph_data.center_node_mask:
+            center_node_mask += mask
 
         with torch.set_grad_enabled(False):
             outputs, _, _, _, _ = model(graph_data)
@@ -201,9 +205,9 @@ def _test_model_graph_losses(
             label_lst.extend(targets.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
-            last_node_label_lst.extend(targets[last_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
             last_node_pred_lst.extend(
-                softmax_layer(outputs[last_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
             )
 
         # 统计
