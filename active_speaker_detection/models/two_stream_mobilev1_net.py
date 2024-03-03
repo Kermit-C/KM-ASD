@@ -193,6 +193,7 @@ class VideoBackbone(nn.Module):
 
 class Mobilev1TwoStreamNet(nn.Module):
     def __init__(self, encoder_enable_vf=True, encoder_enable_grad=False):
+        super(Mobilev1TwoStreamNet, self).__init__()
         self.audio_backbone = AudioBackbone(BasicBlock2D, [2, 2, 2, 2])
         self.video_backbone = VideoBackbone()
 

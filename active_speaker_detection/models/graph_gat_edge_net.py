@@ -42,30 +42,30 @@ class GraphGatEdgeNet(nn.Module):
         self.batch_0 = BatchNorm(channels)
 
         if not is_gatv2:
-            self.layer_1 = GATConv(
-                channels,
-                channels,
-                heads=8,
-                edge_dim=edge_attr_dim,
-                dropout=0.2,
-                concat=True,
-                negative_slope=0.2,
-                bias=True,
-            )
+            TargetGATConv = GATConv
         else:
-            self.layer_1 = GATv2Conv(
-                channels,
-                channels,
-                heads=8,
-                edge_dim=edge_attr_dim,
-                dropout=0.2,
-                concat=True,
-                negative_slope=0.2,
-                bias=True,
-            )
-        self.batch_1 = BatchNorm(channels * 8)
-        self.layer_2 = EdgeConv(
-            LinearPathPreact(channels * 8 * 2, channels), aggr="mean"
+            TargetGATConv = GATv2Conv
+
+        self.layer_1 = TargetGATConv(
+            channels,
+            channels,
+            heads=8,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+        )
+        self.batch_1 = BatchNorm(channels)
+        self.layer_2 = TargetGATConv(
+            channels,
+            channels,
+            heads=8,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
         )
         self.batch_2 = BatchNorm(channels)
         self.layer_3 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
@@ -110,6 +110,7 @@ class GraphGatEdgeNet(nn.Module):
             training=self.training,
         )
         graph_feats_1 = self.layer_1(graph_feats, edge_index_1, edge_attr_1)
+        graph_feats_1 += graph_feats
         graph_feats_1 = self.batch_1(graph_feats_1)
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)

@@ -19,9 +19,9 @@ def get_default_arg_parser():
     # 上下文大小，每刻的实体数
     parser.add_argument("--ctx", default="2")
     # 图的时间上下文步数，即 clip 数
-    parser.add_argument("--nclp", default="21")
+    parser.add_argument("--nclp", default="8")
     # 图的时间上下文步长，即 clip 之间的间隔，单位为帧
-    parser.add_argument("--strd", default="1")
+    parser.add_argument("--strd", default="3")
     # 图像大小，将把人脸 crop resize 到这个大小的正方形
     parser.add_argument("--size", default="112")
 

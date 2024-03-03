@@ -240,6 +240,7 @@ class ResnextTwoStreamNet(nn.Module):
     def __init__(
         self, video_backbone, encoder_enable_vf=True, encoder_enable_grad=False
     ):
+        super(ResnextTwoStreamNet, self).__init__()
         self.audio_backbone = AudioBackbone(BasicBlock2D, [2, 2, 2, 2])
         self.video_backbone = video_backbone
 

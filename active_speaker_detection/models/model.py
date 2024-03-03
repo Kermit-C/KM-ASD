@@ -112,11 +112,14 @@ class MyModel(nn.Module):
         if self.graph_enable_spatial:
             assert self.spatial_net
             # 从数据中提取空间关系特征
+            time_delta_rate = edge_attr_info[:, 2, 0]
+            # 时间差比例作为空间关系的颜色深度
+            spatial_grayscale_values = torch.exp(-time_delta_rate * 10)
             spatial_grayscale_imgs = batch_create_spatial_grayscale(
                 edge_attr_info[:, :2],
                 self.spatial_grayscale_width,
                 self.spatial_grayscale_height,
-                3,
+                spatial_grayscale_values,
             )
             spatial_feats = []
             for i in range(0, spatial_grayscale_imgs.size(0), self.spatial_mini_batch):

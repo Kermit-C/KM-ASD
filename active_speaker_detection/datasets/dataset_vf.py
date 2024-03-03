@@ -109,7 +109,10 @@ class VoiceFaceDataset(Dataset):
         )
         # 获取音频特征和标签
         audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
-            video_id, entity_id, center_index, self.half_clip_length
+            video_id,
+            entity_id,
+            center_index,
+            self.half_clip_length * 2,  # 音频长度取两倍
         )
         audio_data = torch.from_numpy(audio_data)
         audio_fbank = torch.from_numpy(audio_fbank)

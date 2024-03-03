@@ -106,7 +106,10 @@ class End2endDataset(Dataset):
             )
             # 获取音频特征和标签
             audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
-                video_id, entity_id, target_index, self.half_clip_length
+                video_id,
+                entity_id,
+                target_index,
+                self.half_clip_length * 2,  # 音频长度取两倍
             )
 
             a_data = torch.from_numpy(audio_data)
@@ -134,13 +137,15 @@ class End2endDataset(Dataset):
         source_vertices_pos: list[Tuple[float, float, float, float]] = []
         # 边结束点的位置信息，x1, y1, x2, y2
         target_vertices_pos: list[Tuple[float, float, float, float]] = []
+        # 边的时间差比例
+        time_delta_rate: list[float] = []
 
         # 构造边
         for i, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
             for j, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
-                # 自己不连接自己
-                if i == j:
-                    continue
+                # # 自己不连接自己
+                # if i == j:
+                #     continue
 
                 # 超过了时间步数，不连接
                 if abs(i - j) > self.graph_time_steps:
@@ -156,18 +161,21 @@ class End2endDataset(Dataset):
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
                 elif entity_list[i] == entity_list[j]:
                     # 同一实体在不同时刻之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
                 elif self.is_edge_across_entity:
                     # 不同实体在不同时刻之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
 
         entity_idx_list = [
             self.store.entity_list.index((video_id, entity)) for entity in entity_list
@@ -184,9 +192,14 @@ class End2endDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [边的数量, 2, 4]，表示每条边的两侧节点的位置信息
+            # 维度为 [边的数量, 3, 4]，表示每条边的两侧节点的位置信息，最后一个维度是时间差比例
             edge_attr=torch.tensor(
-                [source_vertices_pos, target_vertices_pos], dtype=torch.float
+                [
+                    source_vertices_pos,
+                    target_vertices_pos,
+                    [(rate, 0, 0, 0) for rate in time_delta_rate],
+                ],
+                dtype=torch.float,
             ).transpose(0, 1),
             # 维度为 [节点数量, 4]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是音频实体标签和视频实体标签
             y=torch.tensor(
