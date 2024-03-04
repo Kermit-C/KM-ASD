@@ -211,7 +211,6 @@ def get_backbone(
     if train_weights is not None:
         _load_weights_into_model(model, train_weights)
         print("loaded model weights")
-        model.eval()
         # 先加载整个的，如果有单独的 encoder 的权重，再覆盖一次 encoder 的权重
         if encoder_train_weights is not None:
             _load_weights_into_model(encoder, encoder_train_weights)

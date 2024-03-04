@@ -115,7 +115,7 @@ class GraphGatEdgeNet(nn.Module):
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)
 
-        graph_feats_2 = self.layer_2(graph_feats_1, edge_index)
+        graph_feats_2 = self.layer_2(graph_feats_1, edge_index, edge_attr)
         graph_feats_2 += graph_feats_1
         graph_feats_2 = self.batch_2(graph_feats_2)
         graph_feats_2 = self.relu(graph_feats_2)

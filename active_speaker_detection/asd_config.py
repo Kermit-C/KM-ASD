@@ -52,9 +52,9 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
-        "graph_type": "GraphGatEdgeNet",
+        "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
-        "graph_enable_spatial": True,
+        "graph_enable_spatial": False,
         "encoder_train_weights": None,  # "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
@@ -76,6 +76,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -113,6 +114,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -150,6 +152,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -187,6 +190,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -224,6 +228,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -237,7 +242,7 @@ train_params = [
         "name": "RX3D101",
         # 网络架构
         "encoder_type": "RX3D101",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphGatEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": None,
@@ -261,6 +266,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 8,
+        "accumulation_steps": 4,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -298,6 +304,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -335,6 +342,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -372,6 +380,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -409,6 +418,7 @@ train_params = [
         "graph_gamma": 0.1,
         # 端到端优化配置
         "batch_size": 16,
+        "accumulation_steps": 1,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],

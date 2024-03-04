@@ -358,5 +358,4 @@ def get_light_encoder(
     model = LightTwoStreamNet(encoder_enable_vf)
     if encoder_train_weights:
         _load_weights_into_model(model, encoder_train_weights)
-        model.eval()
     return model, 128, 128

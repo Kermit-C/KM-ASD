@@ -12,6 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from pytorch_metric_learning import losses
+from torch.nn.parallel import DataParallel
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader as EncoderDataLoader
 from torch_geometric.loader import DataLoader as GeometricDataLoader
@@ -77,6 +78,7 @@ def train():
     device = torch.device("cuda" if has_cuda else "cpu")
     print("Cuda info ", has_cuda, device)
     asd_net.to(device)
+    # asd_net = DataParallel(asd_net, device_ids=[0, 1])  # 多卡训练
 
     # loss
     criterion = nn.CrossEntropyLoss()
@@ -188,6 +190,7 @@ def train():
             optimizer,
             scheduler,
             num_epochs=epochs,
+            accumulation_steps=param_config["accumulation_steps"],
             spatial_ctx_size=ctx_size,
             time_len=n_clips,
             models_out=target_models,

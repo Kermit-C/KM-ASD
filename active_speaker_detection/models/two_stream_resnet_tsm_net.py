@@ -295,7 +295,6 @@ def get_resnet_tsm_encoder(
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
-            model.eval()
         return model, 512 * block.expansion, 512 * block.expansion
     elif type == "resnet50":
         block, layers = Bottleneck2D, [3, 4, 6, 3]
@@ -309,7 +308,6 @@ def get_resnet_tsm_encoder(
             model = _load_weights_into_two_stream_resnet(model, pretrained_weigths)
         if encoder_train_weights is not None:
             _load_weights_into_model(model, encoder_train_weights)
-            model.eval()
         return model, 512 * block.expansion, 512 * block.expansion
     else:
         raise ValueError("Unknown resnet type: {}".format(type))

@@ -24,16 +24,29 @@ def optimize_end2end(
     optimizer,
     scheduler,
     num_epochs,
+    accumulation_steps,
     spatial_ctx_size,
     time_len,  # 图的时间步数
     a_weight=0.2,
     v_weight=0.5,
-    vfal_weight=0.3,
+    vfal_weight=0.1,
     models_out=None,
     log=None,
 ):
-    max_val_ap = 0
-    for epoch in range(num_epochs):
+    if models_out is not None and os.path.exists(os.path.join(models_out, "last.ckpt")):
+        # 加载上次训练的状态
+        checkpoint = torch.load(os.path.join(models_out, "last.ckpt"))
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        max_val_ap = checkpoint["max_val_ap"]
+        start_epoch = checkpoint["epoch"]
+        print("load checkpoint from ", os.path.join(models_out, "last.ckpt"))
+    else:
+        start_epoch = 0
+        max_val_ap = 0
+
+    for epoch in range(start_epoch, num_epochs):
         print()
         print("Epoch {}/{}".format(epoch + 1, num_epochs))
         print("-" * 10)
@@ -45,6 +58,7 @@ def optimize_end2end(
             criterion,
             vf_critierion,
             device,
+            accumulation_steps,
             spatial_ctx_size,
             time_len,
             a_weight,
@@ -73,6 +87,21 @@ def optimize_end2end(
             model_target = os.path.join(models_out, str(epoch + 1) + ".pth")
             print("save model to ", model_target)
             torch.save(model.state_dict(), model_target)
+
+        if models_out is not None:
+            # 保存当前训练进度，包含 epoch 和 optimizer 的状态
+            model_target = os.path.join(models_out, "last.ckpt")
+            print("save checkpoint to ", model_target)
+            torch.save(
+                {
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "max_val_ap": max_val_ap,
+                },
+                model_target,
+            )
 
         if log is not None:
             log.write_data_log(
@@ -103,6 +132,7 @@ def _train_model_amp_avl(
     criterion: nn.modules.loss._Loss,
     vf_critierion: nn.modules.loss._Loss,
     device,
+    accumulation_steps,
     ctx_size,
     time_len: int,  # 图的时间步数
     a_weight,
@@ -172,10 +202,11 @@ def _train_model_amp_avl(
                     loss_graph: torch.Tensor = criterion(outputs, targets)
                     loss = a_weight * aux_loss_a + v_weight * aux_loss_v + loss_graph
 
-            optimizer.zero_grad()  # 重置梯度，不加会爆显存
             scaler.scale(loss).backward()  # type: ignore
-            scaler.step(optimizer)
-            scaler.update()
+            if (idx + 1) % accumulation_steps == 0 or idx == len(dataloader) - 1:
+                # 累计 accumulation_steps 个 batch 的梯度，然后更新
+                scaler.step(optimizer)
+                scaler.update()
 
         with torch.set_grad_enabled(False):
             label_lst.extend(targets.cpu().numpy().tolist())

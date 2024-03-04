@@ -30,8 +30,20 @@ def optimize_vf(
     models_out=None,
     log=None,
 ):
-    max_val_auc = 0
-    for epoch in range(num_epochs):
+    if models_out is not None and os.path.exists(os.path.join(models_out, "last.ckpt")):
+        # 加载上次训练的状态
+        checkpoint = torch.load(os.path.join(models_out, "last.ckpt"))
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        max_val_auc = checkpoint["max_val_auc"]
+        start_epoch = checkpoint["epoch"]
+        print("load checkpoint from ", os.path.join(models_out, "last.ckpt"))
+    else:
+        start_epoch = 0
+        max_val_auc = 0
+
+    for epoch in range(start_epoch, num_epochs):
         print()
         print("Epoch {}/{}".format(epoch + 1, num_epochs))
         print("-" * 10)
@@ -60,6 +72,21 @@ def optimize_vf(
             model_target = os.path.join(models_out, str(epoch + 1) + ".pth")
             print("save model to ", model_target)
             torch.save(model.state_dict(), model_target)
+
+        if models_out is not None:
+            # 保存当前训练进度，包含 epoch 和 optimizer 的状态
+            model_target = os.path.join(models_out, "last.ckpt")
+            print("save checkpoint to ", model_target)
+            torch.save(
+                {
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "max_val_auc": max_val_auc,
+                },
+                model_target,
+            )
 
         if log is not None:
             log.write_data_log(
