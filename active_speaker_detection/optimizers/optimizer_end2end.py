@@ -231,14 +231,26 @@ def _train_model_amp_avl(
                 scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets_g.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
+            label_lst.extend(targets_g[video_node_mask].cpu().numpy().tolist())
+            pred_lst.extend(
+                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
 
             last_node_label_lst.extend(
-                targets_g[center_node_mask].cpu().numpy().tolist()
+                targets_g[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
             )
             last_node_pred_lst.extend(
-                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(
+                    outputs[
+                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
             )
 
         # 统计
@@ -352,14 +364,26 @@ def _test_model_graph_losses(
                     ),
                 )
 
-            label_lst.extend(targets_g.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
+            label_lst.extend(targets_g[video_node_mask].cpu().numpy().tolist())
+            pred_lst.extend(
+                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
 
             last_node_label_lst.extend(
-                targets_g[center_node_mask].cpu().numpy().tolist()
+                targets_g[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
             )
             last_node_pred_lst.extend(
-                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(
+                    outputs[
+                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
             )
 
         # 统计

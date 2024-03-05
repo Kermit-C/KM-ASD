@@ -148,6 +148,10 @@ def _train_model_amp_avl(
         center_node_mask = []
         for mask in graph_data.center_node_mask:
             center_node_mask += mask
+        audio_node_mask = []
+        for mask in graph_data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -161,12 +165,26 @@ def _train_model_amp_avl(
             scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
+            label_lst.extend(targets[video_node_mask].cpu().numpy().tolist())
+            pred_lst.extend(
+                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
 
-            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(
+                targets[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
             last_node_pred_lst.extend(
-                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(
+                    outputs[
+                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
             )
 
         # 统计
@@ -224,17 +242,35 @@ def _test_model_graph_losses(
         center_node_mask = []
         for mask in graph_data.center_node_mask:
             center_node_mask += mask
+        audio_node_mask = []
+        for mask in graph_data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
 
         with torch.set_grad_enabled(False):
             outputs, _, _, _, _ = model(graph_data)
             loss = criterion(outputs, targets)
 
-            label_lst.extend(targets.cpu().numpy().tolist())
-            pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
+            label_lst.extend(targets[video_node_mask].cpu().numpy().tolist())
+            pred_lst.extend(
+                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
+            )
 
-            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(
+                targets[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
             last_node_pred_lst.extend(
-                softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
+                softmax_layer(
+                    outputs[
+                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
             )
 
         # 统计
