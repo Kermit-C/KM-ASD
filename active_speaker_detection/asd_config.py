@@ -54,7 +54,7 @@ train_params = [
         "encoder_type": "R3D18",
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
-        "graph_enable_spatial": False,
+        "graph_enable_spatial": True,
         "encoder_train_weights": None,  # "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
@@ -75,8 +75,8 @@ train_params = [
         "graph_milestones": [5],
         "graph_gamma": 0.1,
         # 端到端优化配置
-        "batch_size": 16,
-        "accumulation_steps": 1,
+        "batch_size": 8,
+        "accumulation_steps": 2,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -84,7 +84,7 @@ train_params = [
         # 数据集加载器
         "encoder_threads": 12,
         "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
-        "threads": 2,
+        "threads": 8,
     },
     {
         "name": "R3D50",
@@ -113,8 +113,8 @@ train_params = [
         "graph_milestones": [5],
         "graph_gamma": 0.1,
         # 端到端优化配置
-        "batch_size": 16,
-        "accumulation_steps": 1,
+        "batch_size": 6,
+        "accumulation_steps": 3,
         "learning_rate": 1e-3,
         "epochs": 15,
         "milestones": [6, 9],
@@ -122,7 +122,7 @@ train_params = [
         # 数据集加载器
         "encoder_threads": 12,
         "graph_threads": 0,  # 不为 0 的话，工作进程里就没有 cache 了
-        "threads": 4,
+        "threads": 8,
     },
     {
         "name": "RES18_TSM",

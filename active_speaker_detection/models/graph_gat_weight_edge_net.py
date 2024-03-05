@@ -13,33 +13,13 @@ import torch.nn.parameter
 from torch_geometric.nn import BatchNorm, EdgeConv
 from torch_geometric.utils import dropout_adj
 
-from active_speaker_detection.utils.vf_util import cosine_similarity
+from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
+from ..utils.vf_util import cosine_similarity
+from .graph.gat_weight_conv import GatWeightConv
+from .graph_all_edge_net import LinearPathPreact
 
 
-class LinearPathPreact(nn.Module):
-    """EdgeConv 的线性路径预激活模块"""
-
-    def __init__(self, in_channels, hidden_channels):
-        super(LinearPathPreact, self).__init__()
-        self.fc1 = nn.Linear(in_channels, hidden_channels, bias=False)
-        self.bn1 = nn.BatchNorm1d(in_channels)
-        self.fc2 = nn.Linear(hidden_channels, hidden_channels, bias=False)
-        self.bn2 = nn.BatchNorm1d(hidden_channels)
-        self.relu = nn.ReLU(inplace=True)
-
-    def forward(self, x):
-        x1 = self.bn1(x)
-        x1 = self.relu(x1)
-        x1 = self.fc1(x1)
-
-        x2 = self.bn2(x1)
-        x2 = self.relu(x2)
-        x2 = self.fc2(x2)
-
-        return x2
-
-
-class GraphAllEdgeNet(nn.Module):
+class GraphGatWeightEdgeNet(nn.Module):
 
     def __init__(
         self,
@@ -47,6 +27,7 @@ class GraphAllEdgeNet(nn.Module):
         in_v_channels,
         in_vf_channels,
         channels,
+        edge_attr_dim,
     ):
         super().__init__()
 
@@ -54,14 +35,32 @@ class GraphAllEdgeNet(nn.Module):
         self.in_v_channels = in_v_channels
         self.in_vf_channels = in_vf_channels
 
-        self.layer_0_a = nn.Linear(in_a_channels, channels)
-        self.layer_0_v = nn.Linear(in_v_channels, channels)
-        self.av_fusion = nn.Linear(channels * 2, channels)
+        self.av_fusion = nn.Linear(in_a_channels + in_v_channels, channels)
         self.batch_0 = BatchNorm(channels)
 
-        self.layer_1 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
+        self.layer_1 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+        )
         self.batch_1 = BatchNorm(channels)
-        self.layer_2 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
+        self.layer_2 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+        )
         self.batch_2 = BatchNorm(channels)
         self.layer_3 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
         self.batch_3 = BatchNorm(channels)
@@ -94,10 +93,7 @@ class GraphAllEdgeNet(nn.Module):
             # sim 的维度是 (B, )
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
             audio_feats = audio_feats * sim.unsqueeze(1)
-        audio_feats = self.layer_0_a(audio_feats)
-        video_feats = self.layer_0_v(video_feats)
-        # graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
-        graph_feats = audio_feats + video_feats
+        graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
         graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
 
@@ -115,18 +111,18 @@ class GraphAllEdgeNet(nn.Module):
         ]
 
         for distance_mask in distance_mask_list[:2]:
-            edge_index_1, _ = dropout_adj(
-                edge_index=edge_index[:, distance_mask],
-                p=self.dropout_edge,
-                training=self.training,
+            graph_feats_1 = self.layer_1(
+                graph_feats, edge_index[:, distance_mask], edge_attr[distance_mask]
             )
-            graph_feats_1 = self.layer_1(graph_feats, edge_index_1)
+            graph_feats_1 += graph_feats
             graph_feats_1 = self.batch_1(graph_feats_1)
             graph_feats_1 = self.relu(graph_feats_1)
             graph_feats_1 = self.dropout(graph_feats_1)
 
         for distance_mask in distance_mask_list[:2]:
-            graph_feats_2 = self.layer_2(graph_feats_1, edge_index[:, distance_mask])
+            graph_feats_2 = self.layer_2(
+                graph_feats_1, edge_index[:, distance_mask], edge_attr[distance_mask]
+            )
             graph_feats_2 += graph_feats_1
             graph_feats_2 = self.batch_2(graph_feats_2)
             graph_feats_2 = self.relu(graph_feats_2)

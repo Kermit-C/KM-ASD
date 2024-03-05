@@ -14,23 +14,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
-from active_speaker_detection.models.graph_rnn_net import GraphRnnNet
-from active_speaker_detection.models.two_stream_mobilev1_net import get_mobilev1_encoder
-from active_speaker_detection.models.two_stream_mobilev2_net import get_mobilev2_encoder
-from active_speaker_detection.models.two_stream_resnext_net import get_resnext_encoder
-
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
 from .graph_gat_edge_net import GraphGatEdgeNet
+from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
+from .graph_rnn_net import GraphRnnNet
 from .graph_transformer_edge_net import GraphTransformerEdgeNet
 from .spatial_mobilenet_net import get_spatial_mobilenet_net
 from .spatial_net import get_spatial_net
 from .two_stream_light_net import get_light_encoder
+from .two_stream_mobilev1_net import get_mobilev1_encoder
+from .two_stream_mobilev2_net import get_mobilev2_encoder
 from .two_stream_resnet_net import get_resnet_encoder
 from .two_stream_resnet_tsm_net import get_resnet_tsm_encoder
+from .two_stream_resnext_net import get_resnext_encoder
 
 
 class MyModel(nn.Module):
@@ -147,6 +147,7 @@ class MyModel(nn.Module):
                 device=edge_attr_info.device,
             )
         data.edge_attr = edge_attr
+        data.edge_delta = edge_attr_info[:, 3, 0]
 
         graph_out = self.graph_net(data)
 
@@ -327,6 +328,10 @@ def get_graph(
         )
     elif graph_type == "GraphAllEdgeNet":
         graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
+    elif graph_type == "GraphGatWeightEdgeNet":
+        graph_net = GraphGatWeightEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
     elif graph_type == "GraphGatEdgeNet":
         graph_net = GraphGatEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True

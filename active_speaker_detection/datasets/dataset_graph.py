@@ -65,8 +65,8 @@ class GraphDataset(Dataset):
         target_list: list[int] = []
         # 图节点的实体数据
         entity_list: list[str] = []
-        # 时间戳列表
-        timestamp_list: list[str] = []
+        # 时间戳索引列表
+        timestamp_idx_list: list[int] = []
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
         # 最后一个时间戳的掩码
@@ -122,7 +122,7 @@ class GraphDataset(Dataset):
                     feature_list.append(torch.stack([a_feat, v_feat], dim=0))
                 target_list.append(target)
                 entity_list.append(entity)
-                timestamp_list.append(timestamp)
+                timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
                 center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
 
@@ -136,43 +136,58 @@ class GraphDataset(Dataset):
         target_vertices_pos: list[Tuple[float, float, float, float]] = []
         # 边的时间差比例
         time_delta_rate: list[float] = []
+        # 边的时间差
+        time_delta: list[int] = []
 
         # 构造边
-        for i, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
-            for j, (entity, timestamp) in enumerate(zip(entity_list, timestamp_list)):
+        for i, (entity_i, timestamp_idx_i) in enumerate(
+            zip(entity_list, timestamp_idx_list)
+        ):
+            for j, (entity_j, timestamp_idx_j) in enumerate(
+                zip(entity_list, timestamp_idx_list)
+            ):
                 # # 自己不连接自己
                 # if i == j:
                 #     continue
 
                 # 超过了时间步数，不连接
-                if abs(i - j) > self.graph_time_steps:
+                if abs(timestamp_idx_i - timestamp_idx_j) > self.graph_time_steps:
                     continue
 
                 # 只单向连接
-                if not self.is_edge_double and i > j:
+                if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
                     continue
 
-                if timestamp_list[i] == timestamp_list[j]:
+                if timestamp_idx_j == timestamp_idx_j:
                     # 同一时刻上下文中的实体之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
-                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
-                elif entity_list[i] == entity_list[j]:
+                    time_delta_rate.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
+                    )
+                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                elif entity_i == entity_j:
                     # 同一实体在不同时刻之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
-                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
+                    time_delta_rate.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
+                    )
+                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
                 elif self.is_edge_across_entity:
                     # 不同实体在不同时刻之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
-                    time_delta_rate.append(abs(i - j) / self.graph_time_steps)
+                    time_delta_rate.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
+                    )
+                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
 
         entity_idx_list = [
             self.store.entity_list.index((video_id, entity)) for entity in entity_list
@@ -185,12 +200,13 @@ class GraphDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [边的数量, 3, 4]，表示每条边的两侧节点的位置信息，最后一个维度是时间差比例
+            # 维度为 [边的数量, 4, 4]，表示每条边的两侧节点的位置信息、时间差比例、时间差
             edge_attr=torch.tensor(
                 [
                     source_vertices_pos,
                     target_vertices_pos,
                     [(rate, 0, 0, 0) for rate in time_delta_rate],
+                    [(delta, 0, 0, 0) for delta in time_delta],
                 ],
                 dtype=torch.float,
             ).transpose(0, 1),
