@@ -111,7 +111,7 @@ class End2endDataset(Dataset):
                 video_id,
                 entity_id,
                 target_index,
-                self.half_clip_length * 2,  # 音频长度取两倍
+                self.half_clip_length,
             )
 
             a_data = torch.from_numpy(audio_data)

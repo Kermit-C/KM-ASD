@@ -155,6 +155,7 @@ def _train_model_amp_avl(
 
     audio_size, _ = dataloader.dataset.get_audio_size()
     scaler = torch.cuda.amp.GradScaler(enabled=True)  # type: ignore
+    optimizer.zero_grad()
 
     for idx, dl in enumerate(dataloader):
         print(
@@ -182,7 +183,6 @@ def _train_model_amp_avl(
         entities_a = graph_data.y[:, 2]
         entities_v = graph_data.y[:, 3]
 
-        optimizer.zero_grad()
         with torch.set_grad_enabled(True):
             with autocast(True):
                 outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
@@ -227,6 +227,7 @@ def _train_model_amp_avl(
             if (idx + 1) % accumulation_steps == 0 or idx == len(dataloader) - 1:
                 # 累计 accumulation_steps 个 batch 的梯度，然后更新
                 scaler.step(optimizer)
+                optimizer.zero_grad()
                 scaler.update()
 
         with torch.set_grad_enabled(False):

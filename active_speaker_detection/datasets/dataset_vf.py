@@ -112,7 +112,7 @@ class VoiceFaceDataset(Dataset):
             video_id,
             entity_id,
             center_index,
-            self.half_clip_length * 2,  # 音频长度取两倍
+            self.half_clip_length,
         )
         audio_data = torch.from_numpy(audio_data)
         audio_fbank = torch.from_numpy(audio_fbank)
