@@ -76,11 +76,12 @@ class GraphGatWeightEdgeNet(nn.Module):
         self.dropout_edge = 0
 
     def forward(self, data):
-        x, edge_index, edge_attr, edge_delta = (
+        x, edge_index, edge_attr, edge_delta, edge_self = (
             data.x,
             data.edge_index,
             data.edge_attr,
             data.edge_delta,
+            data.edge_self,
         )
         audio_node_mask = []
         for mask in data.audio_node_mask:
@@ -109,10 +110,10 @@ class GraphGatWeightEdgeNet(nn.Module):
             graph_vf_emb[video_node_mask] = video_vf_emb
 
         distance1_mask = edge_delta < 1
-        distance2_mask = (edge_delta >= 1) & (edge_delta < 3)
-        distance3_mask = (edge_delta >= 3) & (edge_delta < 8)
-        distance4_mask = (edge_delta >= 8) & (edge_delta < 15)
-        distance5_mask = edge_delta >= 15
+        distance2_mask = ((edge_delta >= 1) & (edge_delta < 3)) | (edge_self == 1)
+        distance3_mask = ((edge_delta >= 3) & (edge_delta < 8)) | (edge_self == 1)
+        distance4_mask = ((edge_delta >= 8) & (edge_delta < 15)) | (edge_self == 1)
+        distance5_mask = edge_delta >= 15 | (edge_self == 1)
         distance_mask_list = [
             distance1_mask,
             distance2_mask,

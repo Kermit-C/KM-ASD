@@ -149,6 +149,7 @@ class MyModel(nn.Module):
             )
         data.edge_attr = edge_attr
         data.edge_delta = edge_attr_info[:, 4, 0]
+        data.edge_self = edge_attr_info[:, 5, 0]
 
         graph_out = self.graph_net(data)
 

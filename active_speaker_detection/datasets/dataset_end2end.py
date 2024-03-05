@@ -160,6 +160,8 @@ class End2endDataset(Dataset):
         time_delta_rate: list[float] = []
         # 边的时间差
         time_delta: list[int] = []
+        # 是否自己连接边
+        self_connect: list[int] = []
 
         # 构造边
         for i, (entity_i, timestamp_idx_i) in enumerate(
@@ -188,6 +190,9 @@ class End2endDataset(Dataset):
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
                     time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    self_connect.append(
+                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
+                    )
                 elif entity_i == entity_j:
                     # 同一实体在不同时刻之间的连接
                     source_vertices.append(i)
@@ -200,6 +205,9 @@ class End2endDataset(Dataset):
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
                     time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    self_connect.append(
+                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
+                    )
                 elif self.is_edge_across_entity:
                     # 不同实体在不同时刻之间的连接
                     source_vertices.append(i)
@@ -212,6 +220,9 @@ class End2endDataset(Dataset):
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
                     time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    self_connect.append(
+                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
+                    )
 
         entity_idx_list = [
             (self.store.entity_list.index((video_id, entity)) if entity != "" else -1)
@@ -229,7 +240,7 @@ class End2endDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [边的数量, 5, 4]，表示每条边的两侧节点的位置信息、两侧节点是否纯音频节点、时间差比例、时间差
+            # 维度为 [边的数量, 6, 4]，表示每条边的两侧节点的位置信息、两侧节点是否纯音频节点、时间差比例、时间差、是否自己连接
             edge_attr=torch.tensor(
                 [
                     source_vertices_pos,
@@ -242,6 +253,7 @@ class End2endDataset(Dataset):
                     ],
                     [(rate, 0, 0, 0) for rate in time_delta_rate],
                     [(delta, 0, 0, 0) for delta in time_delta],
+                    [(self_c, 0, 0, 0) for self_c in self_connect],
                 ],
                 dtype=torch.float,
             ).transpose(0, 1),
