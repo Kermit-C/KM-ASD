@@ -110,6 +110,7 @@ class MyModel(nn.Module):
                 data.x = torch.stack([audio_feats, video_feats], dim=1)
 
         if self.graph_enable_spatial:
+            # TODO: 融和音脸作为权重
             assert self.spatial_net
             # 从数据中提取空间关系特征
             time_delta_rate = edge_attr_info[:, 3, 0]

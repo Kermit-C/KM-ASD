@@ -205,7 +205,7 @@ def _train_model_amp_avl(
                         torch.cat(
                             [
                                 entities_a[audio_node_mask],
-                                entities_v[[video_node_mask]],
+                                entities_v[video_node_mask],
                             ],
                             dim=0,
                         ),
@@ -346,7 +346,7 @@ def _test_model_graph_losses(
                         [vf_a_emb[audio_node_mask], vf_v_emb[video_node_mask]], dim=0
                     ),
                     torch.cat(
-                        [entities_a[audio_node_mask], entities_v[[video_node_mask]]],
+                        [entities_a[audio_node_mask], entities_v[video_node_mask]],
                         dim=0,
                     ),
                 )

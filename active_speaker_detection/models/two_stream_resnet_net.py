@@ -427,7 +427,6 @@ def get_resnet_encoder(
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
         if encoder_train_weights is not None:
             _load_weights_into_model(encoder, encoder_train_weights)
-            encoder.eval()
         return encoder, 512 * BasicBlock2D.expansion, 512 * BasicBlock3D.expansion
     elif type == "R3D50":
         args_2d = BasicBlock2D, [2, 2, 2, 2], False, 1, 64, None, None
@@ -439,7 +438,6 @@ def get_resnet_encoder(
             _load_audio_weights_into_model(encoder, audio_pretrained_weights)
         if encoder_train_weights is not None:
             _load_weights_into_model(encoder, encoder_train_weights)
-            encoder.eval()
         return encoder, 512 * BasicBlock2D.expansion, 512 * Bottleneck3D.expansion
     else:
         raise ValueError("Unknown type")
