@@ -166,13 +166,21 @@ def _train_model_amp_avl(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets_a = graph_data.y[:, 0]
-        targets = graph_data.y[:, 1]
-        entities_a = graph_data.y[:, 2]
-        entities = graph_data.y[:, 3]
+
         center_node_mask = []
         for mask in graph_data.center_node_mask:
             center_node_mask += mask
+        audio_node_mask = []
+        for mask in graph_data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
+
+        targets_a = graph_data.y[:, 0]
+        targets_v = graph_data.y[:, 1]
+        targets_g = targets_v.clone()
+        targets_g[audio_node_mask] = targets_a[audio_node_mask]
+        entities_a = graph_data.y[:, 2]
+        entities_v = graph_data.y[:, 3]
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
@@ -181,16 +189,29 @@ def _train_model_amp_avl(
                     graph_data, audio_size
                 )
                 # 单独音频和视频的损失
-                aux_loss_a: torch.Tensor = criterion(audio_out, targets_a)
-                aux_loss_v: torch.Tensor = criterion(video_out, targets)
+                aux_loss_a = criterion(
+                    audio_out[audio_node_mask], targets_a[audio_node_mask]
+                )
+                aux_loss_v = criterion(
+                    video_out[video_node_mask], targets_v[video_node_mask]
+                )
                 if vf_a_emb is not None and vf_v_emb is not None:
                     # 音脸损失
                     aux_loss_vf: torch.Tensor = vf_critierion(
-                        torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                        torch.cat([entities_a, entities], dim=0),
+                        torch.cat(
+                            [vf_a_emb[audio_node_mask], vf_v_emb[video_node_mask]],
+                            dim=0,
+                        ),
+                        torch.cat(
+                            [
+                                entities_a[audio_node_mask],
+                                entities_v[[video_node_mask]],
+                            ],
+                            dim=0,
+                        ),
                     )
                     # 图的损失
-                    loss_graph: torch.Tensor = criterion(outputs, targets)
+                    loss_graph: torch.Tensor = criterion(outputs, targets_g)
                     loss = (
                         a_weight * aux_loss_a
                         + v_weight * aux_loss_v
@@ -199,7 +220,7 @@ def _train_model_amp_avl(
                     )
                 else:
                     # 图的损失
-                    loss_graph: torch.Tensor = criterion(outputs, targets)
+                    loss_graph: torch.Tensor = criterion(outputs, targets_g)
                     loss = a_weight * aux_loss_a + v_weight * aux_loss_v + loss_graph
 
             scaler.scale(loss).backward()  # type: ignore
@@ -209,10 +230,12 @@ def _train_model_amp_avl(
                 scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets.cpu().numpy().tolist())
+            label_lst.extend(targets_g.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
-            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(
+                targets_g[center_node_mask].cpu().numpy().tolist()
+            )
             last_node_pred_lst.extend(
                 softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
             )
@@ -290,32 +313,50 @@ def _test_model_graph_losses(
 
         graph_data = dl
         graph_data = graph_data.to(device)
-        targets = graph_data.y
-        targets_a = graph_data.y[:, 0]
-        targets = graph_data.y[:, 1]
-        entities_a = graph_data.y[:, 2]
-        entities = graph_data.y[:, 3]
+
         center_node_mask = []
         for mask in graph_data.center_node_mask:
             center_node_mask += mask
+        audio_node_mask = []
+        for mask in graph_data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
+
+        targets_a = graph_data.y[:, 0]
+        targets_v = graph_data.y[:, 1]
+        targets_g = targets_v.clone()
+        targets_g[audio_node_mask] = targets_a[audio_node_mask]
+        entities_a = graph_data.y[:, 2]
+        entities_v = graph_data.y[:, 3]
 
         with torch.set_grad_enabled(False):
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
                 graph_data, audio_size
             )
-            loss_graph = criterion(outputs, targets)
-            aux_loss_a = criterion(audio_out, targets_a)
-            aux_loss_v = criterion(video_out, targets)
+            loss_graph = criterion(outputs, targets_g)
+            aux_loss_a = criterion(
+                audio_out[audio_node_mask], targets_a[audio_node_mask]
+            )
+            aux_loss_v = criterion(
+                video_out[video_node_mask], targets_v[video_node_mask]
+            )
             if vf_a_emb is not None and vf_v_emb is not None:
                 aux_loss_vf: torch.Tensor = vf_critierion(
-                    torch.cat([vf_a_emb, vf_v_emb], dim=0),
-                    torch.cat([entities_a, entities], dim=0),
+                    torch.cat(
+                        [vf_a_emb[audio_node_mask], vf_v_emb[video_node_mask]], dim=0
+                    ),
+                    torch.cat(
+                        [entities_a[audio_node_mask], entities_v[[video_node_mask]]],
+                        dim=0,
+                    ),
                 )
 
-            label_lst.extend(targets.cpu().numpy().tolist())
+            label_lst.extend(targets_g.cpu().numpy().tolist())
             pred_lst.extend(softmax_layer(outputs).cpu().numpy()[:, 1].tolist())
 
-            last_node_label_lst.extend(targets[center_node_mask].cpu().numpy().tolist())
+            last_node_label_lst.extend(
+                targets_g[center_node_mask].cpu().numpy().tolist()
+            )
             last_node_pred_lst.extend(
                 softmax_layer(outputs[center_node_mask]).cpu().numpy()[:, 1].tolist()
             )

@@ -77,7 +77,7 @@ class GraphGatEdgeNet(nn.Module):
         # 共享
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout(0.2)
-        self.dropout_edge = 0.05
+        self.dropout_edge = 0
 
     def forward(self, data):
         x, edge_index, edge_attr, _ = (

@@ -328,12 +328,11 @@ class ResnetTwoStreamNet(nn.Module):
 
             # sim 的维度是 (B, )
             sim = cosine_similarity(vf_a_emb, vf_v_emb)
-            audio_emb = audio_emb * sim.unsqueeze(1)
 
             audio_out, video_out, av_out = (
                 self.fc_a(audio_emb),
                 self.fc_v(video_emb),
-                self.fc_av(torch.cat([audio_emb, video_emb], dim=1)),
+                self.fc_av(torch.cat([audio_emb* sim.unsqueeze(1), video_emb], dim=1)),
             )
 
             return (

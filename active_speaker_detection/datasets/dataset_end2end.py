@@ -83,6 +83,8 @@ class End2endDataset(Dataset):
         feature_list: list[torch.Tensor] = []
         # 图节点的标签数据，前面是音频标签，后面是视频标签
         target_list: list[Tuple[int, int]] = []
+        # 纯音频图节点掩码
+        audio_feature_mask: list[bool] = []
         # 图节点的实体数据
         entity_list: list[str] = []
         # 图节点的音频实体数据
@@ -113,16 +115,29 @@ class End2endDataset(Dataset):
             )
 
             a_data = torch.from_numpy(audio_data)
-            for v_data, target, entity, pos in zip(
-                video_data, target_v, entities_v, positions
+            for i, (v_data, target, entity, pos) in enumerate(
+                zip(video_data, target_v, entities_v, positions)
             ):
                 # 一个数据是 2 * 通道数 * clip数 * 高度 * 宽度 的 5D tensor
                 # 前面是音频特征，后面是视频特征
                 # 音频特征通道数和 clip 数都是 1
                 a_extend_data = torch.zeros_like(v_data)
                 a_extend_data[0, 0, : a_data.size(1), : a_data.size(2)] = a_data
+                if i == 0:
+                    # 第一个节点之前加一个纯音频节点
+                    feature_list.append(
+                        torch.stack([a_extend_data, torch.zeros_like(v_data)], dim=0)
+                    )
+                    target_list.append((target_a, 0))
+                    audio_feature_mask.append(True)
+                    entity_list.append("")
+                    audio_entity_list.append(entity_a)
+                    timestamp_idx_list.append(time_idx)
+                    position_list.append((0, 0, 0, 0))
+                    center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
                 feature_list.append(torch.stack([a_extend_data, v_data], dim=0))
                 target_list.append((target_a, target))
+                audio_feature_mask.append(False)
                 entity_list.append(entity)
                 audio_entity_list.append(entity_a)
                 timestamp_idx_list.append(time_idx)
@@ -137,6 +152,10 @@ class End2endDataset(Dataset):
         source_vertices_pos: list[Tuple[float, float, float, float]] = []
         # 边结束点的位置信息，x1, y1, x2, y2
         target_vertices_pos: list[Tuple[float, float, float, float]] = []
+        # 边出发点是否是音频特征
+        source_vertices_audio: list[int] = []
+        # 边结束点是否是音频特征
+        target_vertices_audio: list[int] = []
         # 边的时间差比例
         time_delta_rate: list[float] = []
         # 边的时间差
@@ -149,10 +168,6 @@ class End2endDataset(Dataset):
             for j, (entity_j, timestamp_idx_j) in enumerate(
                 zip(entity_list, timestamp_idx_list)
             ):
-                # # 自己不连接自己
-                # if i == j:
-                #     continue
-
                 # 超过了时间步数，不连接
                 if abs(timestamp_idx_i - timestamp_idx_j) > self.graph_time_steps:
                     continue
@@ -161,12 +176,14 @@ class End2endDataset(Dataset):
                 if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
                     continue
 
-                if timestamp_idx_j == timestamp_idx_j:
+                if timestamp_idx_i == timestamp_idx_j:
                     # 同一时刻上下文中的实体之间的连接
                     source_vertices.append(i)
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
+                    target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
@@ -177,6 +194,8 @@ class End2endDataset(Dataset):
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
+                    target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
@@ -187,14 +206,17 @@ class End2endDataset(Dataset):
                     target_vertices.append(j)
                     source_vertices_pos.append(position_list[i])
                     target_vertices_pos.append(position_list[j])
+                    source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
+                    target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
                     time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
 
         entity_idx_list = [
-            self.store.entity_list.index((video_id, entity)) for entity in entity_list
-        ]
+            (self.store.entity_list.index((video_id, entity)) if entity != "" else -1)
+            for entity in entity_list
+        ]  # 视频实体序号，-1 代表纯音频节点没有视频实体
         audio_entity_idx_list = [
             (self.store.entity_list.index((video_id, entity)) if entity != "" else -1)
             for entity in audio_entity_list
@@ -207,17 +229,23 @@ class End2endDataset(Dataset):
             edge_index=torch.tensor(
                 [source_vertices, target_vertices], dtype=torch.long
             ),
-            # 维度为 [边的数量, 4, 4]，表示每条边的两侧节点的位置信息、时间差比例、时间差
+            # 维度为 [边的数量, 5, 4]，表示每条边的两侧节点的位置信息、两侧节点是否纯音频节点、时间差比例、时间差
             edge_attr=torch.tensor(
                 [
                     source_vertices_pos,
                     target_vertices_pos,
+                    [
+                        (s_audio, t_audio, 0, 0)
+                        for s_audio, t_audio in zip(
+                            source_vertices_audio, target_vertices_audio
+                        )
+                    ],
                     [(rate, 0, 0, 0) for rate in time_delta_rate],
                     [(delta, 0, 0, 0) for delta in time_delta],
                 ],
                 dtype=torch.float,
             ).transpose(0, 1),
-            # 维度为 [节点数量, 4]，表示每个节点的标签，前面是音频标签，中间是视频标签，后面是音频实体标签和视频实体标签
+            # 维度为 [节点数量, 4]，音频标签、视频标签、音频实体标签、视频实体标签
             y=torch.tensor(
                 [
                     (target[0], target[1], entity_a, entity)
@@ -230,6 +258,8 @@ class End2endDataset(Dataset):
             ),
             # 最后一个时间戳的掩码
             center_node_mask=center_node_mask,
+            # 纯音频节点的掩码
+            audio_node_mask=audio_feature_mask,
         )
 
     def get_audio_size(

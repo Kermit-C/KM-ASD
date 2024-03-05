@@ -112,7 +112,7 @@ class MyModel(nn.Module):
         if self.graph_enable_spatial:
             assert self.spatial_net
             # 从数据中提取空间关系特征
-            time_delta_rate = edge_attr_info[:, 2, 0]
+            time_delta_rate = edge_attr_info[:, 3, 0]
             # 时间差比例作为空间关系的颜色深度
             spatial_grayscale_values = torch.exp(-time_delta_rate * 10)
             spatial_grayscale_imgs = batch_create_spatial_grayscale(
@@ -147,7 +147,7 @@ class MyModel(nn.Module):
                 device=edge_attr_info.device,
             )
         data.edge_attr = edge_attr
-        data.edge_delta = edge_attr_info[:, 3, 0]
+        data.edge_delta = edge_attr_info[:, 4, 0]
 
         graph_out = self.graph_net(data)
 
