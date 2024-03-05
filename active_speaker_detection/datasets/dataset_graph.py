@@ -145,7 +145,7 @@ class GraphDataset(Dataset):
                     audio_feature_mask.append(True)
                     entity_list.append("")
                     timestamp_idx_list.append(time_idx)
-                    position_list.append((0, 0, 0, 0))
+                    position_list.append((0, 0, 1, 1))
                     center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
                 target_list.append(target)
                 audio_feature_mask.append(False)
@@ -199,7 +199,9 @@ class GraphDataset(Dataset):
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
-                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    time_delta.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
+                    )
                     self_connect.append(
                         int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
                     )
@@ -214,7 +216,9 @@ class GraphDataset(Dataset):
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
-                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    time_delta.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
+                    )
                     self_connect.append(
                         int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
                     )
@@ -229,7 +233,9 @@ class GraphDataset(Dataset):
                     time_delta_rate.append(
                         abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
                     )
-                    time_delta.append(abs(timestamp_idx_i - timestamp_idx_j))
+                    time_delta.append(
+                        abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
+                    )
                     self_connect.append(
                         int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
                     )

@@ -14,10 +14,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
+from active_speaker_detection.utils.vf_util import cosine_similarity
+
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
 from .graph_gat_edge_net import GraphGatEdgeNet
+from .graph_gat_weight_2s_edge_net import GraphGatWeightTwoStreamEdgeNet
 from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
@@ -67,7 +70,11 @@ class MyModel(nn.Module):
         data,
         audio_size: Optional[tuple[int, int, int]] = None,
     ):
-        x, edge_attr_info = data.x, data.edge_attr
+        x, edge_index, edge_attr_info = data.x, data.edge_index, data.edge_attr
+        audio_node_mask = []
+        for mask in data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
 
         if len(x.shape) > 3:
             # 从数据中提取音频和视频特征
@@ -110,12 +117,12 @@ class MyModel(nn.Module):
                 data.x = torch.stack([audio_feats, video_feats], dim=1)
 
         if self.graph_enable_spatial:
-            # TODO: 融和音脸作为权重
             assert self.spatial_net
+
             # 从数据中提取空间关系特征
             time_delta_rate = edge_attr_info[:, 3, 0]
             # 时间差比例作为空间关系的颜色深度
-            spatial_grayscale_values = torch.exp(-time_delta_rate * 10)
+            spatial_grayscale_values = torch.exp(-time_delta_rate * 10) * 255
             spatial_grayscale_imgs = batch_create_spatial_grayscale(
                 edge_attr_info[:, :2],
                 self.spatial_grayscale_width,
@@ -138,16 +145,57 @@ class MyModel(nn.Module):
                     )
                 else:
                     spatial_feats.append(self.spatial_net(mini_spatial_grayscale_imgs))
-            edge_attr = torch.cat(spatial_feats, dim=0)
+
+            edge_attr = torch.zeros(
+                edge_attr_info.size(0),
+                self.spatial_feature_dim,
+                device=edge_attr_info.device,
+                dtype=x.dtype,
+            )
+            edge_attr[:] = torch.cat(spatial_feats, dim=0)
+
+            edge_vertices_audio = edge_attr_info[:, 2, :2]
+            edge_vertices_no_audio_mask = edge_vertices_audio.mean(dim=1) == 0
+            edge_vertices_half1_audio_mask = (edge_vertices_audio[:, 0] == 1) & (
+                edge_vertices_audio[:, 1] == 0
+            )  # 从音到脸
+            edge_vertices_half2_audio_mask = (edge_vertices_audio[:, 0] == 0) & (
+                edge_vertices_audio[:, 1] == 1
+            )  # 从脸到音
+            edge_vertices_all_audio_mask = edge_vertices_audio.mean(dim=1) == 1
+            if self.encoder_enable_vf:
+                # 融合音脸关系相似度
+                edge_half1_audio_index = edge_index[:, edge_vertices_half1_audio_mask]
+                edge_half2_audio_index = edge_index[:, edge_vertices_half2_audio_mask]
+                vf_a_emb_half1_audio = data.x[edge_half1_audio_index[0], 2, :]
+                vf_v_emb_half1_audio = data.x[edge_half1_audio_index[1], 3, :]
+                vf_v_emb_half2_audio = data.x[edge_half2_audio_index[0], 3, :]
+                vf_a_emb_half2_audio = data.x[edge_half2_audio_index[1], 2, :]
+                sim_half1 = cosine_similarity(
+                    vf_a_emb_half1_audio, vf_v_emb_half1_audio
+                )
+                sim_half2 = cosine_similarity(
+                    vf_a_emb_half2_audio, vf_v_emb_half2_audio
+                )
+                edge_attr[edge_vertices_half1_audio_mask] = edge_attr[
+                    edge_vertices_half1_audio_mask
+                ] * sim_half1.unsqueeze(1)
+                edge_attr[edge_vertices_half2_audio_mask] = edge_attr[
+                    edge_vertices_half2_audio_mask
+                ] * sim_half2.unsqueeze(1)
+
             edge_attr = self.spatial_bn(edge_attr)
         else:
+            edge_vertices_audio = edge_attr_info[:, 2, :2]
             # 权重全为 1，代表没有空间关系
             edge_attr = torch.ones(
                 edge_attr_info.size(0),
                 self.spatial_feature_dim,
                 device=edge_attr_info.device,
             )
+
         data.edge_attr = edge_attr
+        data.edge_vertices_audio = edge_vertices_audio
         data.edge_delta = edge_attr_info[:, 4, 0]
         data.edge_self = edge_attr_info[:, 5, 0]
 
@@ -332,6 +380,10 @@ def get_graph(
         graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
     elif graph_type == "GraphGatWeightEdgeNet":
         graph_net = GraphGatWeightEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphGatWeightTwoStreamEdgeNet":
+        graph_net = GraphGatWeightTwoStreamEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
     elif graph_type == "GraphGatEdgeNet":

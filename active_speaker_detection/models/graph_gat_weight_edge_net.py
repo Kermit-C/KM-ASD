@@ -110,8 +110,8 @@ class GraphGatWeightEdgeNet(nn.Module):
             graph_vf_emb[video_node_mask] = video_vf_emb
 
         distance1_mask = edge_delta < 1
-        distance2_mask = ((edge_delta >= 1) & (edge_delta < 3)) | (edge_self == 1)
-        distance3_mask = ((edge_delta >= 3) & (edge_delta < 8)) | (edge_self == 1)
+        distance2_mask = ((edge_delta >= 1) & (edge_delta < 4)) | (edge_self == 1)
+        distance3_mask = ((edge_delta >= 4) & (edge_delta < 8)) | (edge_self == 1)
         distance4_mask = ((edge_delta >= 8) & (edge_delta < 15)) | (edge_self == 1)
         distance5_mask = edge_delta >= 15 | (edge_self == 1)
         distance_mask_list = [
@@ -133,7 +133,7 @@ class GraphGatWeightEdgeNet(nn.Module):
         graph_feats_1 = self.dropout(graph_feats_1)
 
         graph_feats_2 = graph_feats_1
-        for distance_mask in distance_mask_list[:2]:
+        for distance_mask in distance_mask_list[2:]:
             graph_feats_2 = self.layer_2(
                 graph_feats_2, edge_index[:, distance_mask], edge_attr[distance_mask]
             )
