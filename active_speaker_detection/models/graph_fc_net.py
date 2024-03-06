@@ -65,9 +65,14 @@ class GraphFcNet(nn.Module):
             video_audio_feats = video_audio_feats * sim.unsqueeze(1)
 
         graph_feats[audio_node_mask] = self.layer_0_a(audio_feats)
-        graph_feats[video_node_mask] = self.layer_0_v(video_feats)
         graph_feats[video_node_mask] = self.av_fusion(
-            torch.cat([video_audio_feats, graph_feats[video_node_mask]], dim=1)
+            torch.cat(
+                [
+                    self.relu(self.layer_0_a(video_audio_feats)),
+                    self.relu(self.layer_0_v(video_feats)),
+                ],
+                dim=1,
+            )
         )
         graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
