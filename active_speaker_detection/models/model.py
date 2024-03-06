@@ -19,6 +19,7 @@ from ..utils.vf_util import cosine_similarity
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
 from .graph_easee_net import GraphEaseeNet
+from .graph_fc_net import GraphFcNet
 from .graph_gat_edge_net import GraphGatEdgeNet
 from .graph_gat_weight_2s_edge_net import GraphGatWeightTwoStreamEdgeNet
 from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
@@ -390,8 +391,7 @@ def get_graph(
         graph_net = GraphGatEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
         )
-    elif graph_type == "GraphEaseeNet":
-        graph_net = GraphEaseeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
+
     elif graph_type == "GraphGatedEdgeNet":
         graph_net = GraphGatedEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
@@ -404,6 +404,11 @@ def get_graph(
         graph_net = GraphTransformerEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
+
+    elif graph_type == "GraphEaseeNet":
+        graph_net = GraphEaseeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
+    elif graph_type == "GraphFcNet":
+        graph_net = GraphFcNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
     elif graph_type == "GraphRnnGruNet":
         graph_net = GraphRnnNet(
             "GRU", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
@@ -412,6 +417,7 @@ def get_graph(
         graph_net = GraphRnnNet(
             "LSTM", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
+
     else:
         raise ValueError(f"Unknown graph type: {graph_type}")
 
