@@ -53,8 +53,12 @@ class GraphFcNet(nn.Module):
         video_audio_feats = x[:, 0, : self.in_a_channels][video_node_mask]
         video_feats = x[:, 1, : self.in_v_channels][video_node_mask]
 
-        audio_vf_emb = x[:, 2, : self.in_vf_channels] if x.size(1) > 2 else None
-        video_vf_emb = x[:, 3, : self.in_vf_channels] if x.size(1) > 3 else None
+        audio_vf_emb = (
+            x[:, 2, : self.in_vf_channels][video_node_mask] if x.size(1) > 2 else None
+        )
+        video_vf_emb = (
+            x[:, 3, : self.in_vf_channels][video_node_mask] if x.size(1) > 3 else None
+        )
         if audio_vf_emb is not None and video_vf_emb is not None:
             # sim 的维度是 (B, )
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
