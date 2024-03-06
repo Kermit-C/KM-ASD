@@ -14,11 +14,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parameter
 
-from active_speaker_detection.utils.vf_util import cosine_similarity
-
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
+from ..utils.vf_util import cosine_similarity
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
+from .graph_easee_net import GraphEaseeNet
 from .graph_gat_edge_net import GraphGatEdgeNet
 from .graph_gat_weight_2s_edge_net import GraphGatWeightTwoStreamEdgeNet
 from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
@@ -390,6 +390,8 @@ def get_graph(
         graph_net = GraphGatEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
         )
+    elif graph_type == "GraphEaseeNet":
+        graph_net = GraphEaseeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
     elif graph_type == "GraphGatedEdgeNet":
         graph_net = GraphGatedEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
