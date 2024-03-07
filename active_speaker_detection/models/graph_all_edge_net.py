@@ -57,7 +57,6 @@ class GraphAllEdgeNet(nn.Module):
 
         self.layer_0_a = nn.Linear(in_a_channels, channels)
         self.layer_0_v = nn.Linear(in_v_channels, channels)
-        # self.av_fusion = nn.Linear(channels * 2, channels)
         self.batch_0 = BatchNorm(channels)
 
         self.layer_1 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
@@ -91,24 +90,6 @@ class GraphAllEdgeNet(nn.Module):
             audio_node_mask += mask
         video_node_mask = [not mask for mask in audio_node_mask]
 
-        # audio_feats = x[:, 0, : self.in_a_channels].squeeze(1)
-        # video_feats = x[:, 1, : self.in_v_channels].squeeze(1)
-        # audio_vf_emb = (
-        #     x[:, 2, : self.in_vf_channels].squeeze(1) if x.size(1) > 2 else None
-        # )
-        # video_vf_emb = (
-        #     x[:, 3, : self.in_vf_channels].squeeze(1) if x.size(1) > 3 else None
-        # )
-        # if audio_vf_emb is not None and video_vf_emb is not None:
-        #     # sim 的维度是 (B, )
-        #     sim = cosine_similarity(audio_vf_emb, video_vf_emb)
-        #     audio_feats = audio_feats * sim.unsqueeze(1)
-        # audio_feats = self.layer_0_a(audio_feats)
-        # video_feats = self.layer_0_v(video_feats)
-        # graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
-        # graph_feats = self.batch_0(graph_feats)
-        # graph_feats = self.relu(graph_feats)
-
         graph_feats = torch.zeros(x.size(0), self.channels, dtype=x.dtype).to(x.device)
         audio_feats = x[audio_node_mask][:, 0, : self.in_a_channels]
         video_feats = x[video_node_mask][:, 1, : self.in_v_channels]
@@ -116,19 +97,6 @@ class GraphAllEdgeNet(nn.Module):
         graph_feats[video_node_mask] = self.layer_0_v(video_feats)
         graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
-
-        graph_vf_emb = torch.zeros(x.size(0), self.in_vf_channels, dtype=x.dtype).to(
-            x.device
-        )
-        audio_vf_emb = (
-            x[audio_node_mask][:, 2, : self.in_vf_channels] if x.size(1) > 2 else None
-        )
-        video_vf_emb = (
-            x[video_node_mask][:, 3, : self.in_vf_channels] if x.size(1) > 3 else None
-        )
-        if audio_vf_emb is not None and video_vf_emb is not None:
-            graph_vf_emb[audio_node_mask] = audio_vf_emb
-            graph_vf_emb[video_node_mask] = video_vf_emb
 
         distance1_mask = edge_delta < 1
         distance2_mask = ((edge_delta >= 1) & (edge_delta < 4)) | (edge_self == 1)

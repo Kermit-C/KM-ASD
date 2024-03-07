@@ -48,6 +48,7 @@ class MyModel(nn.Module):
         graph_enable_spatial: bool,
         encoder_vf: Optional[VfalSlEncoder] = None,  # 为空则不使用音视频融合网络
         spatial_net: Optional[nn.Module] = None,  # 为空则不使用空间关系网络
+        encoder_vf_emb_dim: int = 128,
         spatial_feature_dim: int = 64,
         spatial_grayscale_width: int = 32,
         spatial_grayscale_height: int = 32,
@@ -61,6 +62,7 @@ class MyModel(nn.Module):
         self.graph_enable_spatial = graph_enable_spatial
 
         self.encoder_vf = encoder_vf
+        self.encoder_vf_emb_dim = encoder_vf_emb_dim
 
         self.spatial_net = spatial_net
         self.spatial_bn = nn.BatchNorm1d(spatial_feature_dim)
@@ -126,10 +128,10 @@ class MyModel(nn.Module):
                 # 维度不够的在后面填充 0
                 audio_feats = F.pad(audio_feats, (0, max_dim - audio_feat_dim))
                 video_feats = F.pad(video_feats, (0, max_dim - video_feat_dim))
-                vf_a_emb = F.pad(vf_a_emb, (0, max_dim - vf_a_emb_dim))
-                vf_v_emb = F.pad(vf_v_emb, (0, max_dim - vf_v_emb_dim))
+                pad_vf_a_emb = F.pad(vf_a_emb, (0, max_dim - vf_a_emb_dim))
+                pad_vf_v_emb = F.pad(vf_v_emb, (0, max_dim - vf_v_emb_dim))
                 data.x = torch.stack(
-                    [audio_feats, video_feats, vf_a_emb, vf_v_emb], dim=1
+                    [audio_feats, video_feats, pad_vf_a_emb, pad_vf_v_emb], dim=1
                 )
             else:
                 vf_a_emb, vf_v_emb = None, None
@@ -139,8 +141,11 @@ class MyModel(nn.Module):
                 data.x = torch.stack([audio_feats, video_feats], dim=1)
         else:
             # 输入的就是 encoder 出来的特征
-            vf_a_emb, vf_v_emb = None, None
-            if not self.encoder_enable_vf:
+            if self.encoder_enable_vf:
+                vf_a_emb = x[:, 2, : self.encoder_vf_emb_dim]
+                vf_v_emb = x[:, 3, : self.encoder_vf_emb_dim]
+            else:
+                vf_a_emb, vf_v_emb = None, None
                 audio_feats = x[:, 0, :]
                 video_feats = x[:, 1, :]
                 data.x = torch.stack([audio_feats, video_feats], dim=1)
@@ -194,12 +199,14 @@ class MyModel(nn.Module):
             edge_vertices_all_audio_mask = edge_vertices_audio.mean(dim=1) == 1
             if self.encoder_enable_vf:
                 # 融合音脸关系相似度
+                assert vf_a_emb is not None
+                assert vf_v_emb is not None
                 edge_half1_audio_index = edge_index[:, edge_vertices_half1_audio_mask]
                 edge_half2_audio_index = edge_index[:, edge_vertices_half2_audio_mask]
-                vf_a_emb_half1_audio = data.x[edge_half1_audio_index[0], 2, :]
-                vf_v_emb_half1_audio = data.x[edge_half1_audio_index[1], 3, :]
-                vf_v_emb_half2_audio = data.x[edge_half2_audio_index[0], 3, :]
-                vf_a_emb_half2_audio = data.x[edge_half2_audio_index[1], 2, :]
+                vf_a_emb_half1_audio = vf_a_emb[edge_half1_audio_index[0]]
+                vf_v_emb_half1_audio = vf_v_emb[edge_half1_audio_index[1]]
+                vf_v_emb_half2_audio = vf_v_emb[edge_half2_audio_index[0]]
+                vf_a_emb_half2_audio = vf_a_emb[edge_half2_audio_index[1]]
                 sim_half1 = cosine_similarity(
                     vf_a_emb_half1_audio, vf_v_emb_half1_audio
                 )
@@ -290,6 +297,7 @@ def get_backbone(
         graph_enable_spatial,
         encoder_vf,
         spatial_net,
+        encoder_vf_emb_dim=vf_emb_dim,
         spatial_feature_dim=spatial_feature_dim,
     )
 

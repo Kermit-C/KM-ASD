@@ -99,19 +99,6 @@ class GraphGatWeightEdgeNet(nn.Module):
         graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
 
-        graph_vf_emb = torch.zeros(x.size(0), self.in_vf_channels, dtype=x.dtype).to(
-            x.device
-        )
-        audio_vf_emb = (
-            x[audio_node_mask][:, 2, : self.in_vf_channels] if x.size(1) > 2 else None
-        )
-        video_vf_emb = (
-            x[video_node_mask][:, 3, : self.in_vf_channels] if x.size(1) > 3 else None
-        )
-        if audio_vf_emb is not None and video_vf_emb is not None:
-            graph_vf_emb[audio_node_mask] = audio_vf_emb
-            graph_vf_emb[video_node_mask] = video_vf_emb
-
         distance1_mask = edge_delta < 1
         distance2_mask = ((edge_delta >= 1) & (edge_delta < 4)) | (edge_self == 1)
         distance3_mask = ((edge_delta >= 4) & (edge_delta < 8)) | (edge_self == 1)
