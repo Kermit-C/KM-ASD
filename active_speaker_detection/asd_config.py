@@ -77,7 +77,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 8,
         "accumulation_steps": 2,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -115,7 +115,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 6,
         "accumulation_steps": 3,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -153,7 +153,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -191,7 +191,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -229,7 +229,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -267,7 +267,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 8,
         "accumulation_steps": 4,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -305,7 +305,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -343,7 +343,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -381,7 +381,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
@@ -419,7 +419,7 @@ train_params = [
         # 端到端优化配置
         "batch_size": 16,
         "accumulation_steps": 1,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "epochs": 30,
         "milestones": [12, 18],
         "gamma": 0.1,
