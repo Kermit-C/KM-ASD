@@ -237,9 +237,8 @@ class VideoBackbone(nn.Module):
 
 
 class ResnextTwoStreamNet(nn.Module):
-    def __init__(
-        self, video_backbone, encoder_enable_vf=True, encoder_enable_grad=False
-    ):
+
+    def __init__(self, video_backbone, encoder_enable_grad=False):
         super(ResnextTwoStreamNet, self).__init__()
         self.audio_backbone = AudioBackbone(BasicBlock2D, [2, 2, 2, 2])
         self.video_backbone = video_backbone
@@ -248,15 +247,6 @@ class ResnextTwoStreamNet(nn.Module):
             # 冻结上面参数
             for param in self.parameters():
                 param.requires_grad = False
-
-        # 音脸分支
-        self.encoder_enable_vf = encoder_enable_vf
-        self.vf_layer = VfalSlEncoder(
-            voice_size=512 * BasicBlock2D.expansion,
-            face_size=512,
-            embedding_size=128,
-            shared=False,
-        )
 
         self.relu = nn.ReLU(inplace=True)
         self.fc_128_a = nn.Linear(512 * BasicBlock2D.expansion, 128)
@@ -281,28 +271,14 @@ class ResnextTwoStreamNet(nn.Module):
         v_emb = self.fc_128_v(v)
         v_emb = self.relu(v_emb)
 
-        if self.encoder_enable_vf:
-            # 音脸分支
-            vf_a_emb, vf_v_emb = self.vf_layer(a, v)
+        audio_out, video_out = self.fc_a(a_emb), self.fc_v(v_emb)
 
-            # sim 的维度是 (B, )
-            sim = cosine_similarity(vf_a_emb, vf_v_emb)
-
-            audio_out, video_out, av_out = (
-                self.fc_a(a_emb),
-                self.fc_v(v_emb),
-                self.fc_av(torch.cat([a_emb * sim.unsqueeze(1), v_emb], dim=1)),
-            )
-
-            return a, v, audio_out, video_out, av_out, vf_a_emb, vf_v_emb
+        if a_emb.size(0) == v_emb.size(0):
+            av_out = self.fc_av(torch.cat([a_emb, v_emb], dim=1))
         else:
-            audio_out, video_out, av_out = (
-                self.fc_a(a_emb),
-                self.fc_v(v_emb),
-                self.fc_av(torch.cat([a_emb, v_emb], dim=1)),
-            )
+            av_out = None
 
-            return a, v, audio_out, video_out, av_out, None, None
+        return a, v, audio_out, video_out, av_out
 
 
 ############### 以下是模型的加载权重 ###############
@@ -379,7 +355,6 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_resnext_encoder(
     type: str,
-    encoder_enable_vf: bool,
     encoder_enable_grad: bool = False,
     audio_pretrained_weigths=None,
     video_pretrained_weigths=None,
@@ -395,7 +370,7 @@ def get_resnext_encoder(
         raise ValueError(
             "type must be one of ['RESNEXT50', 'RESNEXT101', 'RESNEXT152']"
         )
-    model = ResnextTwoStreamNet(video_backbone, encoder_enable_vf, encoder_enable_grad)
+    model = ResnextTwoStreamNet(video_backbone, encoder_enable_grad)
 
     if audio_pretrained_weigths is not None:
         _load_audio_pretrained_weights_into_model(model, audio_pretrained_weigths)

@@ -67,6 +67,9 @@ class GraphEaseeNet(nn.Module):
         self.layer_4 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="max")
         self.layer_4t = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="max")
 
+        # 分类器
+        self.fc_a = nn.Linear(channels, 2)
+        self.fc_v = nn.Linear(channels, 2)
         self.fc = nn.Linear(channels, 2)
 
         # 共享
@@ -87,8 +90,8 @@ class GraphEaseeNet(nn.Module):
         video_node_mask = [not mask for mask in audio_node_mask]
 
         graph_feats = torch.zeros(x.size(0), self.channels, dtype=x.dtype).to(x.device)
-        audio_feats = x[:, 0, : self.in_a_channels][audio_node_mask]
-        video_feats = x[:, 1, : self.in_v_channels][video_node_mask]
+        audio_feats = x[audio_node_mask][:, 0, : self.in_a_channels]
+        video_feats = x[video_node_mask][:, 1, : self.in_v_channels]
         graph_feats[audio_node_mask] = self.layer_0_a(audio_feats)
         graph_feats[video_node_mask] = self.layer_0_v(video_feats)
         graph_feats = self.batch_0(graph_feats)
@@ -126,5 +129,7 @@ class GraphEaseeNet(nn.Module):
         graph_feats_4 += graph_feats_3
 
         out = self.fc(graph_feats_4)
+        audio_out = self.fc_a(graph_feats[audio_node_mask])
+        video_out = self.fc_v(graph_feats[video_node_mask])
 
-        return out
+        return out, audio_out, video_out

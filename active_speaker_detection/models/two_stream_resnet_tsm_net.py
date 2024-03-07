@@ -30,7 +30,6 @@ class TwoStreamResNet(nn.Module):
         width_per_group=64,
         replace_stride_with_dilation=None,
         norm_layer=None,
-        encoder_enable_vf=True,
         encoder_enable_grad=False,
     ):
         super(TwoStreamResNet, self).__init__()
@@ -89,15 +88,6 @@ class TwoStreamResNet(nn.Module):
             # 冻结上面参数
             for param in self.parameters():
                 param.requires_grad = False
-
-        # 音脸分支
-        self.encoder_enable_vf = encoder_enable_vf
-        self.vf_layer = VfalSlEncoder(
-            voice_size=512 * block.expansion,
-            face_size=512 * block.expansion,
-            embedding_size=128,
-            shared=False,
-        )
 
         self.tsm = TemporalShift(n_div=8)
 
@@ -217,28 +207,14 @@ class TwoStreamResNet(nn.Module):
         v_emb = self.fc_128_v(v)
         v_emb = self.relu(v_emb)
 
-        if self.encoder_enable_vf:
-            # 音脸分支
-            vf_a_emb, vf_v_emb = self.vf_layer(a, v)
+        audio_out, video_out = self.fc_a(a_emb), self.fc_v(v_emb)
 
-            # sim 的维度是 (B, )
-            sim = cosine_similarity(vf_a_emb, vf_v_emb)
-
-            audio_out, video_out, av_out = (
-                self.fc_a(a_emb),
-                self.fc_v(v_emb),
-                self.fc_av(torch.cat([a_emb * sim.unsqueeze(1), v_emb], dim=1)),
-            )
-
-            return a, v, audio_out, video_out, av_out, vf_a_emb, vf_v_emb
+        if a_emb.size(0) == v_emb.size(0):
+            av_out = self.fc_av(torch.cat([a_emb, v_emb], dim=1))
         else:
-            audio_out, video_out, av_out = (
-                self.fc_a(a_emb),
-                self.fc_v(v_emb),
-                self.fc_av(torch.cat([a_emb, v_emb], dim=1)),
-            )
+            av_out = None
 
-            return a, v, audio_out, video_out, av_out, None, None
+        return a, v, audio_out, video_out, av_out
 
 
 ############### 以下是模型的加载权重 ###############
@@ -277,7 +253,6 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 
 def get_resnet_tsm_encoder(
     type: str,
-    encoder_enable_vf: bool,
     encoder_enable_grad: bool = False,
     pretrained_weigths=None,
     encoder_train_weights=None,
@@ -287,7 +262,6 @@ def get_resnet_tsm_encoder(
         model = TwoStreamResNet(
             block,
             layers,
-            encoder_enable_vf=encoder_enable_vf,
             encoder_enable_grad=encoder_enable_grad,
         )
         if pretrained_weigths is not None:
@@ -300,7 +274,6 @@ def get_resnet_tsm_encoder(
         model = TwoStreamResNet(
             block,
             layers,
-            encoder_enable_vf=encoder_enable_vf,
             encoder_enable_grad=encoder_enable_grad,
         )
         if pretrained_weigths is not None:

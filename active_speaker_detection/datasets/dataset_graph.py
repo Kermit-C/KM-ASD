@@ -65,6 +65,8 @@ class GraphDataset(Dataset):
         target_list: list[int] = []
         # 纯音频图节点掩码
         audio_feature_mask: list[bool] = []
+        # 节点的时刻对应纯音频节点的索引
+        audio_feature_idx_list: list[int] = []
         # 图节点的实体数据
         entity_list: list[str] = []
         # 时间戳索引列表
@@ -96,6 +98,7 @@ class GraphDataset(Dataset):
             a_vf_feat = (
                 torch.from_numpy(audio_vf_data) if audio_vf_data is not None else None
             )
+            audio_feature_idx = len(feature_list)
             for i, (v_np, v_vf_np, target, entity, pos) in enumerate(
                 zip(video_data, video_vf_data, target_v, entities_v, positions)
             ):
@@ -143,12 +146,14 @@ class GraphDataset(Dataset):
                 if i == 0:
                     target_list.append(target_a)
                     audio_feature_mask.append(True)
+                    audio_feature_idx_list.append(audio_feature_idx)
                     entity_list.append("")
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
                     center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
                 target_list.append(target)
                 audio_feature_mask.append(False)
+                audio_feature_idx_list.append(audio_feature_idx)
                 entity_list.append(entity)
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
@@ -180,14 +185,6 @@ class GraphDataset(Dataset):
             for j, (entity_j, timestamp_idx_j) in enumerate(
                 zip(entity_list, timestamp_idx_list)
             ):
-                # 超过了时间步数，不连接
-                if abs(timestamp_idx_i - timestamp_idx_j) > self.graph_time_steps:
-                    continue
-
-                # 只单向连接
-                if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
-                    continue
-
                 if timestamp_idx_i == timestamp_idx_j:
                     # 同一时刻上下文中的实体之间的连接
                     source_vertices.append(i)
@@ -202,43 +199,50 @@ class GraphDataset(Dataset):
                     time_delta.append(
                         abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
                     )
-                    self_connect.append(
-                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
-                    )
-                elif entity_i == entity_j:
-                    # 同一实体在不同时刻之间的连接
-                    source_vertices.append(i)
-                    target_vertices.append(j)
-                    source_vertices_pos.append(position_list[i])
-                    target_vertices_pos.append(position_list[j])
-                    source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
-                    target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
-                    time_delta_rate.append(
-                        abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
-                    )
-                    time_delta.append(
-                        abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
-                    )
-                    self_connect.append(
-                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
-                    )
-                elif self.is_edge_across_entity:
-                    # 不同实体在不同时刻之间的连接
-                    source_vertices.append(i)
-                    target_vertices.append(j)
-                    source_vertices_pos.append(position_list[i])
-                    target_vertices_pos.append(position_list[j])
-                    source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
-                    target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
-                    time_delta_rate.append(
-                        abs(timestamp_idx_i - timestamp_idx_j) / self.graph_time_steps
-                    )
-                    time_delta.append(
-                        abs(timestamp_idx_i - timestamp_idx_j) * self.graph_time_stride
-                    )
-                    self_connect.append(
-                        int(entity_i == entity_j and timestamp_idx_i == timestamp_idx_j)
-                    )
+                    self_connect.append(int(i == j))
+                else:
+                    # 超过了时间步数，不连接
+                    if abs(timestamp_idx_i - timestamp_idx_j) > self.graph_time_steps:
+                        continue
+
+                    # 只单向连接
+                    if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
+                        continue
+
+                    if entity_i == entity_j:
+                        # 同一实体在不同时刻之间的连接
+                        source_vertices.append(i)
+                        target_vertices.append(j)
+                        source_vertices_pos.append(position_list[i])
+                        target_vertices_pos.append(position_list[j])
+                        source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
+                        target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
+                        time_delta_rate.append(
+                            abs(timestamp_idx_i - timestamp_idx_j)
+                            / self.graph_time_steps
+                        )
+                        time_delta.append(
+                            abs(timestamp_idx_i - timestamp_idx_j)
+                            * self.graph_time_stride
+                        )
+                        self_connect.append(int(i == j))
+                    elif self.is_edge_across_entity:
+                        # 不同实体在不同时刻之间的连接
+                        source_vertices.append(i)
+                        target_vertices.append(j)
+                        source_vertices_pos.append(position_list[i])
+                        target_vertices_pos.append(position_list[j])
+                        source_vertices_audio.append(1 if audio_feature_mask[i] else 0)
+                        target_vertices_audio.append(1 if audio_feature_mask[j] else 0)
+                        time_delta_rate.append(
+                            abs(timestamp_idx_i - timestamp_idx_j)
+                            / self.graph_time_steps
+                        )
+                        time_delta.append(
+                            abs(timestamp_idx_i - timestamp_idx_j)
+                            * self.graph_time_stride
+                        )
+                        self_connect.append(int(i == j))
 
         entity_idx_list = [
             (self.store.entity_list.index((video_id, entity)) if entity != "" else -1)
@@ -280,4 +284,6 @@ class GraphDataset(Dataset):
             center_node_mask=center_node_mask,
             # 纯音频节点的掩码
             audio_node_mask=audio_feature_mask,
+            # 节点的时刻对应纯音频节点的索引
+            audio_feature_idx_list=audio_feature_idx_list,
         )

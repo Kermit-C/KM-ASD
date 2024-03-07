@@ -14,6 +14,7 @@ import torch
 
 def gen_feature(
     model,
+    model_vf,
     dataloader,
     out_path,
     device,
@@ -35,8 +36,11 @@ def gen_feature(
         audio_data = audio_data.to(device)
 
         with torch.set_grad_enabled(False):
-            audio_out, video_out, _, _, _, vf_a_emb, vf_v_emb = model(
-                audio_data, video_data
+            audio_out, video_out, *_ = model(audio_data, video_data)
+            vf_a_emb, vf_v_emb = (
+                model_vf(audio_data, video_data)
+                if model_vf is not None
+                else (None, None)
             )
             audio_np = audio_out.cpu().numpy()
             video_np = video_out.cpu().numpy()

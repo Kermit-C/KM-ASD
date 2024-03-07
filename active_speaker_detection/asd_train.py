@@ -62,7 +62,7 @@ def train():
     audio_pretrain_weightds_path = param_config["encoder_audio_pretrain_weights"]
     spatial_pretrained_weights = param_config["graph_spatial_pretrain_weights"]
     encoder_train_weights = param_config["encoder_train_weights"]
-    asd_net, encoder_net = get_backbone(
+    asd_net, encoder_net, encoder_vf_net = get_backbone(
         param_config["encoder_type"],
         param_config["graph_type"],
         param_config["encoder_enable_vf"],
@@ -307,12 +307,10 @@ def train():
                 "train_loss",
                 "train_audio_loss",
                 "train_video_loss",
-                "train_vfal_loss",
                 "train_map",
                 "val_loss",
                 "val_audio_loss",
                 "val_video_loss",
-                "val_vfal_loss",
                 "val_map",
             ],
         )
@@ -360,13 +358,11 @@ def train():
             dl_val,
             device,
             criterion,
-            vf_critierion,
             optimizer,
             scheduler,
             num_epochs=epochs,
             a_weight=0.2,
             v_weight=0.5,
-            vf_weight=0.5,
             models_out=target_models,
             log=log,
         )
@@ -482,12 +478,14 @@ def train():
         )
         gen_feature(
             encoder_net,
+            encoder_vf_net,
             dl_train,
             os.path.join(encoder_feature_path, "train"),
             device,
         )
         gen_feature(
             encoder_net,
+            encoder_vf_net,
             dl_val,
             os.path.join(encoder_feature_path, "val"),
             device,

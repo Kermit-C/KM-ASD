@@ -254,19 +254,13 @@ class AudioEncoder(nn.Module):
 
 class LightTwoStreamNet(nn.Module):
 
-    def __init__(self, encoder_enable_vf: bool):
+    def __init__(self):
         super(LightTwoStreamNet, self).__init__()
 
         self.audio_encoder = AudioEncoder()
         self.visual_encoder = VisualEncoder()
 
         self.max_pool = nn.AdaptiveMaxPool1d(1)
-
-        # 音脸分支
-        self.encoder_enable_vf = encoder_enable_vf
-        self.vf_layer = VfalSlEncoder(
-            voice_size=128, face_size=128, embedding_size=128, shared=False
-        )
 
         # 分类器
         self.fc_a = nn.Linear(128, 2)
@@ -297,40 +291,15 @@ class LightTwoStreamNet(nn.Module):
         audio_embed = self.max_pool(audio_embed.transpose(1, 2)).squeeze(2)
         visual_embed = self.max_pool(visual_embed.transpose(1, 2)).squeeze(2)
 
-        if self.encoder_enable_vf:
-            # 音脸分支
-            vf_a_emb, vf_v_emb = self.vf_layer(audio_embed, visual_embed)
+        audio_out, video_out = self.fc_a(audio_embed), self.fc_v(visual_embed)
 
-            # sim 的维度是 (B, )
-            sim = cosine_similarity(vf_a_emb, vf_v_emb)
-
-            audio_out, video_out, av_out = (
-                self.fc_a(audio_embed),
-                self.fc_v(visual_embed),
-                self.fc_av(
-                    torch.cat([audio_embed * sim.unsqueeze(1), visual_embed], dim=1)
-                ),
-            )
-
-            # audio_embed: (B, C), visual_embed: (B, C)
-            return (
-                audio_embed,
-                visual_embed,
-                audio_out,
-                video_out,
-                av_out,
-                vf_a_emb,
-                vf_v_emb,
-            )
+        if audio_embed.size(0) == visual_embed.size(0):
+            av_out = self.fc_av(torch.cat([audio_embed, visual_embed], dim=1))
         else:
-            audio_out, video_out, av_out = (
-                self.fc_a(audio_embed),
-                self.fc_v(visual_embed),
-                self.fc_av(torch.cat([audio_embed, visual_embed], dim=1)),
-            )
+            av_out = None
 
-            # audio_embed: (B, C), visual_embed: (B, C)
-            return audio_embed, visual_embed, audio_out, video_out, av_out, None, None
+        # audio_embed: (B, C), visual_embed: (B, C)
+        return audio_embed, visual_embed, audio_out, video_out, av_out
 
     def __init_weight(self):
         for m in self.modules():
@@ -351,11 +320,8 @@ def _load_weights_into_model(model: nn.Module, ws_file):
 ############### 以下是模型的工厂函数 ###############
 
 
-def get_light_encoder(
-    encoder_train_weights=None,
-    encoder_enable_vf=True,
-):
-    model = LightTwoStreamNet(encoder_enable_vf)
+def get_light_encoder(encoder_train_weights=None):
+    model = LightTwoStreamNet()
     if encoder_train_weights:
         _load_weights_into_model(model, encoder_train_weights)
     return model, 128, 128

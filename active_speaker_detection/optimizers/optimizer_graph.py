@@ -157,7 +157,7 @@ def _train_model_amp_avl(
         with torch.set_grad_enabled(True):
             # 训练部分图的时候，需要关闭自动混合精度，否则可能会出现 NaN
             with autocast(False):
-                outputs, _, _, _, _ = model(graph_data)
+                outputs, *_ = model(graph_data)
                 # 图的损失
                 loss: torch.Tensor = criterion(outputs, targets)
 
@@ -249,7 +249,7 @@ def _test_model_graph_losses(
         video_node_mask = [not mask for mask in audio_node_mask]
 
         with torch.set_grad_enabled(False):
-            outputs, _, _, _, _ = model(graph_data)
+            outputs, *_ = model(graph_data)
             loss = criterion(outputs, targets)
 
             label_lst.extend(targets[video_node_mask].cpu().numpy().tolist())

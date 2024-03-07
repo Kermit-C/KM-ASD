@@ -35,6 +35,7 @@ from .two_stream_mobilev2_net import get_mobilev2_encoder
 from .two_stream_resnet_net import get_resnet_encoder
 from .two_stream_resnet_tsm_net import get_resnet_tsm_encoder
 from .two_stream_resnext_net import get_resnext_encoder
+from .vf_extract.vfal_sl_encoder import VfalSlEncoder
 
 
 class MyModel(nn.Module):
@@ -45,6 +46,7 @@ class MyModel(nn.Module):
         graph_net,
         encoder_enable_vf: bool,
         graph_enable_spatial: bool,
+        encoder_vf: Optional[VfalSlEncoder] = None,  # 为空则不使用音视频融合网络
         spatial_net: Optional[nn.Module] = None,  # 为空则不使用空间关系网络
         spatial_feature_dim: int = 64,
         spatial_grayscale_width: int = 32,
@@ -57,6 +59,8 @@ class MyModel(nn.Module):
 
         self.encoder_enable_vf = encoder_enable_vf
         self.graph_enable_spatial = graph_enable_spatial
+
+        self.encoder_vf = encoder_vf
 
         self.spatial_net = spatial_net
         self.spatial_bn = nn.BatchNorm1d(spatial_feature_dim)
@@ -73,23 +77,49 @@ class MyModel(nn.Module):
     ):
         x, edge_index, edge_attr_info = data.x, data.edge_index, data.edge_attr
         audio_node_mask = []
-        for mask in data.audio_node_mask:
+        audio_feature_idx_list = []
+        for mask, idx in zip(data.audio_node_mask, data.audio_feature_idx_list):
             audio_node_mask += mask
+            audio_feature_idx_list += idx
         video_node_mask = [not mask for mask in audio_node_mask]
 
         if len(x.shape) > 3:
             # 从数据中提取音频和视频特征
+
+            # encoder
             assert audio_size is not None
-            audio_data = x[:, 0, 0, 0, : audio_size[1], : audio_size[2]].unsqueeze(1)
-            video_data = x[:, 1, :, :, :, :]
-            audio_feats, video_feats, audio_out, video_out, _, vf_a_emb, vf_v_emb = (
-                self.encoder(audio_data, video_data)
+            encoder_audio_data = x[audio_node_mask][
+                :, 0, 0, 0, : audio_size[1], : audio_size[2]
+            ].unsqueeze(1)
+            encoder_video_data = x[video_node_mask][:, 1, :, :, :, :]
+            encoder_audio_feats, encoder_video_feats, *_ = self.encoder(
+                encoder_audio_data, encoder_video_data
             )
+
+            # 从 encoder 输出构造完整数据
+            audio_feats = torch.zeros(
+                x.size(0),
+                encoder_audio_feats.size(1),
+                dtype=encoder_audio_feats.dtype,
+                device=encoder_audio_feats.device,
+            )
+            video_feats = torch.zeros(
+                x.size(0),
+                encoder_video_feats.size(1),
+                dtype=encoder_video_feats.dtype,
+                device=encoder_video_feats.device,
+            )
+            audio_feats[audio_node_mask] = encoder_audio_feats
+            audio_feats = audio_feats[audio_feature_idx_list]  # 填充非纯音频节点的部分
+            video_feats[video_node_mask] = encoder_video_feats
+
             audio_feat_dim = audio_feats.size(1)
             video_feat_dim = video_feats.size(1)
             if self.encoder_enable_vf:
+                vf_a_emb, vf_v_emb = self.encoder_vf(audio_feats, video_feats)  # type: ignore
                 vf_a_emb_dim = vf_a_emb.size(1)
                 vf_v_emb_dim = vf_v_emb.size(1)
+
                 max_dim = max(
                     audio_feat_dim, video_feat_dim, vf_a_emb_dim, vf_v_emb_dim
                 )
@@ -102,16 +132,14 @@ class MyModel(nn.Module):
                     [audio_feats, video_feats, vf_a_emb, vf_v_emb], dim=1
                 )
             else:
+                vf_a_emb, vf_v_emb = None, None
                 max_dim = max(audio_feat_dim, video_feat_dim)
                 audio_feats = F.pad(audio_feats, (0, max_dim - audio_feat_dim))
                 video_feats = F.pad(video_feats, (0, max_dim - video_feat_dim))
                 data.x = torch.stack([audio_feats, video_feats], dim=1)
         else:
             # 输入的就是 encoder 出来的特征
-            audio_out = None
-            video_out = None
-            vf_a_emb = None
-            vf_v_emb = None
+            vf_a_emb, vf_v_emb = None, None
             if not self.encoder_enable_vf:
                 audio_feats = x[:, 0, :]
                 video_feats = x[:, 1, :]
@@ -200,9 +228,9 @@ class MyModel(nn.Module):
         data.edge_delta = edge_attr_info[:, 4, 0]
         data.edge_self = edge_attr_info[:, 5, 0]
 
-        graph_out = self.graph_net(data)
+        graph_out, graph_audio_out, graph_video_out = self.graph_net(data)
 
-        return graph_out, audio_out, video_out, vf_a_emb, vf_v_emb
+        return graph_out, graph_audio_out, graph_video_out, vf_a_emb, vf_v_emb
 
 
 ############### 以下是模型的加载权重 ###############
@@ -227,14 +255,19 @@ def get_backbone(
     encoder_train_weights=None,
     train_weights=None,
 ):
-    vf_emb_dim = 128
     encoder, a_feature_dim, v_feature_dim = get_encoder(
         encoder_type,
-        encoder_enable_vf,
         encoder_enable_grad,
         video_pretrained_weigths,
         audio_pretrained_weights,
         encoder_train_weights,
+    )
+    vf_emb_dim = 128
+    encoder_vf = VfalSlEncoder(
+        voice_size=a_feature_dim,
+        face_size=v_feature_dim,
+        embedding_size=vf_emb_dim,
+        shared=False,
     )
     spatial_feature_dim = 64
     spatial_net = (
@@ -255,6 +288,7 @@ def get_backbone(
         graph_net,
         encoder_enable_vf,
         graph_enable_spatial,
+        encoder_vf,
         spatial_net,
         spatial_feature_dim=spatial_feature_dim,
     )
@@ -268,12 +302,11 @@ def get_backbone(
             _load_weights_into_model(encoder, encoder_train_weights)
             print("loaded encoder weights")
 
-    return model, encoder
+    return model, encoder, encoder_vf if encoder_enable_vf else None
 
 
 def get_encoder(
     encoder_type: str,
-    encoder_enable_vf: bool,
     encoder_enable_grad: bool,
     video_pretrained_weigths=None,
     audio_pretrained_weights=None,
@@ -282,7 +315,6 @@ def get_encoder(
     if encoder_type == "R3D18":
         encoder, a_feature_dim, v_feature_dim = get_resnet_encoder(
             "R3D18",
-            encoder_enable_vf,
             encoder_enable_grad,
             video_pretrained_weigths,
             audio_pretrained_weights,
@@ -291,20 +323,16 @@ def get_encoder(
     elif encoder_type == "R3D50":
         encoder, a_feature_dim, v_feature_dim = get_resnet_encoder(
             "R3D50",
-            encoder_enable_vf,
             encoder_enable_grad,
             video_pretrained_weigths,
             audio_pretrained_weights,
             encoder_train_weights,
         )
     elif encoder_type == "LIGHT":
-        encoder, a_feature_dim, v_feature_dim = get_light_encoder(
-            encoder_train_weights, encoder_enable_vf
-        )
+        encoder, a_feature_dim, v_feature_dim = get_light_encoder(encoder_train_weights)
     elif encoder_type == "RES18_TSM":
         encoder, a_feature_dim, v_feature_dim = get_resnet_tsm_encoder(
             "resnet18",
-            encoder_enable_vf,
             encoder_enable_grad,
             video_pretrained_weigths,
             encoder_train_weights,
@@ -312,7 +340,6 @@ def get_encoder(
     elif encoder_type == "RES50_TSM":
         encoder, a_feature_dim, v_feature_dim = get_resnet_tsm_encoder(
             "resnet50",
-            encoder_enable_vf,
             encoder_enable_grad,
             video_pretrained_weigths,
             encoder_train_weights,
@@ -320,7 +347,6 @@ def get_encoder(
     elif encoder_type == "RX3D50":
         encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
             "RESNEXT50",
-            encoder_enable_vf,
             encoder_enable_grad,
             audio_pretrained_weights,
             video_pretrained_weigths,
@@ -329,7 +355,6 @@ def get_encoder(
     elif encoder_type == "RX3D101":
         encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
             "RESNEXT101",
-            encoder_enable_vf,
             encoder_enable_grad,
             audio_pretrained_weights,
             video_pretrained_weigths,
@@ -338,7 +363,6 @@ def get_encoder(
     elif encoder_type == "RX3D152":
         encoder, a_feature_dim, v_feature_dim = get_resnext_encoder(
             "RESNEXT152",
-            encoder_enable_vf,
             encoder_enable_grad,
             audio_pretrained_weights,
             video_pretrained_weigths,
@@ -346,7 +370,6 @@ def get_encoder(
         )
     elif encoder_type == "MB3DV1":
         encoder, a_feature_dim, v_feature_dim = get_mobilev1_encoder(
-            encoder_enable_vf,
             encoder_enable_grad,
             audio_pretrained_weights,
             video_pretrained_weigths,
@@ -354,7 +377,6 @@ def get_encoder(
         )
     elif encoder_type == "MB3DV2":
         encoder, a_feature_dim, v_feature_dim = get_mobilev2_encoder(
-            encoder_enable_vf,
             encoder_enable_grad,
             audio_pretrained_weights,
             video_pretrained_weigths,

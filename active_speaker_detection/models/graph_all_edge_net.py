@@ -68,6 +68,9 @@ class GraphAllEdgeNet(nn.Module):
         self.batch_3 = BatchNorm(channels)
         self.layer_4 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
 
+        # 分类器
+        self.fc_a = nn.Linear(channels, 2)
+        self.fc_v = nn.Linear(channels, 2)
         self.fc = nn.Linear(channels, 2)
 
         # 共享
@@ -107,8 +110,8 @@ class GraphAllEdgeNet(nn.Module):
         # graph_feats = self.relu(graph_feats)
 
         graph_feats = torch.zeros(x.size(0), self.channels, dtype=x.dtype).to(x.device)
-        audio_feats = x[:, 0, : self.in_a_channels][audio_node_mask]
-        video_feats = x[:, 1, : self.in_v_channels][video_node_mask]
+        audio_feats = x[audio_node_mask][:, 0, : self.in_a_channels]
+        video_feats = x[video_node_mask][:, 1, : self.in_v_channels]
         graph_feats[audio_node_mask] = self.layer_0_a(audio_feats)
         graph_feats[video_node_mask] = self.layer_0_v(video_feats)
         graph_feats = self.batch_0(graph_feats)
@@ -118,10 +121,10 @@ class GraphAllEdgeNet(nn.Module):
             x.device
         )
         audio_vf_emb = (
-            x[:, 2, : self.in_vf_channels][audio_node_mask] if x.size(1) > 2 else None
+            x[audio_node_mask][:, 2, : self.in_vf_channels] if x.size(1) > 2 else None
         )
         video_vf_emb = (
-            x[:, 3, : self.in_vf_channels][video_node_mask] if x.size(1) > 3 else None
+            x[video_node_mask][:, 3, : self.in_vf_channels] if x.size(1) > 3 else None
         )
         if audio_vf_emb is not None and video_vf_emb is not None:
             graph_vf_emb[audio_node_mask] = audio_vf_emb
@@ -174,5 +177,7 @@ class GraphAllEdgeNet(nn.Module):
         graph_feats_4 += graph_feats_3
 
         out = self.fc(graph_feats_4)
+        audio_out = self.fc_a(graph_feats[audio_node_mask])
+        video_out = self.fc_v(graph_feats[video_node_mask])
 
-        return out
+        return out, audio_out, video_out

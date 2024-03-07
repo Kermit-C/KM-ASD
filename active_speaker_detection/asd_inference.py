@@ -41,7 +41,7 @@ class ActiveSpeakerDetector:
         self.device = torch.device("cpu" if cpu else "cuda")
 
         torch.set_grad_enabled(False)
-        self.model, self.encoder = get_backbone(
+        self.model, self.encoder, self.encoder_vf = get_backbone(
             infer_config["encoder_type"],
             infer_config["graph_type"],
             infer_config["encoder_enable_vf"],
