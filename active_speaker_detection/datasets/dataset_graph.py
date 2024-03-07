@@ -9,6 +9,7 @@
 import random
 from typing import List, Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
@@ -26,7 +27,7 @@ class GraphDataset(Dataset):
         graph_time_stride: int,  # 步长
         is_edge_double=False,  # 是否边是双向的
         is_edge_across_entity=False,  # 是否跨实体连接，即不同实体不同时刻之间的连接
-        max_context: Optional[int] = None,  # 最大上下文大小，即上下文中有多少个实体
+        max_context: int = 3,  # 最大上下文大小，即上下文中有多少个实体
     ):
         super().__init__()
         self.store = FeatureDataStore(feature_root, data_store_cache)
@@ -76,18 +77,106 @@ class GraphDataset(Dataset):
         # 最后一个时间戳的掩码
         center_node_mask = []
 
+        # 获取基准时间戳的信息
+        # 同一时间的实体顺序，保证前后连接边的时候是同一个实体
+        anchor_entity_sequence_list: list[str] = []
+        anchor_timestamp: Optional[str] = None
+        for timestamp in time_context:
+            context_entities = self.store.get_speaker_context(
+                video_id, entity_id, timestamp, None
+            )
+            # 选最长的实体上下文
+            if len(context_entities) > len(anchor_entity_sequence_list):
+                anchor_entity_sequence_list = context_entities
+                anchor_timestamp = timestamp
+        assert anchor_timestamp is not None
+        anchor_video_data = self.store.get_video_data(
+            video_id, entity_id, timestamp, None, self.cache
+        )
+        while len(anchor_entity_sequence_list) < self.max_context:
+            # 不够就补齐，空的
+            anchor_entity_sequence_list.append("")
+            anchor_video_data[0].append(np.zeros_like(anchor_video_data[0][0]))
+            anchor_video_data[1].append(
+                np.zeros_like(anchor_video_data[1][0])
+                if anchor_video_data[1][0] is not None
+                else None
+            )
+            anchor_video_data[2].append(0)
+            anchor_video_data[3].append("")
+            anchor_video_data[4].append((0, 0, 0, 0))
+
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
-            # 获取视频特征和标签
-            video_data, video_vf_data, target_v, entities_v, positions = (
-                self.store.get_video_data(
+            if timestamp == anchor_timestamp:
+                # 用基准时间戳的信息
+                (
+                    raw_video_data,
+                    raw_video_vf_data,
+                    raw_target_v,
+                    raw_entities_v,
+                    raw_positions,
+                ) = anchor_video_data
+            else:
+                # 获取视频特征和标签
+                (
+                    raw_video_data,
+                    raw_video_vf_data,
+                    raw_target_v,
+                    raw_entities_v,
+                    raw_positions,
+                ) = self.store.get_video_data(
                     video_id, entity_id, timestamp, self.max_context, self.cache
                 )
+
+            # 根据同一时间的实体顺序转换视频特征和标签
+            video_data, video_vf_data, target_v, entities_v, positions = (
+                [],
+                [],
+                [],
+                [],
+                [],
             )
+            for entity in anchor_entity_sequence_list:
+                if entity in raw_entities_v:
+                    # 本时刻有就用本时刻的
+                    idx = raw_entities_v.index(entity)
+                    video_data.append(raw_video_data[idx])
+                    video_vf_data.append(raw_video_vf_data[idx])
+                    target_v.append(raw_target_v[idx])
+                    entities_v.append(raw_entities_v[idx])
+                    positions.append(raw_positions[idx])
+                else:
+                    # 本时刻没有
+                    if entity in entity_list:
+                        # 之前有就用之前的，为 None 是交给后面处理
+                        video_data.append(None)
+                        video_vf_data.append(None)
+                        target_v.append(None)
+                        entities_v.append(entity)
+                        positions.append(None)
+                    else:
+                        # 之前没有，就用 anchor 的
+                        idx = anchor_video_data[3].index(entity)
+                        video_data.append(anchor_video_data[0][idx])
+                        video_vf_data.append(anchor_video_data[1][idx])
+                        target_v.append(anchor_video_data[1][idx])
+                        entities_v.append(anchor_video_data[2][idx])
+                        positions.append(anchor_video_data[3][idx])
+            # 限制上下文长度
+            video_data, video_vf_data, target_v, entities_v, positions = (
+                video_data[: self.max_context],
+                video_vf_data[: self.max_context],
+                target_v[: self.max_context],
+                entities_v[: self.max_context],
+                positions[: self.max_context],
+            )
+
             # 获取音频特征和标签
             audio_data, audio_vf_data, target_a, entity_a = self.store.get_audio_data(
                 video_id, entity_id, timestamp, self.cache
             )
+
             # 生成的 train feat 总共在磁盘里约 11G，valid feat 总共在磁盘里约 3G
             # 总共的帧数约为 100,0000，实体数约为 3,0000
             # 限制 self.entity_cache 长度，最大 40000(全部加载进内存)，从旧的开始删除
@@ -102,6 +191,18 @@ class GraphDataset(Dataset):
             for i, (v_np, v_vf_np, target, entity, pos) in enumerate(
                 zip(video_data, video_vf_data, target_v, entities_v, positions)
             ):
+                if v_np is None:
+                    # 对应：之前有就用之前的，为 None 是交给后面处理
+                    idx = entity_list.index(entity)
+                    v_np = feature_list[idx][1].numpy()
+                    v_vf_np = (
+                        feature_list[idx][3].numpy()
+                        if feature_list[idx].size(0) > 2
+                        else None
+                    )
+                    target = target_list[idx]
+                    pos = position_list[idx]
+
                 v_feat = torch.from_numpy(v_np)
                 v_vf_feat = torch.from_numpy(v_vf_np) if v_vf_np is not None else None
                 a_feat_dim = a_feat.size(0)
@@ -209,7 +310,9 @@ class GraphDataset(Dataset):
                     if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
                         continue
 
-                    if entity_i == entity_j:
+                    # if entity_i == entity_j:
+                    # 使用间隔判断是否同一实体，避免空白实体交叉连接
+                    if abs(i - j) % (self.max_context + 1) == 0:
                         # 同一实体在不同时刻之间的连接
                         source_vertices.append(i)
                         target_vertices.append(j)

@@ -75,7 +75,7 @@ class DataStore:
         """
         # 获取包含自己的上下文实体列表
         context_entities = list(self.ts_to_entity[video_id][center_ts])
-        random.shuffle(context_entities)
+        context_entities.sort()
         # 排除自己
         context_entities.remove(target_entity_id)
         # 保证自己在第一个位置

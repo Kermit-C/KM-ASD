@@ -31,7 +31,7 @@ class End2endDataset(Dataset):
         graph_time_stride: int,  # 步长
         is_edge_double=False,  # 是否边是双向的
         is_edge_across_entity=False,  # 是否跨实体连接，即不同实体不同时刻之间的连接
-        max_context: Optional[int] = None,  # 最大上下文大小，即上下文中有多少个实体
+        max_context: int = 3,  # 最大上下文大小，即上下文中有多少个实体
         video_transform: Optional[transforms.Compose] = None,  # 视频转换方法
         do_video_augment=False,  # 是否视频增强
         crop_ratio=0.95,  # 视频裁剪比例
@@ -101,13 +101,106 @@ class End2endDataset(Dataset):
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
         cache = {}  # 以图片路径为 key 的缓存
+
+        # 获取基准时间戳的信息
+        # 同一时间的实体顺序，保证前后连接边的时候是同一个实体
+        anchor_entity_sequence_list: list[str] = []
+        anchor_timestamp: Optional[str] = None
+        for timestamp in time_context:
+            context_entities = self.store.get_speaker_context(
+                video_id, entity_id, timestamp, None
+            )
+            # 选最长的实体上下文
+            if len(context_entities) > len(anchor_entity_sequence_list):
+                anchor_entity_sequence_list = context_entities
+                anchor_timestamp = timestamp
+        assert anchor_timestamp is not None
+        anchor_video_data = self.store.get_video_data(
+            video_id,
+            entity_id,
+            all_ts.index(anchor_timestamp),
+            len(anchor_entity_sequence_list),  # type: ignore
+            self.half_clip_length,
+            self.video_transform,
+            video_temporal_crop if self.do_video_augment else None,
+            self.crop_ratio if self.do_video_augment else None,
+            cache,
+        )
+        while len(anchor_entity_sequence_list) < self.max_context:
+            # 不够就补齐，空的
+            anchor_entity_sequence_list.append("")
+            anchor_video_data[0].append(
+                [
+                    torch.zeros_like(anchor_video_data[0][0][0])
+                    for _ in range(len(anchor_video_data[0][0]))
+                ]
+            )
+            anchor_video_data[1].append(0)
+            anchor_video_data[2].append("")
+            anchor_video_data[3].append((0, 0, 0, 0))
+
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
             target_index = all_ts.index(timestamp)
-            # 获取视频特征和标签
-            video_data, target_v, entities_v, positions = self._get_scene_video_data(
-                video_id, entity_id, target_index, cache
+            if timestamp == anchor_timestamp:
+                # 用基准时间戳的信息
+                raw_video_data, raw_target_v, raw_entities_v, raw_positions = (
+                    anchor_video_data
+                )
+            else:
+                # 获取视频特征和标签
+                raw_video_data, raw_target_v, raw_entities_v, raw_positions = (
+                    self.store.get_video_data(
+                        video_id,
+                        entity_id,
+                        target_index,
+                        len(anchor_entity_sequence_list),  # type: ignore
+                        self.half_clip_length,
+                        self.video_transform,
+                        video_temporal_crop if self.do_video_augment else None,
+                        self.crop_ratio if self.do_video_augment else None,
+                        cache,
+                    )
+                )
+
+            # 根据同一时间的实体顺序转换视频特征和标签
+            video_data, target_v, entities_v, positions = [], [], [], []
+            for entity in anchor_entity_sequence_list:
+                if entity in raw_entities_v:
+                    # 本时刻有就用本时刻的
+                    idx = raw_entities_v.index(entity)
+                    video_data.append(raw_video_data[idx])
+                    target_v.append(raw_target_v[idx])
+                    entities_v.append(raw_entities_v[idx])
+                    positions.append(raw_positions[idx])
+                else:
+                    # 本时刻没有
+                    if entity in entity_list:
+                        # 之前有就用之前的，为 None 是交给后面处理
+                        video_data.append(None)
+                        target_v.append(None)
+                        entities_v.append(entity)
+                        positions.append(None)
+                    else:
+                        # 之前没有，就用 anchor 的
+                        idx = anchor_video_data[2].index(entity)
+                        video_data.append(anchor_video_data[0][idx])
+                        target_v.append(anchor_video_data[1][idx])
+                        entities_v.append(anchor_video_data[2][idx])
+                        positions.append(anchor_video_data[3][idx])
+            # 限制上下文长度
+            video_data, target_v, entities_v, positions = (
+                video_data[: self.max_context],
+                target_v[: self.max_context],
+                entities_v[: self.max_context],
+                positions[: self.max_context],
             )
+            # 把一个人的多个画面合并成一个 4D tensor
+            video_data = [
+                (torch.stack(vd, dim=1) if vd is not None else None)
+                for vd in video_data
+            ]
+
             # 获取音频特征和标签
             audio_data, audio_fbank, target_a, entity_a = self.store.get_audio_data(
                 video_id,
@@ -121,6 +214,13 @@ class End2endDataset(Dataset):
             for i, (v_data, target, entity, pos) in enumerate(
                 zip(video_data, target_v, entities_v, positions)
             ):
+                if v_data is None:
+                    # 对应：之前有就用之前的，为 None 是交给后面处理
+                    idx = entity_list.index(entity)
+                    v_data = feature_list[idx][1]
+                    target = target_list[idx][1]
+                    pos = position_list[idx]
+
                 # 一个数据是 2 * 通道数 * clip数 * 高度 * 宽度 的 5D tensor
                 # 前面是音频特征，后面是视频特征
                 # 音频特征通道数和 clip 数都是 1
@@ -199,7 +299,9 @@ class End2endDataset(Dataset):
                     if not self.is_edge_double and timestamp_idx_i > timestamp_idx_j:
                         continue
 
-                    if entity_i == entity_j:
+                    # if entity_i == entity_j:
+                    # 使用间隔判断是否同一实体，避免空白实体交叉连接
+                    if abs(i - j) % (self.max_context + 1) == 0:
                         # 同一实体在不同时刻之间的连接
                         source_vertices.append(i)
                         target_vertices.append(j)
@@ -291,37 +393,3 @@ class End2endDataset(Dataset):
     ) -> Tuple[Tuple[int, int, int]]:
         """获得音频的大小，返回一个元组(1, 13, T)"""
         return self.store.get_audio_size(self.half_clip_length)
-
-    def _get_scene_video_data(
-        self, video_id: str, entity_id: str, mid_index: int, cache: dict
-    ) -> Tuple[
-        list[torch.Tensor],
-        list[int],
-        list[str],
-        list[Tuple[float, float, float, float]],
-    ]:
-        """根据实体 ID 和中间某刻时间戳索引
-        获取所有人视频画面 list(人数) tensor(通道数 * clip数 * 高度 * 宽度) 和这一刻所有实体的标签
-        :param video_id: 视频 id
-        :param entity_id: 实体 id
-        :param mid_index: 时间戳索引，即中间时间戳的索引
-        :param cache: 缓存
-        """
-        video_data, targets, entities, positions = self.store.get_video_data(
-            video_id,
-            entity_id,
-            mid_index,
-            self.max_context,
-            self.half_clip_length,
-            self.video_transform,
-            video_temporal_crop if self.do_video_augment else None,
-            self.crop_ratio if self.do_video_augment else None,
-            cache,
-        )
-        # 把一个人的多个画面合并成一个 4D tensor
-        return (
-            [torch.stack(vd, dim=1) for vd in video_data],
-            targets,
-            entities,
-            positions,
-        )

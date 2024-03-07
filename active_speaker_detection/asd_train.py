@@ -154,6 +154,7 @@ def train():
             video_transform=video_train_transform,
             do_video_augment=True,
             crop_ratio=0.95,
+            is_edge_double=True,
         )
         d_val = End2endDataset(
             audio_val_path,
@@ -165,6 +166,7 @@ def train():
             max_context=ctx_size,
             video_transform=video_train_transform,
             do_video_augment=False,
+            is_edge_double=True,
         )
         dl_train = GeometricDataLoader(
             d_train,
@@ -249,6 +251,7 @@ def train():
             graph_time_steps=n_clips,
             graph_time_stride=strd,
             max_context=ctx_size,
+            is_edge_double=True,
         )
         d_val = GraphDataset(
             os.path.join(encoder_feature_path, "val"),
@@ -256,6 +259,7 @@ def train():
             graph_time_steps=n_clips,
             graph_time_stride=strd,
             max_context=ctx_size,
+            is_edge_double=True,
         )
         dl_train = GeometricDataLoader(
             d_train,
