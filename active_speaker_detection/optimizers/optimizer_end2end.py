@@ -211,6 +211,7 @@ def _train_model_amp_avl(
                     loss_graph: torch.Tensor = criterion(outputs, targets_g)
                     loss = a_weight * aux_loss_a + v_weight * aux_loss_v + loss_graph
 
+            loss /= accumulation_steps
             scaler.scale(loss).backward()  # type: ignore
             if (idx + 1) % accumulation_steps == 0 or idx == len(dataloader) - 1:
                 # 累计 accumulation_steps 个 batch 的梯度，然后更新
