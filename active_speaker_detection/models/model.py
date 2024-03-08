@@ -82,7 +82,7 @@ class MyModel(nn.Module):
         audio_feature_idx_list = []
         for mask, idx in zip(data.audio_node_mask, data.audio_feature_idx_list):
             audio_node_mask += mask
-            audio_feature_idx_list += idx
+            audio_feature_idx_list += [i + len(audio_feature_idx_list) for i in idx]
         video_node_mask = [not mask for mask in audio_node_mask]
 
         if len(x.shape) > 3:
