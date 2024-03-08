@@ -49,6 +49,7 @@ class GraphGatWeightTwoStreamEdgeNet(nn.Module):
             concat=False,
             negative_slope=0.2,
             bias=True,
+            add_self_loops=False,
         )
         self.layer_1_2 = GatWeightConv(
             channels,
@@ -60,6 +61,7 @@ class GraphGatWeightTwoStreamEdgeNet(nn.Module):
             concat=False,
             negative_slope=0.2,
             bias=True,
+            add_self_loops=False,
         )
         self.batch_1 = BatchNorm(channels)
         self.layer_2 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")

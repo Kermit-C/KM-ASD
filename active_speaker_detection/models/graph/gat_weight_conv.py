@@ -54,8 +54,10 @@ class GatWeightConv(MessagePassing):
                 bias=bias,
                 weight_initializer="glorot",
             )
+            self.lin_l_bn = nn.BatchNorm1d(heads * out_channels)
             if share_weights:
                 self.lin_r = self.lin_l
+                self.lin_r_bn = self.lin_l_bn
             else:
                 self.lin_r = Linear(
                     in_channels,
@@ -63,6 +65,7 @@ class GatWeightConv(MessagePassing):
                     bias=bias,
                     weight_initializer="glorot",
                 )
+                self.lin_r_bn = nn.BatchNorm1d(heads * out_channels)
         else:
             self.lin_l = Linear(
                 in_channels[0],
@@ -70,8 +73,10 @@ class GatWeightConv(MessagePassing):
                 bias=bias,
                 weight_initializer="glorot",
             )
+            self.lin_l_bn = nn.BatchNorm1d(heads * out_channels)
             if share_weights:
                 self.lin_r = self.lin_l
+                self.lin_r_bn = self.lin_l_bn
             else:
                 self.lin_r = Linear(
                     in_channels[1],
@@ -79,13 +84,15 @@ class GatWeightConv(MessagePassing):
                     bias=bias,
                     weight_initializer="glorot",
                 )
+                self.lin_r_bn = nn.BatchNorm1d(heads * out_channels)
 
-        self.att = Parameter(torch.Tensor(1, heads, out_channels))
+        # self.att = Parameter(torch.Tensor(1, heads, out_channels))
 
         if edge_dim is not None:
             self.lin_edge = Linear(
                 edge_dim, heads * out_channels, bias=False, weight_initializer="glorot"
             )
+            self.lin_edge_bn = nn.BatchNorm1d(heads * out_channels)
         else:
             self.lin_edge = None
 
@@ -102,10 +109,13 @@ class GatWeightConv(MessagePassing):
 
     def reset_parameters(self):
         self.lin_l.reset_parameters()
+        self.lin_l_bn.reset_parameters()
         self.lin_r.reset_parameters()
+        self.lin_r_bn.reset_parameters()
         if self.lin_edge is not None:
             self.lin_edge.reset_parameters()
-        glorot(self.att)
+            self.lin_edge_bn.reset_parameters()
+        # glorot(self.att)
         zeros(self.bias)
 
     def forward(
@@ -121,17 +131,17 @@ class GatWeightConv(MessagePassing):
         x_r: OptTensor = None
         if isinstance(x, Tensor):
             assert x.dim() == 2
-            x_l = self.lin_l(x).view(-1, H, C)
+            x_l = self.lin_l_bn(self.lin_l(x)).view(-1, H, C)
             if self.share_weights:
                 x_r = x_l
             else:
-                x_r = self.lin_r(x).view(-1, H, C)
+                x_r = self.lin_r_bn(self.lin_r(x)).view(-1, H, C)
         else:
             x_l, x_r = x[0], x[1]
             assert x[0].dim() == 2
-            x_l = self.lin_l(x_l).view(-1, H, C)
+            x_l = self.lin_l_bn(self.lin_l(x_l)).view(-1, H, C)
             if x_r is not None:
-                x_r = self.lin_r(x_r).view(-1, H, C)
+                x_r = self.lin_r_bn(self.lin_r(x_r)).view(-1, H, C)
 
         assert x_l is not None
         assert x_r is not None
@@ -196,6 +206,8 @@ class GatWeightConv(MessagePassing):
             edge_attr = edge_attr.view(-1, 1)
         assert self.lin_edge is not None
         edge_attr = self.lin_edge(edge_attr)
+        edge_attr = self.lin_edge_bn(edge_attr)
+        edge_attr = F.dropout(edge_attr, p=self.dropout, training=self.training)
         edge_attr = edge_attr.view(-1, self.heads, self.out_channels)  # type: ignore
         edge_attr = F.leaky_relu(edge_attr, self.negative_slope)
 
@@ -205,14 +217,15 @@ class GatWeightConv(MessagePassing):
         alpha = (x * edge_attr).sum(dim=-1)
         # 除以 sqrt(d_k)
         alpha = alpha / (x.size(-1) ** 0.5)
+        # 按照 index 分组 softmax，x_i,index 维度是边数（size_i）
         alpha = softmax(alpha, index, ptr, size_i)
         self._alpha = alpha
-        alpha = F.dropout(alpha, p=self.dropout, training=self.training)
+        # alpha = F.dropout(alpha, p=self.dropout, training=self.training)
 
         x_i = x_i.view(-1, C)
         x_j = x_j.view(-1, C)
         alpha = alpha.view(-1)
-        message = self.out_nn(torch.cat([x_i, x_j - x_i], dim=-1) * alpha.unsqueeze(-1))
+        message = self.out_nn(torch.cat([x_i, x_j - x_i], dim=-1)) * alpha.unsqueeze(-1)
         return message.view(-1, H, C)
 
     def __repr__(self) -> str:

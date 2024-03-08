@@ -50,6 +50,7 @@ class GraphGatWeightEdgeNet(nn.Module):
             concat=False,
             negative_slope=0.2,
             bias=True,
+            add_self_loops=False,
         )
         self.batch_1 = BatchNorm(channels)
         self.layer_2 = GatWeightConv(
@@ -62,6 +63,7 @@ class GraphGatWeightEdgeNet(nn.Module):
             concat=False,
             negative_slope=0.2,
             bias=True,
+            add_self_loops=False,
         )
         self.batch_2 = BatchNorm(channels)
         self.layer_3 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="mean")
