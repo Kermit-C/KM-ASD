@@ -127,17 +127,31 @@ class End2endDataset(Dataset):
             cache,
         )
         while len(anchor_entity_sequence_list) < self.max_context:
-            # 不够就补齐，空的
-            anchor_entity_sequence_list.append("")
-            anchor_video_data[0].append(
-                [
-                    torch.zeros_like(anchor_video_data[0][0][0])
-                    for _ in range(len(anchor_video_data[0][0]))
-                ]
+            # # 不够就补齐，补空
+            # anchor_entity_sequence_list.append("")
+            # anchor_video_data[0].append(
+            #     [
+            #         torch.zeros_like(anchor_video_data[0][0][0])
+            #         for _ in range(len(anchor_video_data[0][0]))
+            #     ]
+            # )
+            # anchor_video_data[1].append(0)
+            # anchor_video_data[2].append("")
+            # anchor_video_data[3].append((0, 0, 0, 0))
+            # 不够就补齐，只有自己复制自己，不然随机取
+            entity = (
+                random.choice(anchor_entity_sequence_list[1:])
+                if len(anchor_entity_sequence_list) > 1
+                else anchor_entity_sequence_list[0]
             )
-            anchor_video_data[1].append(0)
-            anchor_video_data[2].append("")
-            anchor_video_data[3].append((0, 0, 0, 0))
+            idx = anchor_entity_sequence_list.index(entity)
+            anchor_entity_sequence_list.append(entity)
+            anchor_video_data[0].append(
+                [item.clone() for item in anchor_video_data[0][idx]]
+            )
+            anchor_video_data[1].append(anchor_video_data[1][idx])
+            anchor_video_data[2].append(entity)
+            anchor_video_data[3].append(anchor_video_data[3][idx])
 
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
@@ -184,7 +198,9 @@ class End2endDataset(Dataset):
                     else:
                         # 之前没有，就用 anchor 的
                         idx = anchor_video_data[2].index(entity)
-                        video_data.append(anchor_video_data[0][idx])
+                        video_data.append(
+                            [item.clone() for item in anchor_video_data[0][idx]]
+                        )
                         target_v.append(anchor_video_data[1][idx])
                         entities_v.append(anchor_video_data[2][idx])
                         positions.append(anchor_video_data[3][idx])
@@ -217,7 +233,7 @@ class End2endDataset(Dataset):
                 if v_data is None:
                     # 对应：之前有就用之前的，为 None 是交给后面处理
                     idx = entity_list.index(entity)
-                    v_data = feature_list[idx][1]
+                    v_data = feature_list[idx][1].clone()
                     target = target_list[idx][1]
                     pos = position_list[idx]
 

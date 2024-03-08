@@ -94,17 +94,34 @@ class GraphDataset(Dataset):
             video_id, entity_id, timestamp, None, self.cache
         )
         while len(anchor_entity_sequence_list) < self.max_context:
-            # 不够就补齐，空的
-            anchor_entity_sequence_list.append("")
-            anchor_video_data[0].append(np.zeros_like(anchor_video_data[0][0]))
+            # # 不够就补齐，空的
+            # anchor_entity_sequence_list.append("")
+            # anchor_video_data[0].append(np.zeros_like(anchor_video_data[0][0]))
+            # anchor_video_data[1].append(
+            #     np.zeros_like(anchor_video_data[1][0])
+            #     if anchor_video_data[1][0] is not None
+            #     else None
+            # )
+            # anchor_video_data[2].append(0)
+            # anchor_video_data[3].append("")
+            # anchor_video_data[4].append((0, 0, 0, 0))
+            # 不够就补齐，只有自己复制自己，不然随机取
+            entity = (
+                random.choice(anchor_entity_sequence_list[1:])
+                if len(anchor_entity_sequence_list) > 1
+                else anchor_entity_sequence_list[0]
+            )
+            idx = anchor_entity_sequence_list.index(entity)
+            anchor_entity_sequence_list.append(entity)
+            anchor_video_data[0].append(anchor_video_data[0][idx].copy())
             anchor_video_data[1].append(
-                np.zeros_like(anchor_video_data[1][0])
-                if anchor_video_data[1][0] is not None
+                anchor_video_data[1][idx].copy()  # type: ignore
+                if anchor_video_data[1][idx] is not None
                 else None
             )
-            anchor_video_data[2].append(0)
-            anchor_video_data[3].append("")
-            anchor_video_data[4].append((0, 0, 0, 0))
+            anchor_video_data[2].append(anchor_video_data[2][idx])
+            anchor_video_data[3].append(entity)
+            anchor_video_data[4].append(anchor_video_data[4][idx])
 
         # 对每个上下文时间戳，获取视频特征和标签
         for time_idx, timestamp in enumerate(time_context):
@@ -158,8 +175,12 @@ class GraphDataset(Dataset):
                     else:
                         # 之前没有，就用 anchor 的
                         idx = anchor_video_data[3].index(entity)
-                        video_data.append(anchor_video_data[0][idx])
-                        video_vf_data.append(anchor_video_data[1][idx])
+                        video_data.append(anchor_video_data[0][idx].copy())
+                        video_vf_data.append(
+                            anchor_video_data[1][idx].copy()  # type: ignore
+                            if anchor_video_data[1][idx] is not None
+                            else None
+                        )
                         target_v.append(anchor_video_data[1][idx])
                         entities_v.append(anchor_video_data[2][idx])
                         positions.append(anchor_video_data[3][idx])
@@ -194,9 +215,9 @@ class GraphDataset(Dataset):
                 if v_np is None:
                     # 对应：之前有就用之前的，为 None 是交给后面处理
                     idx = entity_list.index(entity)
-                    v_np = feature_list[idx][1].numpy()
+                    v_np = feature_list[idx][1].numpy().copy()
                     v_vf_np = (
-                        feature_list[idx][3].numpy()
+                        feature_list[idx][3].numpy().copy()
                         if feature_list[idx].size(0) > 2
                         else None
                     )
