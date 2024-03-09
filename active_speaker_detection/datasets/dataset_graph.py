@@ -25,6 +25,7 @@ class GraphDataset(Dataset):
         data_store_cache,
         graph_time_steps: int,  # 图的时间步数
         graph_time_stride: int,  # 步长
+        graph_time_num: int,  # 多少个小图的时间步数构成一个大图
         is_edge_double=False,  # 是否边是双向的
         is_edge_across_entity=False,  # 是否跨实体连接，即不同实体不同时刻之间的连接
         max_context: int = 3,  # 最大上下文大小，即上下文中有多少个实体
@@ -35,6 +36,7 @@ class GraphDataset(Dataset):
         # 时序层配置
         self.graph_time_steps = graph_time_steps  # 图的时间步数
         self.graph_time_stride = graph_time_stride  # 图的步长
+        self.graph_time_num = graph_time_num  # 多少个小图的时间步数构成一个大图
         self.is_edge_double = is_edge_double  # 是否边是双向的
         self.is_edge_across_entity = is_edge_across_entity
 
@@ -56,7 +58,7 @@ class GraphDataset(Dataset):
         time_context: List[str] = self.store.get_time_context(
             target_entity_metadata,
             center_index,
-            0,  # 原来是 self.graph_time_steps，这是为了形成一整个大图
+            self.graph_time_steps * self.graph_time_num,
             self.graph_time_stride,
         )
 
@@ -83,7 +85,12 @@ class GraphDataset(Dataset):
         # 同一时间的实体顺序，保证前后连接边的时候是同一个实体
         anchor_entity_sequence_list: list[str] = []
         anchor_timestamp: Optional[str] = None
-        for timestamp in time_context:
+        for timestamp in time_context[
+            # 仅从中间的小图中选，这样最可能让两边复制的节点数更少
+            (self.graph_time_steps * (self.graph_time_num // 2)) : (
+                self.graph_time_steps * (self.graph_time_num // 2 + 1)
+            )
+        ]:
             context_entities = self.store.get_speaker_context(
                 video_id, entity_id, timestamp, None
             )

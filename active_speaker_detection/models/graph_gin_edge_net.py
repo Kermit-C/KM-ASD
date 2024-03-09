@@ -21,6 +21,7 @@ from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from .graph_all_edge_net import LinearPathPreact
 
 
+# TODO: 未重构成最新版本
 class GraphGinEdgeNet(nn.Module):
 
     def __init__(

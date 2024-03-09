@@ -38,7 +38,7 @@ class LinearPathPreact(nn.Module):
 
         return x2
 
-
+# TODO: 未重构成最新版本
 class GraphAllEdgeNet(nn.Module):
 
     def __init__(

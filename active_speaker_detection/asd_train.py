@@ -152,6 +152,7 @@ def train():
             frames_per_clip,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
+            graph_time_num=3,
             max_context=ctx_size,
             video_transform=video_train_transform,
             do_video_augment=True,
@@ -165,6 +166,7 @@ def train():
             frames_per_clip,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
+            graph_time_num=3,
             max_context=ctx_size,
             video_transform=video_train_transform,
             do_video_augment=False,
@@ -254,6 +256,7 @@ def train():
             data_store_train_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
+            graph_time_num=3,
             max_context=ctx_size,
             is_edge_double=True,
         )
@@ -262,6 +265,7 @@ def train():
             data_store_val_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
+            graph_time_num=3,
             max_context=ctx_size,
             is_edge_double=True,
         )
