@@ -34,8 +34,8 @@ class AsdProcessor(BaseEventBusProcessor):
         super().__init__(processor_name)
         self.store = ActiveSpeakerDetectionStore(LocalStore.create)
         self.frames_per_clip: int = self.processor_properties["frmc"]
-        self.asd_create_lock_lock: Lock = RLock()
-        self.asd_lock_of_request: dict[str, Lock] = {}
+        self.asd_create_lock_lock: RLock = RLock()
+        self.asd_lock_of_request: dict[str, RLock] = {}
 
     def process(self, event_message_body: AsdMessageBody):
         if event_message_body.type == "V":
