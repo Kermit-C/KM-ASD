@@ -155,8 +155,7 @@ def _train_model_amp_avl(
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
-            # 训练部分图的时候，需要关闭自动混合精度，否则可能会出现 NaN
-            with autocast(False):
+            with autocast(True):
                 outputs, *_ = model(graph_data)
                 # 图的损失
                 loss: torch.Tensor = criterion(outputs, targets)

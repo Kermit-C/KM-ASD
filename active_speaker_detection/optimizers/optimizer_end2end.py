@@ -184,8 +184,7 @@ def _train_model_amp_avl(
         entities_v = graph_data.y[:, 3]
 
         with torch.set_grad_enabled(True):
-            # 训练部分图的时候，需要关闭自动混合精度，否则可能会出现 NaN
-            with autocast(False):
+            with autocast(True):
                 outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
                     graph_data, audio_size
                 )
