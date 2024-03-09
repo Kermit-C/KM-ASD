@@ -76,10 +76,24 @@ def optimize_end2end(
         )
         scheduler.step()
 
-        train_loss, ta_loss, tv_loss, tvfal_loss, train_ap, train_ap_center_node = (
-            outs_train
-        )
-        val_loss, va_loss, vv_loss, vvfal_loss, val_ap, val_ap_center_node = outs_val
+        (
+            train_loss,
+            ta_loss,
+            tv_loss,
+            tvfal_loss,
+            train_ap,
+            train_ap_center_node,
+            train_ap_last_node,
+        ) = outs_train
+        (
+            val_loss,
+            va_loss,
+            vv_loss,
+            vvfal_loss,
+            val_ap,
+            val_ap_center_node,
+            val_ap_last_node,
+        ) = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
             # 保存当前最优模型
@@ -113,12 +127,14 @@ def optimize_end2end(
                     tvfal_loss,
                     train_ap,
                     train_ap_center_node,
+                    train_ap_last_node,
                     val_loss,
                     va_loss,
                     vv_loss,
                     vvfal_loss,
                     val_ap,
                     val_ap_center_node,
+                    val_ap_last_node,
                 ]
             )
 
@@ -147,6 +163,8 @@ def _train_model_amp_avl(
     label_lst = []
     center_node_pred_lst = []
     center_node_label_lst = []
+    last_node_pred_lst = []
+    last_node_label_lst = []
 
     running_loss_g = 0.0
     running_loss_a = 0.0
@@ -169,8 +187,12 @@ def _train_model_amp_avl(
         graph_data = graph_data.to(device)
 
         center_node_mask = []
-        for mask in graph_data.center_node_mask:
-            center_node_mask += mask
+        last_node_mask = []
+        for c_mask, l_mask in zip(
+            graph_data.center_node_mask, graph_data.last_node_mask
+        ):
+            center_node_mask += c_mask
+            last_node_mask += l_mask
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
             audio_node_mask += mask
@@ -241,6 +263,21 @@ def _train_model_amp_avl(
                 .tolist()
             )
 
+            last_node_label_lst.extend(
+                targets_g[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
+            last_node_pred_lst.extend(
+                softmax_layer(
+                    outputs[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
+            )
+
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
@@ -259,14 +296,18 @@ def _train_model_amp_avl(
     epoch_ap_center_node = average_precision_score(
         center_node_label_lst, center_node_pred_lst
     )
+    epoch_ap_last_node = average_precision_score(
+        last_node_label_lst, last_node_pred_lst
+    )
     print(
-        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}".format(
+        "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}, LNode mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
             epoch_ap_center_node,
+            epoch_ap_last_node,
         )
     )
     return (
@@ -276,6 +317,7 @@ def _train_model_amp_avl(
         epoch_loss_vf,
         epoch_ap,
         epoch_ap_center_node,
+        epoch_ap_last_node,
     )
 
 
@@ -296,6 +338,8 @@ def _test_model_graph_losses(
     label_lst = []
     center_node_pred_lst = []
     center_node_label_lst = []
+    last_node_pred_lst = []
+    last_node_label_lst = []
 
     running_loss_g = 0.0
     running_loss_a = 0.0
@@ -316,8 +360,12 @@ def _test_model_graph_losses(
         graph_data = graph_data.to(device)
 
         center_node_mask = []
-        for mask in graph_data.center_node_mask:
-            center_node_mask += mask
+        last_node_mask = []
+        for c_mask, l_mask in zip(
+            graph_data.center_node_mask, graph_data.last_node_mask
+        ):
+            center_node_mask += c_mask
+            last_node_mask += l_mask
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
             audio_node_mask += mask
@@ -365,6 +413,21 @@ def _test_model_graph_losses(
                 .tolist()
             )
 
+            last_node_label_lst.extend(
+                targets_g[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
+            last_node_pred_lst.extend(
+                softmax_layer(
+                    outputs[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
+            )
+
         # 统计
         running_loss_g += loss_graph.item()
         running_loss_a += aux_loss_a.item()
@@ -384,14 +447,18 @@ def _test_model_graph_losses(
     epoch_ap_center_node = average_precision_score(
         center_node_label_lst, center_node_pred_lst
     )
+    epoch_ap_last_node = average_precision_score(
+        last_node_label_lst, last_node_pred_lst
+    )
     print(
-        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}".format(
+        "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}, LNode mAP: {:.4f}".format(
             epoch_loss_g,
             epoch_loss_a,
             epoch_loss_v,
             epoch_loss_vf,
             epoch_ap,
             epoch_ap_center_node,
+            epoch_ap_last_node,
         )
     )
     return (
@@ -401,4 +468,5 @@ def _test_model_graph_losses(
         epoch_loss_vf,
         epoch_ap,
         epoch_ap_center_node,
+        epoch_ap_last_node,
     )

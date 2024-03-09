@@ -95,8 +95,10 @@ class End2endDataset(Dataset):
         timestamp_idx_list: list[int] = []
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
-        # 最后一个时间戳的掩码
+        # 中心时间戳的掩码
         center_node_mask = []
+        # 最后一个时间戳的掩码
+        last_node_mask = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
@@ -255,6 +257,7 @@ class End2endDataset(Dataset):
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
                     center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                    last_node_mask.append(time_idx == len(time_context) - 1)
                 feature_list.append(torch.stack([a_extend_data, v_data], dim=0))
                 target_list.append((target_a, target))
                 audio_feature_mask.append(False)
@@ -264,6 +267,7 @@ class End2endDataset(Dataset):
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
                 center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -396,8 +400,10 @@ class End2endDataset(Dataset):
                     )
                 ]
             ),
-            # 最后一个时间戳的掩码
+            # 中间时间戳的掩码
             center_node_mask=center_node_mask,
+            # 最后一个时间戳的掩码
+            last_node_mask=last_node_mask,
             # 纯音频节点的掩码
             audio_node_mask=audio_feature_mask,
             # 节点的时刻对应纯音频节点的索引

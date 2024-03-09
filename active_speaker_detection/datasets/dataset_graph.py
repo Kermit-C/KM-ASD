@@ -74,8 +74,10 @@ class GraphDataset(Dataset):
         timestamp_idx_list: list[int] = []
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
-        # 最后一个时间戳的掩码
+        # 中心时间戳的掩码
         center_node_mask = []
+        # 最后一个时间戳的掩码
+        last_node_mask = []
 
         # 获取基准时间戳的信息
         # 同一时间的实体顺序，保证前后连接边的时候是同一个实体
@@ -273,6 +275,7 @@ class GraphDataset(Dataset):
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
                     center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                    last_node_mask.append(time_idx == len(time_context) - 1)
                 target_list.append(target)
                 audio_feature_mask.append(False)
                 audio_feature_idx_list.append(audio_feature_idx)
@@ -280,6 +283,7 @@ class GraphDataset(Dataset):
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
                 center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -404,8 +408,10 @@ class GraphDataset(Dataset):
                     for target, entity in zip(target_list, entity_idx_list)
                 ]
             ),
-            # 最后一个时间戳的掩码
+            # 中间时间戳的掩码
             center_node_mask=center_node_mask,
+            # 最后一个时间戳的掩码
+            last_node_mask=last_node_mask,
             # 纯音频节点的掩码
             audio_node_mask=audio_feature_mask,
             # 节点的时刻对应纯音频节点的索引
