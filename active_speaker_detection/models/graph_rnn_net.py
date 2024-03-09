@@ -32,9 +32,12 @@ class GraphRnnNet(nn.Module):
         self.in_a_channels = in_a_channels
         self.in_v_channels = in_v_channels
         self.in_vf_channels = in_vf_channels
+        self.channels = channels
         self.max_context = max_context
 
-        self.av_fusion = nn.Linear(in_a_channels + in_v_channels, channels)
+        self.layer_0_a = nn.Linear(in_a_channels, channels)
+        self.layer_0_v = nn.Linear(in_v_channels, channels)
+        self.av_fusion = nn.Linear(2 * channels, channels)
         self.batch_0 = BatchNorm(channels)
 
         if type == "GRU":
@@ -42,7 +45,7 @@ class GraphRnnNet(nn.Module):
                 channels,
                 channels,
                 num_layers=2,
-                dropout=0.1,
+                dropout=0.2,
                 bidirectional=False,
                 batch_first=True,
             )
@@ -51,13 +54,16 @@ class GraphRnnNet(nn.Module):
                 channels,
                 channels,
                 num_layers=2,
-                dropout=0.1,
+                dropout=0.2,
                 bidirectional=False,
                 batch_first=True,
             )
         else:
             raise ValueError("RNN type must be GRU or LSTM")
 
+        # 分类器
+        self.fc_a = nn.Linear(channels, 2)
+        self.fc_v = nn.Linear(channels, 2)
         self.fc = nn.Linear(channels, 2)
 
         # 共享
@@ -73,20 +79,22 @@ class GraphRnnNet(nn.Module):
             data.y,
         )
         entities = y[:, -1]
+        audio_node_mask = []
+        for mask in data.audio_node_mask:
+            audio_node_mask += mask
+        video_node_mask = [not mask for mask in audio_node_mask]
 
-        audio_feats = x[:, 0, : self.in_a_channels].squeeze(1)
-        video_feats = x[:, 1, : self.in_v_channels].squeeze(1)
-        audio_vf_emb = (
-            x[:, 2, : self.in_vf_channels].squeeze(1) if x.size(1) > 2 else None
-        )
-        video_vf_emb = (
-            x[:, 3, : self.in_vf_channels].squeeze(1) if x.size(1) > 3 else None
-        )
+        audio_feats = x[:, 0, : self.in_a_channels]
+        video_feats = x[:, 1, : self.in_v_channels]
+        audio_emb = self.layer_0_a(audio_feats)
+        video_emb = self.layer_0_v(video_feats)
+        audio_vf_emb = x[:, 2, : self.in_vf_channels] if x.size(1) > 2 else None
+        video_vf_emb = x[:, 3, : self.in_vf_channels] if x.size(1) > 3 else None
         if audio_vf_emb is not None and video_vf_emb is not None:
             # sim 的维度是 (B, )
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
-            audio_feats = audio_feats * sim.unsqueeze(1)
-        graph_feats = self.av_fusion(torch.cat([audio_feats, video_feats], dim=1))
+            audio_emb = audio_emb * sim.unsqueeze(1)
+        graph_feats = self.av_fusion(torch.cat([audio_emb, video_emb], dim=1))
         graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
 
@@ -113,5 +121,7 @@ class GraphRnnNet(nn.Module):
             graph_feats_out[mask] = rnn_x[i, : entities[mask].size(0)]
 
         out = self.fc(graph_feats_out)
+        audio_out = self.fc_a(audio_emb[audio_node_mask])
+        video_out = self.fc_v(video_emb[video_node_mask])
 
-        return out
+        return out, audio_out, video_out
