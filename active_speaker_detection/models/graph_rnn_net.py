@@ -15,7 +15,6 @@ from torch_geometric.nn import BatchNorm
 from active_speaker_detection.utils.vf_util import cosine_similarity
 
 
-# TODO: 未重构成最新版本
 class GraphRnnNet(nn.Module):
 
     def __init__(
