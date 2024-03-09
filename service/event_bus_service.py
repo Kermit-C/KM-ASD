@@ -9,7 +9,7 @@
 import json
 import pickle
 from concurrent import futures
-from threading import Lock
+from threading import RLock
 from typing import Any, Optional, Union
 
 import grpc
@@ -30,7 +30,7 @@ from utils.uuid_util import get_uuid
 
 _consume_cache = {}
 _consume_lock = {}
-_consume_create_lock_lock = Lock()
+_consume_create_lock_lock = RLock()
 
 
 def process(
@@ -56,7 +56,7 @@ def process(
 
         with _consume_create_lock_lock:
             if request_id not in _consume_lock.keys():
-                _consume_lock[request_id] = Lock()
+                _consume_lock[request_id] = RLock()
 
         with _consume_lock[request_id]:
             if request_id not in _consume_cache.keys():

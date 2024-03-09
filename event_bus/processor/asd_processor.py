@@ -8,7 +8,7 @@
 
 
 import logging
-from threading import Lock
+from threading import RLock
 from typing import Optional
 
 import numpy as np
@@ -34,7 +34,7 @@ class AsdProcessor(BaseEventBusProcessor):
         super().__init__(processor_name)
         self.store = ActiveSpeakerDetectionStore(LocalStore.create)
         self.frames_per_clip: int = self.processor_properties["frmc"]
-        self.asd_create_lock_lock: Lock = Lock()
+        self.asd_create_lock_lock: Lock = RLock()
         self.asd_lock_of_request: dict[str, Lock] = {}
 
     def process(self, event_message_body: AsdMessageBody):
@@ -92,7 +92,7 @@ class AsdProcessor(BaseEventBusProcessor):
     def _process_asd(self, frame_count: int):
         with self.asd_create_lock_lock:
             if self.get_request_id() not in self.asd_lock_of_request:
-                self.asd_lock_of_request[self.get_request_id()] = Lock()
+                self.asd_lock_of_request[self.get_request_id()] = RLock()
                 asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
             else:
                 asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]

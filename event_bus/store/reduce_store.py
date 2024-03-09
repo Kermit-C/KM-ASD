@@ -6,7 +6,7 @@
 @Date: 2024-02-19 17:49:45
 """
 
-from threading import Lock
+from threading import RLock
 from typing import Callable, Optional
 
 import numpy as np
@@ -23,8 +23,8 @@ class ReduceStore:
     ):
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
-        self.save_frame_lock = Lock()
-        self.frame_resulted_count_lock = Lock()
+        self.save_frame_lock = RLock()
+        self.frame_resulted_count_lock = RLock()
 
     def save_frame_result(
         self,

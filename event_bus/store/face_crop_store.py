@@ -6,7 +6,7 @@
 @Date: 2024-02-19 15:50:28
 """
 
-from threading import Lock
+from threading import RLock
 from typing import Callable, Optional
 
 import numpy as np
@@ -25,7 +25,7 @@ class FaceCropStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
-        self.save_face_lock = Lock()
+        self.save_face_lock = RLock()
 
     def save_face(
         self,

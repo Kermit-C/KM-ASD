@@ -7,7 +7,7 @@
 """
 
 
-from threading import Lock
+from threading import RLock
 from typing import Optional
 
 import cv2
@@ -33,7 +33,7 @@ class ReduceProcessor(BaseEventBusProcessor):
     def __init__(self, processor_name: str):
         super().__init__(processor_name)
         self.store = ReduceStore(LocalStore.create)
-        self.result_lock = Lock()
+        self.result_lock = RLock()
 
     def process(self, event_message_body: ReduceMessageBody):
         if event_message_body.type == "ASD":
