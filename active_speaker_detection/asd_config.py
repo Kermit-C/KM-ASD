@@ -55,6 +55,7 @@ train_params = [
         "graph_type": "GraphGatWeightTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,  # "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
@@ -93,6 +94,7 @@ train_params = [
         "graph_type": "GraphGatEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,  # "active_speaker_detection/results/encoder_R3D50_vf1_clip13/17.pth",
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/R3D50",
         # 预训练权重
@@ -131,6 +133,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
@@ -169,6 +172,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": False,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RES50_TSM",
         # 预训练权重
@@ -207,6 +211,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D50",
         # 预训练权重
@@ -245,6 +250,7 @@ train_params = [
         "graph_type": "GraphGatEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D101",
         # 预训练权重
@@ -283,6 +289,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D152",
         # 预训练权重
@@ -321,6 +328,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV1",
         # 预训练权重
@@ -359,6 +367,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV2",
         # 预训练权重
@@ -397,6 +406,7 @@ train_params = [
         "graph_type": "GraphAllEdgeNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
+        "graph_time_num": 3,
         "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
         # 预训练权重

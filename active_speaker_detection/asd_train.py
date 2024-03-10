@@ -107,6 +107,8 @@ def train():
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
             + str(1 if param_config["graph_enable_spatial"] else 0)
+            + "_graphnum"
+            + str(param_config["graph_time_num"])
             + "_clip"
             + str(frames_per_clip)
             + "_ctx"
@@ -152,7 +154,7 @@ def train():
             frames_per_clip,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
-            graph_time_num=3,
+            graph_time_num=param_config["graph_time_num"],
             max_context=ctx_size,
             video_transform=video_train_transform,
             do_video_augment=True,
@@ -166,7 +168,7 @@ def train():
             frames_per_clip,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
-            graph_time_num=3,
+            graph_time_num=param_config["graph_time_num"],
             max_context=ctx_size,
             video_transform=video_train_transform,
             do_video_augment=False,
@@ -215,6 +217,8 @@ def train():
             + str(1 if param_config["encoder_enable_vf"] else 0)
             + "_sp"
             + str(1 if param_config["graph_enable_spatial"] else 0)
+            + "_graphnum"
+            + str(param_config["graph_time_num"])
             + "_clip"
             + str(frames_per_clip)
             + "_ctx"
@@ -256,7 +260,7 @@ def train():
             data_store_train_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
-            graph_time_num=3,
+            graph_time_num=param_config["graph_time_num"],
             max_context=ctx_size,
             is_edge_double=True,
         )
@@ -265,7 +269,7 @@ def train():
             data_store_val_cache,
             graph_time_steps=n_clips,
             graph_time_stride=strd,
-            graph_time_num=3,
+            graph_time_num=param_config["graph_time_num"],
             max_context=ctx_size,
             is_edge_double=True,
         )
