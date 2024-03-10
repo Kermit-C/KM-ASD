@@ -76,6 +76,8 @@ class GraphDataset(Dataset):
         timestamp_idx_list: list[int] = []
         # 位置列表
         position_list: list[Tuple[float, float, float, float]] = []
+        # 与最新小图的距离
+        distance_to_last_graph_list: list[int] = []
         # 中心时间戳的掩码
         center_node_mask = []
         # 最后一个时间戳的掩码
@@ -281,7 +283,13 @@ class GraphDataset(Dataset):
                     entity_list.append("")
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
-                    center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                    distance_to_last_graph_list.append(
+                        (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
+                        // self.graph_time_steps
+                    )
+                    center_node_mask.append(
+                        time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
+                    )
                     last_node_mask.append(time_idx == len(time_context) - 1)
                 target_list.append(target)
                 audio_feature_mask.append(False)
@@ -289,7 +297,13 @@ class GraphDataset(Dataset):
                 entity_list.append(entity)
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
-                center_node_mask.append(time_idx == (len(time_context) - 1) // 2)
+                distance_to_last_graph_list.append(
+                    (self.graph_time_steps * self.graph_time_num - time_idx)
+                    // self.graph_time_steps
+                )
+                center_node_mask.append(
+                    time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
+                )
                 last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
@@ -415,6 +429,8 @@ class GraphDataset(Dataset):
                     for target, entity in zip(target_list, entity_idx_list)
                 ]
             ),
+            # 与最新小图的距离
+            distance_to_last_graph_list=distance_to_last_graph_list,
             # 中间时间戳的掩码
             center_node_mask=center_node_mask,
             # 最后一个时间戳的掩码

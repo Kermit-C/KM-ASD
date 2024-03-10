@@ -186,13 +186,22 @@ def _train_model_amp_avl(
         graph_data = dl
         graph_data = graph_data.to(device)
 
+        distance_to_last_graph_list = []
         center_node_mask = []
         last_node_mask = []
-        for c_mask, l_mask in zip(
-            graph_data.center_node_mask, graph_data.last_node_mask
+        for d_list, c_mask, l_mask in zip(
+            graph_data.distance_to_last_graph_list,
+            graph_data.center_node_mask,
+            graph_data.last_node_mask,
         ):
+            distance_to_last_graph_list += d_list
             center_node_mask += c_mask
             last_node_mask += l_mask
+        distance_to_last_graph = torch.tensor(
+            distance_to_last_graph_list, dtype=torch.float16
+        ).to(device)
+        max_distance = int(distance_to_last_graph.max().item())
+
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
             audio_node_mask += mask
@@ -210,17 +219,43 @@ def _train_model_amp_avl(
                 outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
                     graph_data, audio_size
                 )
-                # 单独音频和视频的损失
-                aux_loss_a = criterion(audio_out, targets_a[audio_node_mask])
-                aux_loss_v = criterion(video_out, targets_v[video_node_mask])
+
+                # 分小图计算损失
+                aux_loss_a = torch.zeros(1, device=device)
+                aux_loss_v = torch.zeros(1, device=device)
+                loss_graph = torch.zeros(1, device=device)
+                total_weight = 0
+                for d in range(max_distance + 1):
+                    curr_weight = 1 / (d + 1)
+                    total_weight += curr_weight
+                    # 单独音频和视频的损失
+                    aux_loss_a += curr_weight * criterion(
+                        audio_out[distance_to_last_graph[audio_node_mask] == d],
+                        targets_a[audio_node_mask][
+                            distance_to_last_graph[audio_node_mask] == d
+                        ],
+                    )
+                    aux_loss_v += curr_weight * criterion(
+                        video_out[distance_to_last_graph[video_node_mask] == d],
+                        targets_v[video_node_mask][
+                            distance_to_last_graph[video_node_mask] == d
+                        ],
+                    )
+                    # 图的损失
+                    loss_graph += curr_weight * criterion(
+                        outputs[distance_to_last_graph == d],
+                        targets_g[distance_to_last_graph == d],
+                    )
+                aux_loss_a /= total_weight
+                aux_loss_v /= total_weight
+                loss_graph /= total_weight
+
                 if vf_a_emb is not None and vf_v_emb is not None:
                     # 音脸损失
                     aux_loss_vf: torch.Tensor = vf_critierion(
                         torch.cat([vf_a_emb, vf_v_emb], dim=0),
                         torch.cat([entities_a, entities_v], dim=0),
                     )
-                    # 图的损失
-                    loss_graph: torch.Tensor = criterion(outputs, targets_g)
                     loss = (
                         a_weight * aux_loss_a
                         + v_weight * aux_loss_v
@@ -228,8 +263,6 @@ def _train_model_amp_avl(
                         + loss_graph
                     )
                 else:
-                    # 图的损失
-                    loss_graph: torch.Tensor = criterion(outputs, targets_g)
                     loss = a_weight * aux_loss_a + v_weight * aux_loss_v + loss_graph
 
             loss /= accumulation_steps
@@ -241,21 +274,16 @@ def _train_model_amp_avl(
                 scaler.update()
 
         with torch.set_grad_enabled(False):
-            label_lst.extend(targets_g[video_node_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            center_node_label_lst.extend(
-                targets_g[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+            label_lst.extend(
+                targets_g[video_node_mask][distance_to_last_graph[video_node_mask] == 0]
                 .cpu()
                 .numpy()
                 .tolist()
             )
-            center_node_pred_lst.extend(
+            pred_lst.extend(
                 softmax_layer(
-                    outputs[
-                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    outputs[video_node_mask][
+                        distance_to_last_graph[video_node_mask] == 0
                     ]
                 )
                 .cpu()
@@ -263,15 +291,44 @@ def _train_model_amp_avl(
                 .tolist()
             )
 
+            center_video_node_mask = [
+                v and c for v, c in zip(video_node_mask, center_node_mask)
+            ]
+            center_node_label_lst.extend(
+                targets_g[center_video_node_mask][
+                    distance_to_last_graph[center_video_node_mask] == 0
+                ]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
+            center_node_pred_lst.extend(
+                softmax_layer(
+                    outputs[center_video_node_mask][
+                        distance_to_last_graph[center_video_node_mask] == 0
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
+            )
+
+            last_video_node_mask = [
+                v and c for v, c in zip(video_node_mask, last_node_mask)
+            ]
             last_node_label_lst.extend(
-                targets_g[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                targets_g[last_video_node_mask][
+                    distance_to_last_graph[last_video_node_mask] == 0
+                ]
                 .cpu()
                 .numpy()
                 .tolist()
             )
             last_node_pred_lst.extend(
                 softmax_layer(
-                    outputs[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                    outputs[last_video_node_mask][
+                        distance_to_last_graph[last_video_node_mask] == 0
+                    ]
                 )
                 .cpu()
                 .numpy()[:, 1]
@@ -359,13 +416,22 @@ def _test_model_graph_losses(
         graph_data = dl
         graph_data = graph_data.to(device)
 
+        distance_to_last_graph_list = []
         center_node_mask = []
         last_node_mask = []
-        for c_mask, l_mask in zip(
-            graph_data.center_node_mask, graph_data.last_node_mask
+        for d_list, c_mask, l_mask in zip(
+            graph_data.distance_to_last_graph_list,
+            graph_data.center_node_mask,
+            graph_data.last_node_mask,
         ):
+            distance_to_last_graph_list += d_list
             center_node_mask += c_mask
             last_node_mask += l_mask
+        distance_to_last_graph = torch.tensor(
+            distance_to_last_graph_list, dtype=torch.float16
+        ).to(device)
+        max_distance = int(distance_to_last_graph.max().item())
+
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
             audio_node_mask += mask
@@ -382,30 +448,51 @@ def _test_model_graph_losses(
             outputs, audio_out, video_out, vf_a_emb, vf_v_emb = model(
                 graph_data, audio_size
             )
-            loss_graph = criterion(outputs, targets_g)
-            aux_loss_a = criterion(audio_out, targets_a[audio_node_mask])
-            aux_loss_v = criterion(video_out, targets_v[video_node_mask])
+
+            # 分小图计算损失
+            aux_loss_a = torch.zeros(1, device=device)
+            aux_loss_v = torch.zeros(1, device=device)
+            loss_graph = torch.zeros(1, device=device)
+            total_weight = 0
+            for d in range(max_distance + 1):
+                curr_weight = 1 / (d + 1)
+                total_weight += curr_weight
+                loss_graph += curr_weight * criterion(
+                    outputs[distance_to_last_graph == d],
+                    targets_g[distance_to_last_graph == d],
+                )
+                aux_loss_a += curr_weight * criterion(
+                    audio_out[distance_to_last_graph[audio_node_mask] == d],
+                    targets_a[audio_node_mask][
+                        distance_to_last_graph[audio_node_mask] == d
+                    ],
+                )
+                aux_loss_v += curr_weight * criterion(
+                    video_out[distance_to_last_graph[video_node_mask] == d],
+                    targets_v[video_node_mask][
+                        distance_to_last_graph[video_node_mask] == d
+                    ],
+                )
+            aux_loss_a /= total_weight
+            aux_loss_v /= total_weight
+            loss_graph /= total_weight
+
             if vf_a_emb is not None and vf_v_emb is not None:
                 aux_loss_vf: torch.Tensor = vf_critierion(
                     torch.cat([vf_a_emb, vf_v_emb], dim=0),
                     torch.cat([entities_a, entities_v], dim=0),
                 )
 
-            label_lst.extend(targets_g[video_node_mask].cpu().numpy().tolist())
-            pred_lst.extend(
-                softmax_layer(outputs[video_node_mask]).cpu().numpy()[:, 1].tolist()
-            )
-
-            center_node_label_lst.extend(
-                targets_g[[v and c for v, c in zip(video_node_mask, center_node_mask)]]
+            label_lst.extend(
+                targets_g[video_node_mask][distance_to_last_graph[video_node_mask] == 0]
                 .cpu()
                 .numpy()
                 .tolist()
             )
-            center_node_pred_lst.extend(
+            pred_lst.extend(
                 softmax_layer(
-                    outputs[
-                        [v and c for v, c in zip(video_node_mask, center_node_mask)]
+                    outputs[video_node_mask][
+                        distance_to_last_graph[video_node_mask] == 0
                     ]
                 )
                 .cpu()
@@ -413,15 +500,44 @@ def _test_model_graph_losses(
                 .tolist()
             )
 
+            center_video_node_mask = [
+                v and c for v, c in zip(video_node_mask, center_node_mask)
+            ]
+            center_node_label_lst.extend(
+                targets_g[center_video_node_mask][
+                    distance_to_last_graph[center_video_node_mask] == 0
+                ]
+                .cpu()
+                .numpy()
+                .tolist()
+            )
+            center_node_pred_lst.extend(
+                softmax_layer(
+                    outputs[center_video_node_mask][
+                        distance_to_last_graph[center_video_node_mask] == 0
+                    ]
+                )
+                .cpu()
+                .numpy()[:, 1]
+                .tolist()
+            )
+
+            last_video_node_mask = [
+                v and c for v, c in zip(video_node_mask, last_node_mask)
+            ]
             last_node_label_lst.extend(
-                targets_g[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                targets_g[last_video_node_mask][
+                    distance_to_last_graph[last_video_node_mask] == 0
+                ]
                 .cpu()
                 .numpy()
                 .tolist()
             )
             last_node_pred_lst.extend(
                 softmax_layer(
-                    outputs[[v and c for v, c in zip(video_node_mask, last_node_mask)]]
+                    outputs[last_video_node_mask][
+                        distance_to_last_graph[last_video_node_mask] == 0
+                    ]
                 )
                 .cpu()
                 .numpy()[:, 1]

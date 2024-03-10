@@ -17,13 +17,14 @@ class VfalSlEncoder(torch.nn.Module):
 
         def create_front(input_size):
             return torch.nn.Sequential(
-                torch.nn.Dropout(),
+                torch.nn.Dropout(0.4),
                 torch.nn.Linear(input_size, mid_dim),
                 torch.nn.ReLU(),
             )
 
         def create_rare():
             return torch.nn.Sequential(
+                torch.nn.Dropout(0.4),
                 torch.nn.Linear(mid_dim, mid_dim),
                 torch.nn.ReLU(),
                 torch.nn.Linear(mid_dim, embedding_size),
