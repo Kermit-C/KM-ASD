@@ -326,7 +326,7 @@ train_params = [
         # 预训练权重
         "encoder_enable_grad": True,  # 开的情况：整个网络端到端、encoder 端到端后二阶段训练图；关的情况：只训练音脸后二阶段训练图
         "encoder_audio_pretrain_weights": "/hdd1/ckm/pretrain-model/2D-ResNet/results/resnet18-5c106cde.pth",
-        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/Efficient-3DCNNs/results/kinetics_mobilenet_2.0x_RGB_16_best.pth",
+        "encoder_video_pretrain_weights": "/hdd1/ckm/pretrain-model/Efficient-3DCNNs/results/kinetics_mobilenet_1.0x_RGB_16_best.pth",
         "graph_spatial_pretrain_weights": "/hdd1/ckm/pretrain-model/mobilenet_v2/results/mobilenet_v2-b0353104.pth",
         # encoder 优化配置
         "encoder_batch_size": 128,
