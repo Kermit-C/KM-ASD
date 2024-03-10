@@ -52,7 +52,7 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
-        "graph_type": "GraphGatWeightTwoStreamEdgeNet",
+        "graph_type": "GraphGatWeightTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
         "encoder_train_weights": None,  # "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",

@@ -22,6 +22,7 @@ from .graph_easee_net import GraphEaseeNet
 from .graph_fc_net import GraphFcNet
 from .graph_gat_edge_net import GraphGatEdgeNet
 from .graph_gat_weight_2s_edge_net import GraphGatWeightTwoStreamEdgeNet
+from .graph_gat_weight_2s_net import GraphGatWeightTwoStreamNet
 from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
@@ -415,6 +416,10 @@ def get_graph(
         )
     elif graph_type == "GraphGatWeightTwoStreamEdgeNet":
         graph_net = GraphGatWeightTwoStreamEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphGatWeightTwoStreamNet":
+        graph_net = GraphGatWeightTwoStreamNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
     elif graph_type == "GraphGatEdgeNet":
