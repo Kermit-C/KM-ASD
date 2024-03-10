@@ -298,7 +298,7 @@ class GraphDataset(Dataset):
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
                 distance_to_last_graph_list.append(
-                    (self.graph_time_steps * self.graph_time_num - time_idx)
+                    (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
                     // self.graph_time_steps
                 )
                 center_node_mask.append(
