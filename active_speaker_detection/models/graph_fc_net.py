@@ -33,7 +33,8 @@ class GraphFcNet(nn.Module):
         self.layer_0_a = nn.Linear(in_a_channels, channels)
         self.layer_0_v = nn.Linear(in_v_channels, channels)
         self.av_fusion = nn.Linear(channels * 2, channels)
-        self.batch_0 = BatchNorm(channels)
+        self.batch_0_a = BatchNorm(channels)
+        self.batch_0_v = BatchNorm(channels)
 
         # 分类器
         self.fc_a = nn.Linear(channels, 2)
@@ -67,17 +68,18 @@ class GraphFcNet(nn.Module):
             sim = cosine_similarity(audio_vf_emb, video_vf_emb)
             video_audio_feats = video_audio_feats * sim.unsqueeze(1)
 
-        graph_feats[audio_node_mask] = self.layer_0_a(audio_feats)
-        graph_feats[video_node_mask] = self.av_fusion(
-            torch.cat(
-                [
-                    self.relu(self.layer_0_a(video_audio_feats)),
-                    self.relu(self.layer_0_v(video_feats)),
-                ],
-                dim=1,
+        graph_feats[audio_node_mask] = self.batch_0_a(self.layer_0_a(audio_feats))
+        graph_feats[video_node_mask] = self.batch_0_v(
+            self.av_fusion(
+                torch.cat(
+                    [
+                        self.relu(self.layer_0_a(video_audio_feats)),
+                        self.relu(self.layer_0_v(video_feats)),
+                    ],
+                    dim=1,
+                )
             )
         )
-        graph_feats = self.batch_0(graph_feats)
         graph_feats = self.relu(graph_feats)
 
         out = self.fc(graph_feats)

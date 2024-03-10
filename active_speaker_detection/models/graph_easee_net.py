@@ -53,7 +53,8 @@ class GraphEaseeNet(nn.Module):
 
         self.layer_0_a = nn.Linear(in_a_channels, channels)
         self.layer_0_v = nn.Linear(in_v_channels, channels)
-        self.batch_0 = BatchNorm(channels)
+        self.batch_0_a = BatchNorm(channels)
+        self.batch_0_v = BatchNorm(channels)
 
         self.layer_1 = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="max")
         self.layer_1t = EdgeConv(LinearPathPreact(channels * 2, channels), aggr="max")
@@ -92,9 +93,8 @@ class GraphEaseeNet(nn.Module):
         graph_feats = torch.zeros(x.size(0), self.channels, dtype=x.dtype).to(x.device)
         audio_feats = x[audio_node_mask][:, 0, : self.in_a_channels]
         video_feats = x[video_node_mask][:, 1, : self.in_v_channels]
-        graph_feats[audio_node_mask] = self.layer_0_a(audio_feats)
-        graph_feats[video_node_mask] = self.layer_0_v(video_feats)
-        graph_feats = self.batch_0(graph_feats)
+        graph_feats[audio_node_mask] = self.batch_0_a(self.layer_0_a(audio_feats))
+        graph_feats[video_node_mask] = self.batch_0_v(self.layer_0_v(video_feats))
         graph_feats = self.relu(graph_feats)
 
         distance1_mask = edge_delta < 1
