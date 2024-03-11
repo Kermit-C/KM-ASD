@@ -17,15 +17,14 @@ import torch.nn.parameter
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from ..utils.vf_util import cosine_similarity
 from .graph_all_edge_net import GraphAllEdgeNet
-from .graph_all_edge_weight_net import GraphAllEdgeWeightNet
 from .graph_easee_net import GraphEaseeNet
 from .graph_fc_net import GraphFcNet
 from .graph_gat_edge_net import GraphGatEdgeNet
-from .graph_gat_weight_2s_edge_net import GraphGatWeightTwoStreamEdgeNet
-from .graph_gat_weight_2s_net import GraphGatWeightTwoStreamNet
-from .graph_gat_weight_edge_net import GraphGatWeightEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
+from .graph_km_2s_edge_net import GraphKmTwoStreamEdgeNet
+from .graph_km_2s_net import GraphKmTwoStreamNet
+from .graph_km_edge_net import GraphKmEdgeNet
 from .graph_rnn_net import GraphRnnNet
 from .graph_transformer_edge_net import GraphTransformerEdgeNet
 from .spatial_mobilenet_net import get_spatial_mobilenet_net
@@ -404,39 +403,16 @@ def get_graph(
     vf_emb_dim: int,
     edge_attr_dim: int,
 ):
-    if graph_type == "GraphAllEdgeWeightNet":
-        graph_net = GraphAllEdgeWeightNet(
+    if graph_type == "GraphKmEdgeNet":
+        graph_net = GraphKmEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
-    elif graph_type == "GraphAllEdgeNet":
-        graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
-    elif graph_type == "GraphGatWeightEdgeNet":
-        graph_net = GraphGatWeightEdgeNet(
+    elif graph_type == "GraphKmTwoStreamEdgeNet":
+        graph_net = GraphKmTwoStreamEdgeNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
-    elif graph_type == "GraphGatWeightTwoStreamEdgeNet":
-        graph_net = GraphGatWeightTwoStreamEdgeNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
-        )
-    elif graph_type == "GraphGatWeightTwoStreamNet":
-        graph_net = GraphGatWeightTwoStreamNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
-        )
-    elif graph_type == "GraphGatEdgeNet":
-        graph_net = GraphGatEdgeNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
-        )
-
-    elif graph_type == "GraphGatedEdgeNet":
-        graph_net = GraphGatedEdgeNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
-        )
-    elif graph_type == "GraphGinEdgeNet":
-        graph_net = GraphGinEdgeNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
-        )
-    elif graph_type == "GraphTransformerEdgeNet":
-        graph_net = GraphTransformerEdgeNet(
+    elif graph_type == "GraphKmTwoStreamNet":
+        graph_net = GraphKmTwoStreamNet(
             a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
 
@@ -451,6 +427,25 @@ def get_graph(
     elif graph_type == "GraphRnnLstmNet":
         graph_net = GraphRnnNet(
             "LSTM", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+
+    elif graph_type == "GraphAllEdgeNet":
+        graph_net = GraphAllEdgeNet(a_feature_dim, v_feature_dim, vf_emb_dim, 128)
+    elif graph_type == "GraphGatEdgeNet":
+        graph_net = GraphGatEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
+        )
+    elif graph_type == "GraphGatedEdgeNet":
+        graph_net = GraphGatedEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphGinEdgeNet":
+        graph_net = GraphGinEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphTransformerEdgeNet":
+        graph_net = GraphTransformerEdgeNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
         )
 
     else:

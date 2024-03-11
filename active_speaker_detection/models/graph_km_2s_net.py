@@ -12,11 +12,11 @@ import torch.nn.functional as F
 import torch.nn.parameter
 from torch_geometric.nn import BatchNorm
 
-from .graph.gat_weight_conv import GatWeightConv
+from .graph.km_conv import KmConv
 from .graph_all_edge_net import LinearPathPreact
 
 
-class GraphGatWeightTwoStreamNet(nn.Module):
+class GraphKmTwoStreamNet(nn.Module):
 
     def __init__(
         self,
@@ -38,7 +38,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
         self.batch_0_a = BatchNorm(channels)
         self.batch_0_v = BatchNorm(channels)
 
-        self.layer_1_1 = GatWeightConv(
+        self.layer_1_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -50,7 +50,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_1_2_1 = GatWeightConv(
+        self.layer_1_2_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -62,7 +62,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_1_2_2 = GatWeightConv(
+        self.layer_1_2_2 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -75,7 +75,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             add_self_loops=False,
         )
         self.batch_1 = BatchNorm(channels)
-        self.layer_2_1 = GatWeightConv(
+        self.layer_2_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -87,7 +87,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_2_2_1 = GatWeightConv(
+        self.layer_2_2_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -99,7 +99,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_2_2_2 = GatWeightConv(
+        self.layer_2_2_2 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -112,7 +112,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             add_self_loops=False,
         )
         self.batch_2 = BatchNorm(channels)
-        self.layer_3_1 = GatWeightConv(
+        self.layer_3_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -124,7 +124,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_3_2_1 = GatWeightConv(
+        self.layer_3_2_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -136,7 +136,7 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_3_2_2 = GatWeightConv(
+        self.layer_3_2_2 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),

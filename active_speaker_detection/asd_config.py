@@ -52,10 +52,10 @@ train_params = [
         "name": "R3D18",
         # 网络架构
         "encoder_type": "R3D18",
-        "graph_type": "GraphGatWeightTwoStreamNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,  # "./active_speaker_detection/results/encoder_R3D18_vf1_clip13/32.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/R3D18",
         # 预训练权重
@@ -91,10 +91,10 @@ train_params = [
         "name": "R3D50",
         # 网络架构
         "encoder_type": "R3D50",
-        "graph_type": "GraphGatEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,  # "active_speaker_detection/results/encoder_R3D50_vf1_clip13/17.pth",
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/R3D50",
         # 预训练权重
@@ -130,10 +130,10 @@ train_params = [
         "name": "RES18_TSM",
         # 网络架构
         "encoder_type": "RES18_TSM",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "/hdd1/ckm2/features/RES18_TSM",
         # 预训练权重
@@ -169,10 +169,10 @@ train_params = [
         "name": "RES50_TSM",
         # 网络架构
         "encoder_type": "RES50_TSM",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": False,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RES50_TSM",
         # 预训练权重
@@ -208,10 +208,10 @@ train_params = [
         "name": "RX3D50",
         # 网络架构
         "encoder_type": "RX3D50",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D50",
         # 预训练权重
@@ -247,10 +247,10 @@ train_params = [
         "name": "RX3D101",
         # 网络架构
         "encoder_type": "RX3D101",
-        "graph_type": "GraphGatEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D101",
         # 预训练权重
@@ -286,10 +286,10 @@ train_params = [
         "name": "RX3D152",
         # 网络架构
         "encoder_type": "RX3D152",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/RX3D152",
         # 预训练权重
@@ -325,10 +325,10 @@ train_params = [
         "name": "MB3DV1",
         # 网络架构
         "encoder_type": "MB3DV1",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV1",
         # 预训练权重
@@ -364,10 +364,10 @@ train_params = [
         "name": "MB3DV2",
         # 网络架构
         "encoder_type": "MB3DV2",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": None,
         "encoder_feature_dir": "active_speaker_detection/datasets/resources/features/MB3DV2",
         # 预训练权重
@@ -403,10 +403,10 @@ train_params = [
         "name": "LIGHT",
         # 网络架构
         "encoder_type": "LIGHT",
-        "graph_type": "GraphAllEdgeNet",
+        "graph_type": "GraphKmTwoStreamNet",
         "encoder_enable_vf": True,
         "graph_enable_spatial": True,
-        "graph_time_num": 3,
+        "graph_time_num": 1,
         "encoder_train_weights": "active_speaker_detection/results/encoder_LIGHT_clip13.0_ctx3_len7_str3/26.pth",
         "encoder_feature_dir": "/hdd1/ckm2/feature/LIGHT",
         # 预训练权重

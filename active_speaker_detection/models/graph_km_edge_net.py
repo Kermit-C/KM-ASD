@@ -15,11 +15,11 @@ from torch_geometric.utils import dropout_adj
 
 from ..utils.spatial_grayscale_util import batch_create_spatial_grayscale
 from ..utils.vf_util import cosine_similarity
-from .graph.gat_weight_conv import GatWeightConv
+from .graph.km_conv import KmConv
 from .graph_all_edge_net import LinearPathPreact
 
 
-class GraphGatWeightEdgeNet(nn.Module):
+class GraphKmEdgeNet(nn.Module):
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class GraphGatWeightEdgeNet(nn.Module):
         self.batch_0_a = BatchNorm(channels)
         self.batch_0_v = BatchNorm(channels)
 
-        self.layer_1 = GatWeightConv(
+        self.layer_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -54,7 +54,7 @@ class GraphGatWeightEdgeNet(nn.Module):
             add_self_loops=False,
         )
         self.batch_1 = BatchNorm(channels)
-        self.layer_2 = GatWeightConv(
+        self.layer_2 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),

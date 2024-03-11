@@ -13,7 +13,7 @@ from torch_geometric.utils import add_self_loops, remove_self_loops, softmax
 from torch_sparse import SparseTensor, set_diag
 
 
-class GatWeightConv(MessagePassing):
+class KmConv(MessagePassing):
 
     _alpha: OptTensor
 

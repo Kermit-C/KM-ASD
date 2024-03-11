@@ -14,11 +14,11 @@ from torch_geometric.nn import BatchNorm, EdgeConv
 from torch_geometric.utils import dropout_adj
 
 from ..utils.vf_util import cosine_similarity
-from .graph.gat_weight_conv import GatWeightConv
+from .graph.km_conv import KmConv
 from .graph_all_edge_net import LinearPathPreact
 
 
-class GraphGatWeightTwoStreamEdgeNet(nn.Module):
+class GraphKmTwoStreamEdgeNet(nn.Module):
 
     def __init__(
         self,
@@ -40,7 +40,7 @@ class GraphGatWeightTwoStreamEdgeNet(nn.Module):
         self.batch_0_a = BatchNorm(channels)
         self.batch_0_v = BatchNorm(channels)
 
-        self.layer_1_1 = GatWeightConv(
+        self.layer_1_1 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -52,7 +52,7 @@ class GraphGatWeightTwoStreamEdgeNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_1_2 = GatWeightConv(
+        self.layer_1_2 = KmConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
