@@ -124,7 +124,19 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_3_2 = GatWeightConv(
+        self.layer_3_2_1 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+            add_self_loops=False,
+        )
+        self.layer_3_2_2 = GatWeightConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -203,16 +215,22 @@ class GraphGatWeightTwoStreamNet(nn.Module):
         graph_feats_2 = self.relu(graph_feats_2)
         graph_feats_2 = self.dropout(graph_feats_2)
 
-        graph_feats_3 = graph_feats_2
-        graph_feats_3 = self.layer_3_1(
-            graph_feats_3, edge_index[:, distance1_mask], edge_attr[distance1_mask]
+        graph_feats_3_1 = graph_feats_2
+        graph_feats_3_1 = self.layer_3_1(
+            graph_feats_3_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
         )
-        graph_feats_3 = self.layer_3_2(
-            graph_feats_3,
-            edge_index[:, distance2_mask | distance3_mask],
-            edge_attr[distance2_mask | distance3_mask],
+        graph_feats_3_2 = graph_feats_2
+        graph_feats_3_2 = self.layer_3_2_1(
+            graph_feats_3_2,
+            edge_index[:, distance2_mask],
+            edge_attr[distance2_mask],
         )
-        graph_feats_3 += graph_feats_2
+        graph_feats_3_2 = self.layer_3_2_2(
+            graph_feats_3_2,
+            edge_index[:, distance3_mask],
+            edge_attr[distance3_mask],
+        )
+        graph_feats_3 = graph_feats_3_1 + graph_feats_3_2 + graph_feats_2
 
         out = self.fc(graph_feats_3)
         audio_out = self.fc_a(graph_feats[audio_node_mask])
