@@ -50,7 +50,19 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_1_2 = GatWeightConv(
+        self.layer_1_2_1 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+            add_self_loops=False,
+        )
+        self.layer_1_2_2 = GatWeightConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -75,7 +87,19 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             bias=True,
             add_self_loops=False,
         )
-        self.layer_2_2 = GatWeightConv(
+        self.layer_2_2_1 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+            add_self_loops=False,
+        )
+        self.layer_2_2_2 = GatWeightConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -88,7 +112,19 @@ class GraphGatWeightTwoStreamNet(nn.Module):
             add_self_loops=False,
         )
         self.batch_2 = BatchNorm(channels)
-        self.layer_3 = GatWeightConv(
+        self.layer_3_1 = GatWeightConv(
+            channels,
+            channels,
+            LinearPathPreact(channels * 2, channels),
+            heads=4,
+            edge_dim=edge_attr_dim,
+            dropout=0.2,
+            concat=False,
+            negative_slope=0.2,
+            bias=True,
+            add_self_loops=False,
+        )
+        self.layer_3_2 = GatWeightConv(
             channels,
             channels,
             LinearPathPreact(channels * 2, channels),
@@ -136,40 +172,46 @@ class GraphGatWeightTwoStreamNet(nn.Module):
         distance3_mask = edge_delta >= 11 | (edge_self == 1)
 
         graph_feats_1_1 = graph_feats
-        for distance_mask in [distance1_mask, distance2_mask]:
-            graph_feats_1_1 = self.layer_1_1(
-                graph_feats_1_1, edge_index[:, distance_mask], edge_attr[distance_mask]
-            )
+        graph_feats_1_1 = self.layer_1_1(
+            graph_feats_1_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
+        )
         graph_feats_1_2 = graph_feats
-        for distance_mask in [distance2_mask, distance3_mask]:
-            graph_feats_1_2 = self.layer_1_2(
-                graph_feats_1_2, edge_index[:, distance_mask], edge_attr[distance_mask]
-            )
+        graph_feats_1_2 = self.layer_1_2_1(
+            graph_feats_1_2, edge_index[:, distance2_mask], edge_attr[distance2_mask]
+        )
+        graph_feats_1_2 = self.layer_1_2_2(
+            graph_feats_1_2, edge_index[:, distance3_mask], edge_attr[distance3_mask]
+        )
         graph_feats_1 = graph_feats_1_1 + graph_feats_1_2 + graph_feats
         graph_feats_1 = self.batch_1(graph_feats_1)
         graph_feats_1 = self.relu(graph_feats_1)
         graph_feats_1 = self.dropout(graph_feats_1)
 
         graph_feats_2_1 = graph_feats_1
-        for distance_mask in [distance1_mask, distance2_mask]:
-            graph_feats_2_1 = self.layer_2_1(
-                graph_feats_2_1, edge_index[:, distance_mask], edge_attr[distance_mask]
-            )
+        graph_feats_2_1 = self.layer_2_1(
+            graph_feats_2_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
+        )
         graph_feats_2_2 = graph_feats_1
-        for distance_mask in [distance2_mask, distance3_mask]:
-            graph_feats_2_2 = self.layer_2_2(
-                graph_feats_2_2, edge_index[:, distance_mask], edge_attr[distance_mask]
-            )
+        graph_feats_2_2 = self.layer_2_2_1(
+            graph_feats_2_2, edge_index[:, distance2_mask], edge_attr[distance2_mask]
+        )
+        graph_feats_2_2 = self.layer_2_2_2(
+            graph_feats_2_2, edge_index[:, distance3_mask], edge_attr[distance3_mask]
+        )
         graph_feats_2 = graph_feats_2_1 + graph_feats_2_2 + graph_feats_1
         graph_feats_2 = self.batch_2(graph_feats_2)
         graph_feats_2 = self.relu(graph_feats_2)
         graph_feats_2 = self.dropout(graph_feats_2)
 
         graph_feats_3 = graph_feats_2
-        for distance_mask in [distance1_mask, distance2_mask]:
-            graph_feats_3 = self.layer_3(
-                graph_feats_3, edge_index[:, distance_mask], edge_attr[distance_mask]
-            )
+        graph_feats_3 = self.layer_3_1(
+            graph_feats_3, edge_index[:, distance1_mask], edge_attr[distance1_mask]
+        )
+        graph_feats_3 = self.layer_3_2(
+            graph_feats_3,
+            edge_index[:, distance2_mask | distance3_mask],
+            edge_attr[distance2_mask | distance3_mask],
+        )
         graph_feats_3 += graph_feats_2
 
         out = self.fc(graph_feats_3)
