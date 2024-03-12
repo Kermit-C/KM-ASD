@@ -35,11 +35,35 @@ def setup_optim_outputs(
     experiment_name: str,
     headers: Optional[List[str]] = None,
 ):
-    target_logs = os.path.join(models_out, experiment_name + "/logs.csv")
     target_models = os.path.join(models_out, experiment_name)
     print("target_models", target_models)
     if not os.path.isdir(target_models):
         os.makedirs(target_models)
+    log = create_log(models_out, experiment_name, headers=headers)
+
+    # Dump cfg to json
+    dump_cfg = opt_config.copy()
+    for key, value in dump_cfg.items():
+        if callable(value):
+            try:
+                dump_cfg[key] = value.__name__
+            except:
+                dump_cfg[key] = str(value)
+    json_cfg = os.path.join(models_out, experiment_name + "/cfg.json")
+    with open(json_cfg, "w") as json_file:
+        json.dump(dump_cfg, json_file)
+
+    models_out = os.path.join(models_out, experiment_name)
+    return log, models_out
+
+
+def create_log(
+    models_out: str,
+    experiment_name: str,
+    headers,
+    log_name: str = "logs.csv",
+):
+    target_logs = os.path.join(models_out, experiment_name + log_name)
     log = Logger(target_logs, ";")
 
     if headers is None:
@@ -60,18 +84,4 @@ def setup_optim_outputs(
         )
     else:
         log.write_headers(headers)
-
-    # Dump cfg to json
-    dump_cfg = opt_config.copy()
-    for key, value in dump_cfg.items():
-        if callable(value):
-            try:
-                dump_cfg[key] = value.__name__
-            except:
-                dump_cfg[key] = str(value)
-    json_cfg = os.path.join(models_out, experiment_name + "/cfg.json")
-    with open(json_cfg, "w") as json_file:
-        json.dump(dump_cfg, json_file)
-
-    models_out = os.path.join(models_out, experiment_name)
-    return log, models_out
+    return log

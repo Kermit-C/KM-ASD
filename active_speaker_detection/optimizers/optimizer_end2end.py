@@ -11,7 +11,7 @@ import os
 
 import torch
 import torch.nn as nn
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
 from torch.cuda.amp.autocast_mode import autocast
 
 
@@ -33,6 +33,7 @@ def optimize_end2end(
     vfal_weight=0.1,
     models_out=None,
     log=None,
+    log_aux=None,
 ):
     if models_out is not None and os.path.exists(os.path.join(models_out, "last.ckpt")):
         # 加载上次训练的状态
@@ -85,6 +86,12 @@ def optimize_end2end(
             train_ap,
             train_ap_center_node,
             train_ap_last_node,
+            train_auroc,
+            train_auroc_center_node,
+            train_auroc_last_node,
+            train_f1,
+            train_f1_center_node,
+            train_f1_last_node,
         ) = outs_train
         (
             val_loss,
@@ -94,6 +101,12 @@ def optimize_end2end(
             val_ap,
             val_ap_center_node,
             val_ap_last_node,
+            val_auroc,
+            val_auroc_center_node,
+            val_auroc_last_node,
+            val_f1,
+            val_f1_center_node,
+            val_f1_last_node,
         ) = outs_val
 
         if models_out is not None and val_ap > max_val_ap:
@@ -136,6 +149,30 @@ def optimize_end2end(
                     val_ap,
                     val_ap_center_node,
                     val_ap_last_node,
+                ]
+            )
+        if log_aux is not None:
+            log_aux.write_data_log(
+                [
+                    epoch + 1,
+                    train_ap,
+                    train_ap_center_node,
+                    train_ap_last_node,
+                    train_auroc,
+                    train_auroc_center_node,
+                    train_auroc_last_node,
+                    train_f1,
+                    train_f1_center_node,
+                    train_f1_last_node,
+                    val_ap,
+                    val_ap_center_node,
+                    val_ap_last_node,
+                    val_auroc,
+                    val_auroc_center_node,
+                    val_auroc_last_node,
+                    val_f1,
+                    val_f1_center_node,
+                    val_f1_last_node,
                 ]
             )
 
@@ -350,6 +387,7 @@ def _train_model_amp_avl(
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
+    # mAP
     epoch_ap = average_precision_score(label_lst, pred_lst)
     epoch_ap_center_node = average_precision_score(
         center_node_label_lst, center_node_pred_lst
@@ -357,6 +395,22 @@ def _train_model_amp_avl(
     epoch_ap_last_node = average_precision_score(
         last_node_label_lst, last_node_pred_lst
     )
+    # auROC
+    epoch_auroc = roc_auc_score(label_lst, pred_lst)
+    epoch_auroc_center_node = roc_auc_score(center_node_label_lst, center_node_pred_lst)
+    epoch_auroc_last_node = roc_auc_score(last_node_label_lst, last_node_pred_lst)
+    # F1 Score
+    threshold = 0.5  # 设置阈值
+    pred_binary = [1 if pred >= threshold else 0 for pred in pred_lst]
+    center_node_pred_binary = [
+        1 if pred >= threshold else 0 for pred in center_node_pred_lst
+    ]
+    last_node_pred_binary = [
+        1 if pred >= threshold else 0 for pred in last_node_pred_lst
+    ]
+    epoch_f1 = f1_score(label_lst, pred_binary)
+    epoch_f1_center_node = f1_score(center_node_label_lst, center_node_pred_binary)
+    epoch_f1_last_node = f1_score(last_node_label_lst, last_node_pred_binary)
     print(
         "Train Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}, LNode mAP: {:.4f}".format(
             epoch_loss_g,
@@ -376,6 +430,12 @@ def _train_model_amp_avl(
         epoch_ap,
         epoch_ap_center_node,
         epoch_ap_last_node,
+        epoch_auroc,
+        epoch_auroc_center_node,
+        epoch_auroc_last_node,
+        epoch_f1,
+        epoch_f1_center_node,
+        epoch_f1_last_node,
     )
 
 
@@ -560,6 +620,7 @@ def _test_model_graph_losses(
     epoch_loss_a = running_loss_a / len(dataloader)
     epoch_loss_v = running_loss_v / len(dataloader)
     epoch_loss_vf = running_loss_vf / len(dataloader)
+    # mAP
     epoch_ap = average_precision_score(label_lst, pred_lst)
     epoch_ap_center_node = average_precision_score(
         center_node_label_lst, center_node_pred_lst
@@ -567,6 +628,22 @@ def _test_model_graph_losses(
     epoch_ap_last_node = average_precision_score(
         last_node_label_lst, last_node_pred_lst
     )
+    # auROC
+    epoch_auroc = roc_auc_score(label_lst, pred_lst)
+    epoch_auroc_center_node = roc_auc_score(center_node_label_lst, center_node_pred_lst)
+    epoch_auroc_last_node = roc_auc_score(last_node_label_lst, last_node_pred_lst)
+    # F1 Score
+    threshold = 0.5  # 设置阈值
+    pred_binary = [1 if pred >= threshold else 0 for pred in pred_lst]
+    center_node_pred_binary = [
+        1 if pred >= threshold else 0 for pred in center_node_pred_lst
+    ]
+    last_node_pred_binary = [
+        1 if pred >= threshold else 0 for pred in last_node_pred_lst
+    ]
+    epoch_f1 = f1_score(label_lst, pred_binary)
+    epoch_f1_center_node = f1_score(center_node_label_lst, center_node_pred_binary)
+    epoch_f1_last_node = f1_score(last_node_label_lst, last_node_pred_binary)
     print(
         "Val Graph Loss: {:.4f}, Audio Loss: {:.4f}, Video Loss: {:.4f}, Vf Loss: {:.4f}, mAP: {:.4f}, CNode mAP: {:.4f}, LNode mAP: {:.4f}".format(
             epoch_loss_g,
@@ -586,4 +663,10 @@ def _test_model_graph_losses(
         epoch_ap,
         epoch_ap_center_node,
         epoch_ap_last_node,
+        epoch_auroc,
+        epoch_auroc_center_node,
+        epoch_auroc_last_node,
+        epoch_f1,
+        epoch_f1_center_node,
+        epoch_f1_last_node,
     )

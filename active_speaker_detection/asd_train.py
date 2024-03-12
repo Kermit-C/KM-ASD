@@ -34,7 +34,7 @@ from active_speaker_detection.utils.command_line import (
     get_default_arg_parser,
     unpack_command_line_args,
 )
-from active_speaker_detection.utils.logging import setup_optim_outputs
+from active_speaker_detection.utils.logging import create_log, setup_optim_outputs
 
 
 def train():
@@ -140,6 +140,32 @@ def train():
                 "val_map_l",
             ],
         )
+        log_aux = create_log(
+            dataset_config["models_out"],
+            model_name,
+            log_name="logs_aux.csv",
+            headers=[
+                "epoch",
+                "train_map",
+                "train_map_c",
+                "train_map_l",
+                "train_auc",
+                "train_auc_c",
+                "train_auc_l",
+                "train_f1",
+                "train_f1_c",
+                "train_f1_l",
+                "val_map",
+                "val_map_c",
+                "val_map_l",
+                "val_auc",
+                "val_auc_c",
+                "val_auc_l",
+                "val_f1",
+                "val_f1_c",
+                "val_f1_l",
+            ],
+        )
 
         epochs = param_config["epochs"]
         lr = param_config["learning_rate"]
@@ -203,6 +229,7 @@ def train():
             time_len=n_clips,
             models_out=target_models,
             log=log,
+            log_aux=log_aux,
         )
 
     elif stage == "graph":
