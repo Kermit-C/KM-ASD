@@ -63,7 +63,7 @@ def create_log(
     headers,
     log_name: str = "logs.csv",
 ):
-    target_logs = os.path.join(models_out, experiment_name + log_name)
+    target_logs = os.path.join(models_out, experiment_name, log_name)
     log = Logger(target_logs, ";")
 
     if headers is None:
