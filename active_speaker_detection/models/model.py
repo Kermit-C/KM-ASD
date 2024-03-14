@@ -19,6 +19,7 @@ from ..utils.vf_util import cosine_similarity
 from .graph_all_edge_net import GraphAllEdgeNet
 from .graph_easee_net import GraphEaseeNet
 from .graph_fc_net import GraphFcNet
+from .graph_gat_2s_net import GraphGatTwoStreamNet
 from .graph_gat_edge_net import GraphGatEdgeNet
 from .graph_gated_edge_net import GraphGatedEdgeNet
 from .graph_gin_edge_net import GraphGinEdgeNet
@@ -427,6 +428,10 @@ def get_graph(
     elif graph_type == "GraphRnnLstmNet":
         graph_net = GraphRnnNet(
             "LSTM", a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim
+        )
+    elif graph_type == "GraphGatTwoStreamNet":
+        graph_net = GraphGatTwoStreamNet(
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
         )
 
     elif graph_type == "GraphAllEdgeNet":
