@@ -81,10 +81,14 @@ class MyModel(nn.Module):
         x, edge_index, edge_attr_info = data.x, data.edge_index, data.edge_attr
         audio_node_mask = []
         audio_feature_idx_list = []
-        # TODO: 判断形状
-        for mask, idx in zip(data.audio_node_mask, data.audio_feature_idx_list):
-            audio_node_mask += mask
-            audio_feature_idx_list += [i + len(audio_feature_idx_list) for i in idx]
+        if type(data.audio_node_mask[0]) == bool:
+            audio_node_mask = data.audio_node_mask
+            audio_feature_idx_list = data.audio_feature_idx_list
+        else:
+            # 批量数据平铺
+            for mask, idx in zip(data.audio_node_mask, data.audio_feature_idx_list):
+                audio_node_mask += mask
+                audio_feature_idx_list += [i + len(audio_feature_idx_list) for i in idx]
         video_node_mask = [not mask for mask in audio_node_mask]
 
         if len(x.shape) > 3:

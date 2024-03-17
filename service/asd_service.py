@@ -117,8 +117,8 @@ def get_faces_and_audios_of_graph(
 ]:
     frames_per_clip: int = infer_config["frmc"]
     max_ctx_size: int = (
-        infer_config["ctx"] * 3
-    )  # 三倍的上下文大小，一次请求可以分治成三份分别请求算法
+        infer_config["ctx"] * 1
+    )  # TODO: 三倍的上下文大小，一次请求可以分治成三份分别请求算法
     n_clips: int = infer_config["nclp"]
     strd: int = infer_config["strd"]
 

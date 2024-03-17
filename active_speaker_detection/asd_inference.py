@@ -97,7 +97,7 @@ class ActiveSpeakerDetector:
             example_face_tensor.size(1),
             example_face_tensor.size(2),
             example_face_tensor.size(3),
-        )
+        ).to(self.device)
 
         # 图节点的实体数据
         entity_list: list[int] = []
@@ -225,7 +225,7 @@ class ActiveSpeakerDetector:
             x=feature_set,
             # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
             edge_index=torch.tensor(
-                [source_vertices, target_vertices], dtype=torch.long
+                [source_vertices, target_vertices], dtype=torch.long, device=self.device
             ),
             # 维度为 [边的数量, 6, 4]，表示每条边的两侧节点的位置信息、两侧节点是否纯音频节点、时间差比例、时间差、是否自己连接
             edge_attr=torch.tensor(
@@ -243,6 +243,7 @@ class ActiveSpeakerDetector:
                     [(self_c, 0, 0, 0) for self_c in self_connect],
                 ],
                 dtype=torch.float,
+                device=self.device,
             ).transpose(0, 1),
             # 纯音频节点的掩码
             audio_node_mask=audio_feature_mask,

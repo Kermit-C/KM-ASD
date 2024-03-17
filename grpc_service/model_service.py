@@ -18,6 +18,7 @@ from service.asd_service import detect_active_speaker
 from service.face_detection_service import detect_faces
 from service.face_recognition_service import recognize_faces
 from service.speaker_verification_service import register_speaker, verify_speakers
+from utils.logger_util import ms_logger
 from utils.uuid_util import get_uuid
 
 from . import model_service_pb2, model_service_pb2_grpc
@@ -51,13 +52,17 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         frame_width = request.frame_width  # type: ignore
         frame_height = request.frame_height  # type: ignore
 
+        ms_logger.debug(f"Received ASD request: {request_id}")
+
         is_acquired = self.asd_semaphore.acquire(
             blocking=True,
             timeout=config.model_service_server_asd_worker_wait_timeout,
         )
         if not is_acquired:
+            ms_logger.error(f"Active speaker detection worker is busy: {request_id}")
             raise Exception("Active speaker detection worker is busy")
         try:
+            ms_logger.debug(f"Start processing ASD request: {request_id}")
             is_active_list = detect_active_speaker(
                 video_id,
                 frame_count,
@@ -68,6 +73,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                 frame_width,
             )
         finally:
+            ms_logger.debug(f"Finish processing ASD request: {request_id}")
             self.asd_semaphore.release()
 
         return model_service_pb2.AsdResponse(
