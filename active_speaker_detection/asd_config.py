@@ -26,7 +26,7 @@ datasets = {
 
 inference_params = {
     "encoder_type": "R3D18",
-    "graph_type": "GraphAllEdgeNet",
+    "graph_type": "GraphKmTwoStreamNet",
     "encoder_enable_vf": True,
     "graph_enable_spatial": True,
     # 每刻计算特征的帧数
@@ -41,7 +41,7 @@ inference_params = {
     "size": 112,
     "audio_sample_rate": 16000,
     # 图的边是否双向连接
-    "is_edge_double": False,
+    "is_edge_double": True,
     # 不同实体在不同时刻之间的连接
     "is_edge_across_entity": False,
 }

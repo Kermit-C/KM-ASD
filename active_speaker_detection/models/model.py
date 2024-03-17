@@ -81,6 +81,7 @@ class MyModel(nn.Module):
         x, edge_index, edge_attr_info = data.x, data.edge_index, data.edge_attr
         audio_node_mask = []
         audio_feature_idx_list = []
+        # TODO: 判断形状
         for mask, idx in zip(data.audio_node_mask, data.audio_feature_idx_list):
             audio_node_mask += mask
             audio_feature_idx_list += [i + len(audio_feature_idx_list) for i in idx]
