@@ -20,8 +20,8 @@ class FaceDetectProcessor(BaseEventBusProcessor):
     def __init__(self, processor_name: str):
         super().__init__(processor_name)
 
-    def process(self, event_message_body: FaceDetectMessageBody):
-        face_dets = call_face_detection(
+    async def process_async(self, event_message_body: FaceDetectMessageBody):
+        face_dets = await call_face_detection(
             event_message_body.frame, self.processor_timeout
         )
         self.publish_next(

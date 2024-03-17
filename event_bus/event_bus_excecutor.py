@@ -24,3 +24,7 @@ def init():
 
 def submit(task: Callable, *args, **kwargs) -> futures.Future:
     return excecuter.submit(task, *args, **kwargs)
+
+
+def get_executor():
+    return excecuter

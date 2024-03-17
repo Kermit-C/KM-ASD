@@ -37,7 +37,7 @@ class AsdProcessor(BaseEventBusProcessor):
         self.asd_create_lock_lock: RLock = RLock()
         self.asd_lock_of_request: dict[str, RLock] = {}
 
-    def process(self, event_message_body: AsdMessageBody):
+    async def process_async(self, event_message_body: AsdMessageBody):
         if event_message_body.type == "V":
             assert event_message_body.frame_count is not None
             assert event_message_body.frame_timestamp is not None
@@ -58,7 +58,7 @@ class AsdProcessor(BaseEventBusProcessor):
                 frame_height=event_message_body.frame_height,
                 frame_width=event_message_body.frame_width,
             )
-            self._process_asd(event_message_body.frame_count)
+            await self._process_asd(event_message_body.frame_count)
         elif event_message_body.type == "A":
             assert event_message_body.audio_frame_count is not None
             assert event_message_body.audio_frame_timestamp is not None
@@ -79,7 +79,7 @@ class AsdProcessor(BaseEventBusProcessor):
                     event_message_body.audio_frame_timestamp,
                 ),
             )
-            self._process_asd(parsed_frame_count)
+            await self._process_asd(parsed_frame_count)
         else:
             raise ValueError("AsdProcessor event_message_body.type error")
 
@@ -89,7 +89,7 @@ class AsdProcessor(BaseEventBusProcessor):
         # 已在 process 内部处理过 ASD 调用异常，其他异常直接抛出，视为不可恢复异常
         raise ValueError("AsdProcessor event_message_body.type error", exception)
 
-    def _process_asd(self, frame_count: int):
+    async def _process_asd(self, frame_count: int):
         with self.asd_create_lock_lock:
             if self.get_request_id() not in self.asd_lock_of_request:
                 self.asd_lock_of_request[self.get_request_id()] = RLock()
@@ -127,7 +127,7 @@ class AsdProcessor(BaseEventBusProcessor):
                         )  # type: ignore
 
                         try:
-                            is_active_list = call_asd(
+                            is_active_list = await call_asd(
                                 self.get_request_id(),
                                 wait_asd_frame_count,
                                 faces,

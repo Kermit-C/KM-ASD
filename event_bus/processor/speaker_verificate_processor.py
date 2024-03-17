@@ -32,7 +32,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
             "aggregate_frame_length"
         ]
 
-    def process(self, event_message_body: SpeakerVerificateMessageBody):
+    async def process_async(self, event_message_body: SpeakerVerificateMessageBody):
         self.store.save_frame(
             self.get_request_id(),
             event_message_body.audio_frame_count,
@@ -68,7 +68,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
             event_message_body.audio_frame_length,
         )
 
-        label = call_speaker_verification(aggregate_frame, self.processor_timeout)
+        label = await call_speaker_verification(aggregate_frame, self.processor_timeout)
         if not label:
             return
 

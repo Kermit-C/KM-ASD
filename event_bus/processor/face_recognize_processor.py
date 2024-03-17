@@ -26,7 +26,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
             "same_face_between_frames_iou_threshold"
         ]
 
-    def process(self, event_message_body: FaceRecognizeMessageBody):
+    async def process_async(self, event_message_body: FaceRecognizeMessageBody):
         # 获取最近 10 帧最接近的人脸的标签
         for frame_count in range(
             event_message_body.frame_count - 1, event_message_body.frame_count - 10, -1
@@ -45,7 +45,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
         if last_label is not None:
             label = last_label
         else:
-            label = call_face_recognition(
+            label = await call_face_recognition(
                 event_message_body.frame,
                 event_message_body.face_lmks,
                 self.processor_timeout,
