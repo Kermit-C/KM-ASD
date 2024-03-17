@@ -14,7 +14,7 @@ from typing import Coroutine, Optional
 from config import event_bus
 from utils.logger_util import eb_logger
 
-from .event_bus_excecutor import get_executor
+from .event_bus_excecutor import get_event_loop, get_executor
 from .event_bus_excecutor import submit as submit_executor
 from .event_message import EventMessage, EventMessageBody
 
@@ -31,8 +31,6 @@ class BaseEventBusProcessor:
             self.__class__.__name__
         ]["timeout"]
         self.last_message: threading.local = threading.local()
-
-        self.event_loop = asyncio.get_event_loop()
 
     def process(self, event_message_body: EventMessageBody):
         """处理消息，需要重写"""
@@ -141,8 +139,8 @@ class BaseEventBusProcessor:
                     f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
                 )
 
-        process_future: asyncio.Future = self.event_loop.run_in_executor(
-            get_executor(), self.event_loop.create_task, process_coroutine
+        process_future: asyncio.Future = get_event_loop().run_in_executor(
+            get_executor(), get_event_loop().create_task, process_coroutine
         )
         process_future.add_done_callback(_handler_async_callback)
         return process_future
