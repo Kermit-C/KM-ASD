@@ -431,7 +431,7 @@ def get_graph(
         )
     elif graph_type == "GraphGatTwoStreamNet":
         graph_net = GraphGatTwoStreamNet(
-            a_feature_dim, v_feature_dim, vf_emb_dim, 128, edge_attr_dim, is_gatv2=True
+            a_feature_dim, v_feature_dim, vf_emb_dim, 128, is_gatv2=True
         )
 
     elif graph_type == "GraphAllEdgeNet":
