@@ -20,7 +20,6 @@ class GraphGatTwoStreamNet(nn.Module):
         in_v_channels,
         in_vf_channels,
         channels,
-        edge_attr_dim,
         is_gatv2: bool = False,
     ):
         super().__init__()
@@ -44,7 +43,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -55,7 +53,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -66,7 +63,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -78,7 +74,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -89,7 +84,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -100,7 +94,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -112,7 +105,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -123,7 +115,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -134,7 +125,6 @@ class GraphGatTwoStreamNet(nn.Module):
             channels,
             channels,
             heads=4,
-            edge_dim=edge_attr_dim,
             dropout=0.2,
             concat=False,
             negative_slope=0.2,
@@ -153,10 +143,9 @@ class GraphGatTwoStreamNet(nn.Module):
         self.dropout_edge = 0
 
     def forward(self, data):
-        x, edge_index, edge_attr, edge_delta, edge_self = (
+        x, edge_index, edge_delta, edge_self = (
             data.x,
             data.edge_index,
-            data.edge_attr,
             data.edge_delta,
             data.edge_self,
         )
@@ -177,15 +166,13 @@ class GraphGatTwoStreamNet(nn.Module):
         distance3_mask = edge_delta >= 11 | (edge_self == 1)
 
         graph_feats_1_1 = graph_feats
-        graph_feats_1_1 = self.layer_1_1(
-            graph_feats_1_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
-        )
+        graph_feats_1_1 = self.layer_1_1(graph_feats_1_1, edge_index[:, distance1_mask])
         graph_feats_1_2 = graph_feats
         graph_feats_1_2 = self.layer_1_2_1(
-            graph_feats_1_2, edge_index[:, distance2_mask], edge_attr[distance2_mask]
+            graph_feats_1_2, edge_index[:, distance2_mask]
         )
         graph_feats_1_2 = self.layer_1_2_2(
-            graph_feats_1_2, edge_index[:, distance3_mask], edge_attr[distance3_mask]
+            graph_feats_1_2, edge_index[:, distance3_mask]
         )
         graph_feats_1 = graph_feats_1_1 + graph_feats_1_2 + graph_feats
         graph_feats_1 = self.batch_1(graph_feats_1)
@@ -193,15 +180,13 @@ class GraphGatTwoStreamNet(nn.Module):
         graph_feats_1 = self.dropout(graph_feats_1)
 
         graph_feats_2_1 = graph_feats_1
-        graph_feats_2_1 = self.layer_2_1(
-            graph_feats_2_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
-        )
+        graph_feats_2_1 = self.layer_2_1(graph_feats_2_1, edge_index[:, distance1_mask])
         graph_feats_2_2 = graph_feats_1
         graph_feats_2_2 = self.layer_2_2_1(
-            graph_feats_2_2, edge_index[:, distance2_mask], edge_attr[distance2_mask]
+            graph_feats_2_2, edge_index[:, distance2_mask]
         )
         graph_feats_2_2 = self.layer_2_2_2(
-            graph_feats_2_2, edge_index[:, distance3_mask], edge_attr[distance3_mask]
+            graph_feats_2_2, edge_index[:, distance3_mask]
         )
         graph_feats_2 = graph_feats_2_1 + graph_feats_2_2 + graph_feats_1
         graph_feats_2 = self.batch_2(graph_feats_2)
@@ -209,19 +194,13 @@ class GraphGatTwoStreamNet(nn.Module):
         graph_feats_2 = self.dropout(graph_feats_2)
 
         graph_feats_3_1 = graph_feats_2
-        graph_feats_3_1 = self.layer_3_1(
-            graph_feats_3_1, edge_index[:, distance1_mask], edge_attr[distance1_mask]
-        )
+        graph_feats_3_1 = self.layer_3_1(graph_feats_3_1, edge_index[:, distance1_mask])
         graph_feats_3_2 = graph_feats_2
         graph_feats_3_2 = self.layer_3_2_1(
-            graph_feats_3_2,
-            edge_index[:, distance2_mask],
-            edge_attr[distance2_mask],
+            graph_feats_3_2, edge_index[:, distance2_mask]
         )
         graph_feats_3_2 = self.layer_3_2_2(
-            graph_feats_3_2,
-            edge_index[:, distance3_mask],
-            edge_attr[distance3_mask],
+            graph_feats_3_2, edge_index[:, distance3_mask]
         )
         graph_feats_3 = graph_feats_3_1 + graph_feats_3_2 + graph_feats_2
 
