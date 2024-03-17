@@ -283,13 +283,20 @@ class GraphDataset(Dataset):
                     entity_list.append("")
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
+                    is_last_node = time_idx == (
+                        len(time_context) - 1 - self.graph_time_steps // 2
+                    )
+                    # 最后一个节点是 0，最后一个图是 1，然后依次 2,3...
                     distance_to_last_graph_list.append(
-                        (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
-                        // self.graph_time_steps
+                        (
+                            (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
+                            // self.graph_time_steps
+                        )
+                        + 1
+                        if not is_last_node
+                        else 0
                     )
-                    center_node_mask.append(
-                        time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
-                    )
+                    center_node_mask.append(is_last_node)
                     last_node_mask.append(time_idx == len(time_context) - 1)
                 target_list.append(target)
                 audio_feature_mask.append(False)
@@ -297,13 +304,20 @@ class GraphDataset(Dataset):
                 entity_list.append(entity)
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
+                is_last_node = time_idx == (
+                    len(time_context) - 1 - self.graph_time_steps // 2
+                )
+                # 最后一个节点是 0，最后一个图是 1，然后依次 2,3...
                 distance_to_last_graph_list.append(
-                    (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
-                    // self.graph_time_steps
+                    (
+                        (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
+                        // self.graph_time_steps
+                    )
+                    + 1
+                    if not is_last_node
+                    else 0
                 )
-                center_node_mask.append(
-                    time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
-                )
+                center_node_mask.append(is_last_node)
                 last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
