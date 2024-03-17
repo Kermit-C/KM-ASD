@@ -97,14 +97,14 @@ class ActiveSpeakerDetector:
 
     def detect_active_speaker(
         self,
-        faces: list[list[list[np.ndarray]]],
+        faces: list[list[np.ndarray]],
         audios: list[np.ndarray],
         face_bboxes: list[list[tuple[float, float, float, float]]],
-        faces_vf_emb: Optional[list[list[list[np.ndarray]]]] = None,
+        faces_vf_emb: Optional[list[list[np.ndarray]]] = None,
         audios_vf_emb: Optional[list[np.ndarray]] = None,
     ) -> list[list[float]]:
         """
-        :param faces: 人脸图像，第一个列表是每个时刻的列表，第二个列表是每个人的列表，第三个列表是一个人一个时刻的 feat
+        :param faces: 人脸图像，第一个列表是每个时刻的列表，第二个列表是每个人的列表，一个人一个时刻的 feat
         :param audios: 音频，列表是每个时刻的 feat，ndarray 形状为 (N,)
         :param face_bboxes: 人脸框，第一个列表是每个时刻的列表，第二个列表是每个人的列表，第三个列表是一个人一个时刻的 bbox list，(x1, y1, x2, y2)，相对于原图的比例
         :return: 第一个列表是每个时刻的列表，第二个列表是每个人的列表，每个人每个时刻的 p
@@ -115,11 +115,11 @@ class ActiveSpeakerDetector:
             raise ValueError("Face data should be of length max_context")
 
         max_dim = 0
-        max_dim = max(faces[0][0][0].shape[0], max_dim)
+        max_dim = max(faces[0][0].shape[0], max_dim)
         max_dim = max(audios[0].shape[0], max_dim)
         if self.encoder_enable_vf:
             assert faces_vf_emb is not None and audios_vf_emb is not None
-            max_dim = max(faces_vf_emb[0][0][0].shape[0], max_dim)
+            max_dim = max(faces_vf_emb[0][0].shape[0], max_dim)
             max_dim = max(audios_vf_emb[0].shape[0], max_dim)
 
         # 创建一个 tensor，用于存放特征数据，这里是 6D 的，第一个维度是最大节点数，第二个维度分为音视频特征，第三个维度是维度数
@@ -147,29 +147,37 @@ class ActiveSpeakerDetector:
             for j, face_np in enumerate(faces[i]):
                 if j == 0:
                     # 第一个节点之前加一个纯音频节点
-                    feature_set[node_count, 0] = audio_data
+                    feature_set[node_count, 0, : audio_data.shape[0]] = audio_data
                     if self.encoder_enable_vf:
                         assert audios_vf_emb is not None
-                        feature_set[node_count, 2] = torch.from_numpy(audios_vf_emb[i])
-                    entity_list.insert(0, -1)
-                    audio_feature_mask.insert(0, True)
-                    audio_feature_idx_list.insert(0, audio_feature_idx)
-                    timestamp_list.insert(0, i)
-                    position_list.insert(0, (0, 0, 1, 1))
+                        feature_set[node_count, 2, : audios_vf_emb[i].shape[0]] = (
+                            torch.from_numpy(audios_vf_emb[i])
+                        )
+                    entity_list.append(-1)
+                    audio_feature_mask.append(True)
+                    audio_feature_idx_list.append(audio_feature_idx)
+                    timestamp_list.append(i)
+                    position_list.append((0, 0, 1, 1))
                     node_count += 1
 
-                feature_set[node_count, 0] = audio_data
-                feature_set[node_count, 1] = torch.from_numpy(face_np)
+                feature_set[node_count, 0, : audio_data.shape[0]] = audio_data
+                feature_set[node_count, 1, : face_np.shape[0]] = torch.from_numpy(
+                    face_np
+                )
                 if self.encoder_enable_vf:
                     assert faces_vf_emb is not None and audios_vf_emb is not None
-                    feature_set[node_count, 2] = torch.from_numpy(audios_vf_emb[i])
-                    feature_set[node_count, 3] = torch.from_numpy(faces_vf_emb[i][j])
+                    feature_set[node_count, 2, : audios_vf_emb[i].shape[0]] = (
+                        torch.from_numpy(audios_vf_emb[i])
+                    )
+                    feature_set[node_count, 3, : faces_vf_emb[i][j].shape[0]] = (
+                        torch.from_numpy(faces_vf_emb[i][j])
+                    )
 
-                entity_list.insert(0, j)
-                audio_feature_mask.insert(0, False)
-                audio_feature_idx_list.insert(0, audio_feature_idx)
-                timestamp_list.insert(0, i)
-                position_list.insert(0, face_bboxes[i][j])  # type: ignore
+                entity_list.append(j)
+                audio_feature_mask.append(False)
+                audio_feature_idx_list.append(audio_feature_idx)
+                timestamp_list.append(i)
+                position_list.append(face_bboxes[i][j])  # type: ignore
 
                 node_count += 1
         feature_set = feature_set[:node_count]

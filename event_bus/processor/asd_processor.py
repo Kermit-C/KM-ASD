@@ -129,7 +129,7 @@ class AsdProcessor(BaseEventBusProcessor):
                         try:
                             is_active_list = call_asd(
                                 self.get_request_id(),
-                                frame_count,
+                                wait_asd_frame_count,
                                 faces,
                                 face_bboxes,
                                 audio,

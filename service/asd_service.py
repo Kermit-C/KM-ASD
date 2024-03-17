@@ -151,6 +151,7 @@ def get_faces_and_audios_of_encoder(
         [None for _ in range(ctx_size)] for _ in range(frames_per_clip)
     ]
 
+    last_face_boxes: Optional[list[Optional[tuple[int, int, int, int]]]] = None
     for i in range(frames_per_clip - 1, -1, -1):
         curr_frame_count = frame_count - frames_per_clip + i + 1
         frame_faces = asd_store.get_frame_faces(request_id, curr_frame_count)
@@ -174,7 +175,7 @@ def get_faces_and_audios_of_encoder(
             alloc_num = 0
             for j, frame_face in enumerate(frame_faces):
                 face_bbox = frame_face["face_bbox"]
-                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)  # type: ignore
+                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)
                 if last_face_idx != -1:
                     frame_faces_idx_list[last_face_idx] = j
                     alloc_num += 1
@@ -248,8 +249,8 @@ def get_faces_and_audios_of_graph(
     frame_height: int,
     frame_width: int,
 ) -> tuple[
-    list[list[list[np.ndarray]]],
-    Optional[list[list[list[np.ndarray]]]],
+    list[list[np.ndarray]],
+    Optional[list[list[np.ndarray]]],
     list[np.ndarray],
     Optional[list[np.ndarray]],
     list[list[tuple[float, float, float, float]]],
@@ -302,7 +303,7 @@ def get_faces_and_audios_of_graph(
             alloc_num = 0
             for j, frame_face in enumerate(frame_faces):
                 face_bbox = frame_face["face_bbox"]
-                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)  # type: ignore
+                last_face_idx = get_face_idx_from_last_frame(last_face_boxes, face_bbox)
                 if last_face_idx != -1:
                     frame_faces_idx_list[last_face_idx] = j
                     alloc_num += 1
@@ -352,13 +353,12 @@ def get_faces_and_audios_of_graph(
             if is_last_frame and any(
                 [faces_list[k][j] is None for k in range(len(faces_list))]
             ):
+                l = random.randint(0, j - 1)
                 for k in range(len(faces_list)):
-                    l = random.randint(0, j - 1)
                     faces_list[k][j] = faces_list[k][l]
                     face_vf_emb_list[k][j] = face_vf_emb_list[k][l]
                     faces_bbox_list[k][j] = faces_bbox_list[k][l]
 
-            # 如果是最新帧，而且没有不为 None 的 clip，就用下一帧一样的
             if faces_list[i][j] is None:
                 faces_list[i][j] = faces_list[i + 1][j]
                 face_vf_emb_list[i][j] = face_vf_emb_list[i + 1][j]
@@ -402,10 +402,13 @@ def get_faces_and_audios_of_graph(
 
 
 def get_face_idx_from_last_frame(
-    face_bboxes: list[tuple[int, int, int, int]], face_bbox: tuple[int, int, int, int]
+    face_bboxes: list[Optional[tuple[int, int, int, int]]],
+    face_bbox: tuple[int, int, int, int],
 ) -> int:
     """从上一帧人脸中找到最接近的人脸"""
     for i, last_frame_face_bbox in enumerate(face_bboxes):
+        if last_frame_face_bbox is None:
+            continue
         # 计算两个人脸框的IOU
         iou = get_iou(face_bbox, last_frame_face_bbox)
         if iou > config.asd_same_face_between_frames_iou_threshold:
