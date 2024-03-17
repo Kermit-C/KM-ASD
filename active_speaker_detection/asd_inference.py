@@ -38,13 +38,14 @@ class ActiveSpeakerDetector:
         self.audio_sample_rate = infer_config["audio_sample_rate"]
         self.is_edge_double = infer_config["is_edge_double"]
         self.is_edge_across_entity = infer_config["is_edge_across_entity"]
+        self.encoder_enable_vf = infer_config["encoder_enable_vf"]
         self.device = torch.device("cpu" if cpu else "cuda")
 
         torch.set_grad_enabled(False)
         self.model, self.encoder, self.encoder_vf = get_backbone(
             infer_config["encoder_type"],
             infer_config["graph_type"],
-            infer_config["encoder_enable_vf"],
+            self.encoder_enable_vf,
             infer_config["graph_enable_spatial"],
             train_weights=trained_model,
         )
@@ -58,15 +59,53 @@ class ActiveSpeakerDetector:
             ]
         )
 
+    def gen_feature(
+        self, faces: list[list[np.ndarray]], audios: list[np.ndarray]
+    ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+        """
+        :param faces: 人脸图像，第一个列表是每个人的列表，第二个列表是一个人一个时刻的 clip list，ndarray 形状为 (H, W, C)，BGR
+        :param audios: 音频，ndarray 形状为 (N,)，float32 pcm
+        """
+        faces_tensors = [[self._parse_face(f) for f in clips] for clips in faces]
+        # 把一个人的多个画面合并成一个 4D tensor，第一个维度是通道数，第二个维度是clip数，第三四个维度是画面的长宽
+        faces_tensor = torch.stack([torch.stack(fc, dim=1) for fc in faces_tensors]).to(
+            self.device
+        )
+
+        mel_feats, _ = zip(*[self._parse_audio(a) for a in audios])
+        audios_tensor = torch.from_numpy(np.stack(mel_feats, axis=0)).to(self.device)
+
+        audio_feats, video_feats = self.model.forward_encoder(
+            faces_tensor, audios_tensor
+        )
+
+        if self.encoder_enable_vf:
+            vf_a_emb, vf_v_emb = self.model.forward_encoder_vf(audio_feats, video_feats)
+            return (
+                [i for i in audio_feats.cpu().detach().numpy()],
+                [i for i in video_feats.cpu().detach().numpy()],
+                [i for i in vf_a_emb.cpu().detach().numpy()],
+                [i for i in vf_v_emb.cpu().detach().numpy()],
+            )
+        else:
+            return (
+                [i for i in audio_feats.cpu().detach().numpy()],
+                [i for i in video_feats.cpu().detach().numpy()],
+                [],
+                [],
+            )
+
     def detect_active_speaker(
         self,
         faces: list[list[list[np.ndarray]]],
         audios: list[np.ndarray],
         face_bboxes: list[list[tuple[float, float, float, float]]],
+        faces_vf_emb: Optional[list[list[list[np.ndarray]]]] = None,
+        audios_vf_emb: Optional[list[np.ndarray]] = None,
     ) -> list[list[float]]:
         """
-        :param faces: 人脸图像，第一个列表是每个时刻的列表，第二个列表是每个人的列表，第三个列表是一个人一个时刻的 clip list，ndarray 形状为 (H, W, C)，BGR
-        :param audios: 音频，列表是每个时刻的列表，ndarray 形状为 (N,)，float32 pcm
+        :param faces: 人脸图像，第一个列表是每个时刻的列表，第二个列表是每个人的列表，第三个列表是一个人一个时刻的 feat
+        :param audios: 音频，列表是每个时刻的 feat，ndarray 形状为 (N,)
         :param face_bboxes: 人脸框，第一个列表是每个时刻的列表，第二个列表是每个人的列表，第三个列表是一个人一个时刻的 bbox list，(x1, y1, x2, y2)，相对于原图的比例
         :return: 第一个列表是每个时刻的列表，第二个列表是每个人的列表，每个人每个时刻的 p
         """
@@ -75,28 +114,19 @@ class ActiveSpeakerDetector:
         if len(faces[0]) != self.max_context:
             raise ValueError("Face data should be of length max_context")
 
-        faces_tensors = [
-            [[self._parse_face(f) for f in clips] for clips in faces_per_entity]
-            for faces_per_entity in faces
-        ]
-        # 把一个人的多个画面合并成一个 4D tensor，第一个维度是通道数，第二个维度是clip数，第三四个维度是画面的长宽
-        faces_tensors = [
-            [torch.stack(fc, dim=1) for fc in faces_per_entity]
-            for faces_per_entity in faces_tensors
-        ]
-        # 获取一个不为空的人脸 tensor，用于获取长宽
-        example_face_tensor = faces_tensors[0][0]
+        max_dim = 0
+        max_dim = max(faces[0][0][0].shape[0], max_dim)
+        max_dim = max(audios[0].shape[0], max_dim)
+        if self.encoder_enable_vf:
+            assert faces_vf_emb is not None and audios_vf_emb is not None
+            max_dim = max(faces_vf_emb[0][0][0].shape[0], max_dim)
+            max_dim = max(audios_vf_emb[0].shape[0], max_dim)
 
-        mel_feats, fbank_feats = zip(*[self._parse_audio(a) for a in audios])
-
-        # 创建一个 tensor，用于存放特征数据，这里是 6D 的，第一个维度是最大节点数，第二个维度分为音视频特征，第三个维度是通道数，第四个维度是clip数，第五六个维度是画面的长宽
+        # 创建一个 tensor，用于存放特征数据，这里是 6D 的，第一个维度是最大节点数，第二个维度分为音视频特征，第三个维度是维度数
         feature_set = torch.zeros(
             (self.max_context + 1) * self.graph_time_steps,
-            2,
-            example_face_tensor.size(0),
-            example_face_tensor.size(1),
-            example_face_tensor.size(2),
-            example_face_tensor.size(3),
+            4 if self.encoder_enable_vf else 2,
+            max_dim,
         ).to(self.device)
 
         # 图节点的实体数据
@@ -112,14 +142,15 @@ class ActiveSpeakerDetector:
 
         node_count = 0
         for i in range(self.graph_time_steps - 1, -1, -1):
-            audio_data = torch.from_numpy(mel_feats[i])
+            audio_data = torch.from_numpy(audios[i])
             audio_feature_idx = node_count
-            for j, face_tensor in enumerate(faces_tensors[i]):
+            for j, face_np in enumerate(faces[i]):
                 if j == 0:
                     # 第一个节点之前加一个纯音频节点
-                    feature_set[
-                        node_count, 0, 0, 0, : audio_data.size(1), : audio_data.size(2)
-                    ] = audio_data
+                    feature_set[node_count, 0] = audio_data
+                    if self.encoder_enable_vf:
+                        assert audios_vf_emb is not None
+                        feature_set[node_count, 2] = torch.from_numpy(audios_vf_emb[i])
                     entity_list.insert(0, -1)
                     audio_feature_mask.insert(0, True)
                     audio_feature_idx_list.insert(0, audio_feature_idx)
@@ -127,8 +158,12 @@ class ActiveSpeakerDetector:
                     position_list.insert(0, (0, 0, 1, 1))
                     node_count += 1
 
-                feature_set[node_count, 0,0,0, : audio_data.size(1), : audio_data.size(2)] = audio_data
-                feature_set[node_count, 1] = face_tensor
+                feature_set[node_count, 0] = audio_data
+                feature_set[node_count, 1] = torch.from_numpy(face_np)
+                if self.encoder_enable_vf:
+                    assert faces_vf_emb is not None and audios_vf_emb is not None
+                    feature_set[node_count, 2] = torch.from_numpy(audios_vf_emb[i])
+                    feature_set[node_count, 3] = torch.from_numpy(faces_vf_emb[i][j])
 
                 entity_list.insert(0, j)
                 audio_feature_mask.insert(0, False)
@@ -221,7 +256,7 @@ class ActiveSpeakerDetector:
                         self_connect.append(int(i == j))
 
         graph_data = Data(
-            # 维度为 [节点数量, 2, 通道数 , clip数 , 高度 , 宽度]，表示每个节点的音频和视频特征
+            # 维度为 [节点数量, 4 or 2, n]，表示每个节点的音频、视频特征、音频音脸嵌入、视频音脸嵌入
             x=feature_set,
             # 维度为 [2, 边的数量]，表示每条边的两侧节点的索引
             edge_index=torch.tensor(
@@ -250,7 +285,7 @@ class ActiveSpeakerDetector:
             # 节点的时刻对应纯音频节点的索引
             audio_feature_idx_list=audio_feature_idx_list,
         )
-        graph_output, *_ = self.model(graph_data, mel_feats[0].shape)
+        graph_output, *_ = self.model(graph_data)
         graph_output = F.softmax(graph_output, dim=1)
 
         output_list = [[0.0 for _ in faces_per_entity] for faces_per_entity in faces]

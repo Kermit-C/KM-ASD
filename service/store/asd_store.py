@@ -48,13 +48,49 @@ class ActiveSpeakerDetectionStore:
                 request_store["frames"][frame_count - 1] = {
                     "faces": [],
                     "audio_frame": audio_frame,
+                    "audio_feat": None,
+                    "audio_vf_emb": None,
                 }
             request_store["frames"][frame_count - 1]["faces"].append(
                 {
                     "face_frame": face_frame,
+                    "face_feat": None,
+                    "face_vf_emb": None,
                     "face_bbox": face_bbox,
                 }
             )
+            # 保留的最大帧数
+            if len(request_store["frames"]) > self.max_frame_count:
+                request_store["frames"][: -self.max_frame_count] = [None] * (
+                    len(request_store["frames"]) - self.max_frame_count
+                )
+
+    def save_frame_feat(
+        self,
+        request_id: str,
+        frame_count: int,
+        frame_face_index: int,
+        face_feat: np.ndarray,
+        face_vf_emb: Optional[np.ndarray],
+        audio_feat: np.ndarray,
+        audio_vf_emb: Optional[np.ndarray],
+    ):
+        with self.save_frame_lock:
+            if not self.store_of_request.has(request_id):
+                self.store_of_request.put(request_id, {"frames": []})
+            request_store = self.store_of_request.get(request_id)
+            while len(request_store["frames"]) <= frame_count - 1:
+                return
+            if request_store["frames"][frame_count - 1] is None:
+                return
+            request_store["frames"][frame_count - 1]["audio_feat"] = audio_feat
+            request_store["frames"][frame_count - 1]["audio_vf_emb"] = audio_vf_emb
+            request_store["frames"][frame_count - 1]["faces"][frame_face_index][
+                "face_feat"
+            ] = face_feat
+            request_store["frames"][frame_count - 1]["faces"][frame_face_index][
+                "face_vf_emb"
+            ] = face_vf_emb
             # 保留的最大帧数
             if len(request_store["frames"]) > self.max_frame_count:
                 request_store["frames"][: -self.max_frame_count] = [None] * (
@@ -75,14 +111,18 @@ class ActiveSpeakerDetectionStore:
 
     def get_frame_audio(
         self, request_id: str, frame_count: int
-    ) -> Optional[np.ndarray]:
+    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
         if frame_count < 1:
-            return None
+            return None, None, None
         if not self.store_of_request.has(request_id):
-            return None
+            return None, None, None
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
-            return None
+            return None, None, None
         if request_store["frames"][frame_count - 1] is None:
-            return None
-        return request_store["frames"][frame_count - 1]["audio_frame"]
+            return None, None, None
+        return (
+            request_store["frames"][frame_count - 1]["audio_frame"],
+            request_store["frames"][frame_count - 1]["audio_feat"],
+            request_store["frames"][frame_count - 1]["audio_vf_emb"],
+        )

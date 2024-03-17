@@ -73,6 +73,26 @@ class MyModel(nn.Module):
         self.spatial_grayscale_height = spatial_grayscale_height
         self.spatial_mini_batch = 32  # 空间网络的 mini batch 大小，因为图节点数太大了（上千），所以需要分批次计算
 
+    def forward_encoder(
+        self,
+        faces: torch.Tensor,
+        audio: torch.Tensor,
+    ):
+        """
+        :param faces: (B, C, T, H, W)
+        :param audio: (B, C, 13, T)
+        """
+        encoder_audio_feats, encoder_video_feats, *_ = self.encoder(audio, faces)
+        return encoder_audio_feats, encoder_video_feats
+
+    def forward_encoder_vf(
+        self,
+        audio_feats: torch.Tensor,
+        video_feats: torch.Tensor,
+    ):
+        vf_a_emb, vf_v_emb = self.encoder_vf(audio_feats, video_feats)  # type: ignore
+        return vf_a_emb, vf_v_emb
+
     def forward(
         self,
         data,
@@ -100,8 +120,8 @@ class MyModel(nn.Module):
                 :, 0, 0, 0, : audio_size[1], : audio_size[2]
             ].unsqueeze(1)
             encoder_video_data = x[video_node_mask][:, 1, :, :, :, :]
-            encoder_audio_feats, encoder_video_feats, *_ = self.encoder(
-                encoder_audio_data, encoder_video_data
+            encoder_audio_feats, encoder_video_feats = self.forward_encoder(
+                encoder_video_data, encoder_audio_data
             )
 
             # 从 encoder 输出构造完整数据
@@ -124,7 +144,7 @@ class MyModel(nn.Module):
             audio_feat_dim = audio_feats.size(1)
             video_feat_dim = video_feats.size(1)
             if self.encoder_enable_vf:
-                vf_a_emb, vf_v_emb = self.encoder_vf(audio_feats, video_feats)  # type: ignore
+                vf_a_emb, vf_v_emb = self.forward_encoder_vf(audio_feats, video_feats)  # type: ignore
                 vf_a_emb_dim = vf_a_emb.size(1)
                 vf_v_emb_dim = vf_v_emb.size(1)
 
