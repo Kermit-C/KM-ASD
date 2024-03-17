@@ -7,14 +7,16 @@
 """
 
 import asyncio
+import contextvars
 import threading
 import time
+from concurrent.futures import Future
 from typing import Coroutine, Optional
 
 from config import event_bus
 from utils.logger_util import eb_logger
 
-from .event_bus_excecutor import get_event_loop, get_executor
+from .event_bus_excecutor import get_event_loop
 from .event_bus_excecutor import submit as submit_executor
 from .event_message import EventMessage, EventMessageBody
 
@@ -22,8 +24,9 @@ from .event_message import EventMessage, EventMessageBody
 class BaseEventBusProcessor:
     """事件总线处理器基类"""
 
-    def __init__(self, processor_name: str):
+    def __init__(self, processor_name: str, is_async: bool = False):
         self.processor_name: str = processor_name
+        self.is_async = is_async
         self.processor_properties: dict = event_bus["processors"][
             self.__class__.__name__
         ]["properties"]
@@ -31,6 +34,9 @@ class BaseEventBusProcessor:
             self.__class__.__name__
         ]["timeout"]
         self.last_message: threading.local = threading.local()
+        self.last_message_async: contextvars.ContextVar = contextvars.ContextVar(
+            "last_message_async"
+        )
 
     def process(self, event_message_body: EventMessageBody):
         """处理消息，需要重写"""
@@ -56,7 +62,10 @@ class BaseEventBusProcessor:
         wait_async_timeout: float = 0.0,
     ):
         """发布下一个消息"""
-        message = self.last_message.value.copy()
+        if self.is_async:
+            message = self.last_message_async.get().copy()
+        else:
+            message = self.last_message.value.copy()
         message.body = messageBody
         message.is_async = is_async
         message.is_wait_async = is_wait_async
@@ -65,33 +74,54 @@ class BaseEventBusProcessor:
 
     def result(self, messageBody: EventMessageBody):
         """输出消息"""
-        message = self.last_message.value.copy()
+        if self.is_async:
+            message = self.last_message_async.get().copy()
+        else:
+            message = self.last_message.value.copy()
         message.body = messageBody
-        self.last_message.value.result_consumer(message)
+        if self.is_async:
+            self.last_message_async.get().result_consumer(message)
+        else:
+            self.last_message.value.result_consumer(message)
 
     def result_exception(self, exception: Exception):
         """输出异常"""
-        message = self.last_message.value.copy()
+        if self.is_async:
+            message = self.last_message_async.get().copy()
+        else:
+            message = self.last_message.value.copy()
         message.body = exception
-        self.last_message.value.result_consumer(message)
+        if self.is_async:
+            self.last_message_async.get().result_consumer(message)
+        else:
+            self.last_message.value.result_consumer(message)
 
     def get_request_id(self) -> str:
-        return self.last_message.value.request_id
+        if self.is_async:
+            return self.last_message_async.get().request_id
+        else:
+            return self.last_message.value.request_id
 
     def get_request_timestamp(self) -> int:
-        return self.last_message.value.timestamp
+        if self.is_async:
+            return self.last_message_async.get().timestamp
+        else:
+            return self.last_message.value.timestamp
 
     def is_real_time(self) -> bool:
-        return self.last_message.value.is_real_time
+        if self.is_async:
+            return self.last_message_async.get().is_real_time
+        else:
+            return self.last_message.value.is_real_time
 
     def _handler(self, event_message: EventMessage) -> None:
         """处理消息"""
         start_time = time.time()
         eb_logger.debug(f"processor {self.processor_name} start")
         try:
-            self.last_message.value = event_message
             assert isinstance(event_message.body, EventMessageBody)
-            self.process(event_message.body)
+            self.last_message.value = event_message
+            return self.process(event_message.body)
         except Exception as e:
             try:
                 eb_logger.debug(f"processor {self.processor_name} exception: {str(e)}")
@@ -107,20 +137,16 @@ class BaseEventBusProcessor:
                 f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
             )
 
-    def _handler_async(self, event_message: EventMessage) -> Optional[asyncio.Future]:
+    def _handler_async(self, event_message: EventMessage) -> Future:
         """处理消息，异步处理"""
         start_time = time.time()
         eb_logger.debug(f"processor {self.processor_name} start")
 
-        self.last_message.value = event_message
-        assert isinstance(event_message.body, EventMessageBody)
-        process_coroutine: Coroutine = self.process_async(event_message.body)
-        if not asyncio.iscoroutine(process_coroutine):
-            return None
-
-        def _handler_async_callback(future: asyncio.Future):
+        async def process():
             try:
-                future.result()
+                assert isinstance(event_message.body, EventMessageBody)
+                self.last_message_async.set(event_message)
+                return await self.process_async(event_message.body)
             except Exception as e:
                 try:
                     eb_logger.debug(
@@ -139,51 +165,36 @@ class BaseEventBusProcessor:
                     f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
                 )
 
-        process_future: asyncio.Future = get_event_loop().run_in_executor(
-            get_executor(), get_event_loop().create_task, process_coroutine
+        process_future: Future = asyncio.run_coroutine_threadsafe(
+            process(), get_event_loop()
         )
-        process_future.add_done_callback(_handler_async_callback)
         return process_future
 
     def _listener(self, event_message: EventMessage):
         """监听消息"""
         if event_message.is_async:
             # 异步任务
-            # 先尝试异步实现的处理
-            handle_asyncio_future = self._handler_async(event_message)
-            if handle_asyncio_future is None:
+            if not self.is_async:
                 # 使用同步实现的处理，加入线程池
                 handle_future = submit_executor(self._handler, event_message)
-                if event_message.is_wait_async:
-                    # 等待异步任务
-                    try:
-                        handle_future.result(event_message.wait_async_timeout)
-                    except:
-                        pass
-            elif event_message.is_wait_async:
+            else:
+                # 异步实现的处理
+                handle_future = self._handler_async(event_message)
+            if event_message.is_wait_async:
                 # 等待异步任务
-                begin_time = time.time()
-                while True:
-                    if handle_asyncio_future.done():
-                        handle_asyncio_future.result()
-                        break
-                    if time.time() - begin_time > event_message.wait_async_timeout:
-                        break
-                    time.sleep(0.1)
+                try:
+                    handle_future.result(event_message.wait_async_timeout)
+                except:
+                    pass
         else:
             # 同步处理
-            # 先尝试异步实现的处理
-            handle_asyncio_future = self._handler_async(event_message)
-            if handle_asyncio_future is None:
+            if not self.is_async:
                 # 使用同步实现的处理
                 self._handler(event_message)
             else:
-                # 异步转同步
-                while True:
-                    if handle_asyncio_future.done():
-                        handle_asyncio_future.result()
-                        break
-                    time.sleep(0.1)
+                # 异步实现的处理，异步转同步
+                handle_future = self._handler_async(event_message)
+                handle_future.result()
 
     def _get_publisher(self):
         """获取发布者"""

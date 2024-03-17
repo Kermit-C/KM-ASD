@@ -25,7 +25,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
     """说话人验证处理器"""
 
     def __init__(self, processor_name: str):
-        super().__init__(processor_name)
+        super().__init__(processor_name, is_async=True)
         self.store = SpeakerVerificateStore(LocalStore.create)
         # 需要聚合成的大帧的采样点长度，每聚合一次，就会调用一次模型
         self.aggregate_frame_length: int = self.processor_properties[

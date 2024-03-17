@@ -31,7 +31,7 @@ class AsdProcessor(BaseEventBusProcessor):
     """说话人检测处理器"""
 
     def __init__(self, processor_name: str):
-        super().__init__(processor_name)
+        super().__init__(processor_name, is_async=True)
         self.store = ActiveSpeakerDetectionStore(LocalStore.create)
         self.frames_per_clip: int = self.processor_properties["frmc"]
         self.asd_create_lock_lock: RLock = RLock()

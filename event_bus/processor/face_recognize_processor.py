@@ -20,7 +20,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
     """人脸识别处理器"""
 
     def __init__(self, processor_name: str):
-        super().__init__(processor_name)
+        super().__init__(processor_name, is_async=True)
         self.store = FaceRecognizeStore(LocalStore.create)
         self.same_face_between_frames_iou_threshold: float = self.processor_properties[
             "same_face_between_frames_iou_threshold"
