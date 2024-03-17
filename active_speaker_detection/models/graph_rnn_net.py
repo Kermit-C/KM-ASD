@@ -80,8 +80,11 @@ class GraphRnnNet(nn.Module):
         )
         entities = y[:, -1]
         audio_node_mask = []
-        for mask in data.audio_node_mask:
-            audio_node_mask += mask
+        if type(data.audio_node_mask[0]) == bool:
+            audio_node_mask = data.audio_node_mask
+        else:
+            for mask in data.audio_node_mask:
+                audio_node_mask += mask
         video_node_mask = [not mask for mask in audio_node_mask]
 
         audio_feats = x[:, 0, : self.in_a_channels]
