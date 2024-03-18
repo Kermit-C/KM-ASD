@@ -314,7 +314,7 @@ def _train_model_amp_avl(
         with torch.set_grad_enabled(False):
             label_lst.extend(
                 targets_g[video_node_mask][
-                    distance_to_last_graph[video_node_mask] // 2 == 0
+                    distance_to_last_graph[video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -323,7 +323,7 @@ def _train_model_amp_avl(
             pred_lst.extend(
                 softmax_layer(
                     outputs[video_node_mask][
-                        distance_to_last_graph[video_node_mask] // 2 == 0
+                        distance_to_last_graph[video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
@@ -336,7 +336,7 @@ def _train_model_amp_avl(
             ]
             center_node_label_lst.extend(
                 targets_g[center_video_node_mask][
-                    distance_to_last_graph[center_video_node_mask] // 2 == 0
+                    distance_to_last_graph[center_video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -345,7 +345,7 @@ def _train_model_amp_avl(
             center_node_pred_lst.extend(
                 softmax_layer(
                     outputs[center_video_node_mask][
-                        distance_to_last_graph[center_video_node_mask] // 2 == 0
+                        distance_to_last_graph[center_video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
@@ -358,7 +358,7 @@ def _train_model_amp_avl(
             ]
             last_node_label_lst.extend(
                 targets_g[last_video_node_mask][
-                    distance_to_last_graph[last_video_node_mask] // 2 == 0
+                    distance_to_last_graph[last_video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -367,7 +367,7 @@ def _train_model_amp_avl(
             last_node_pred_lst.extend(
                 softmax_layer(
                     outputs[last_video_node_mask][
-                        distance_to_last_graph[last_video_node_mask] // 2 == 0
+                        distance_to_last_graph[last_video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
@@ -548,7 +548,7 @@ def _test_model_graph_losses(
 
             label_lst.extend(
                 targets_g[video_node_mask][
-                    distance_to_last_graph[video_node_mask] // 2 == 0
+                    distance_to_last_graph[video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -557,7 +557,7 @@ def _test_model_graph_losses(
             pred_lst.extend(
                 softmax_layer(
                     outputs[video_node_mask][
-                        distance_to_last_graph[video_node_mask] // 2 == 0
+                        distance_to_last_graph[video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
@@ -570,7 +570,7 @@ def _test_model_graph_losses(
             ]
             center_node_label_lst.extend(
                 targets_g[center_video_node_mask][
-                    distance_to_last_graph[center_video_node_mask] // 2 == 0
+                    distance_to_last_graph[center_video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -579,7 +579,7 @@ def _test_model_graph_losses(
             center_node_pred_lst.extend(
                 softmax_layer(
                     outputs[center_video_node_mask][
-                        distance_to_last_graph[center_video_node_mask] // 2 == 0
+                        distance_to_last_graph[center_video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
@@ -592,7 +592,7 @@ def _test_model_graph_losses(
             ]
             last_node_label_lst.extend(
                 targets_g[last_video_node_mask][
-                    distance_to_last_graph[last_video_node_mask] // 2 == 0
+                    distance_to_last_graph[last_video_node_mask] / 2 < 1
                 ]
                 .cpu()
                 .numpy()
@@ -601,7 +601,7 @@ def _test_model_graph_losses(
             last_node_pred_lst.extend(
                 softmax_layer(
                     outputs[last_video_node_mask][
-                        distance_to_last_graph[last_video_node_mask] // 2 == 0
+                        distance_to_last_graph[last_video_node_mask] / 2 < 1
                     ]
                 )
                 .cpu()
