@@ -61,6 +61,27 @@ class FaceCropStore:
                     len(request_store["frames"]) - self.max_frame_count
                 )
 
+    async def save_empty_face(
+        self, request_id: str, frame_count: int, frame_timestamp: int
+    ):
+        async with self.save_face_lock:
+            if not self.store_of_request.has(request_id):
+                self.store_of_request.put(request_id, {"frames": []})
+            request_store = self.store_of_request.get(request_id)
+            while len(request_store["frames"]) <= frame_count - 1:
+                # 补充空帧
+                request_store["frames"].append(None)
+            if request_store["frames"][frame_count - 1] is None:
+                request_store["frames"][frame_count - 1] = {
+                    "frame_timestamp": frame_timestamp,
+                    "faces": [],
+                }
+            # 保留的最大帧数
+            if len(request_store["frames"]) > self.max_frame_count:
+                request_store["frames"][: -self.max_frame_count] = [None] * (
+                    len(request_store["frames"]) - self.max_frame_count
+                )
+
     def get_faces(self, request_id: str, frame_count: int) -> Optional[list[dict]]:
         if frame_count < 1:
             return None

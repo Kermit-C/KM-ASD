@@ -37,14 +37,24 @@ class FaceCropProcessor(BaseEventBusProcessor):
         frame_height, frame_width, _ = frame.shape
 
         if len(face_dets) == 0:
-            # 如果没有检测到人脸，就直接到 reduce
+            # 没有检测到人脸
+            await self.store.save_empty_face(
+                self.get_request_id(),
+                event_message_body.frame_count,
+                event_message_body.frame_timestamp,
+            )
             self.publish_next(
-                "reduce_topic",
-                ReduceMessageBody(
-                    type="ASD",
+                "asd_topic",
+                AsdMessageBody(
+                    type="V",
                     frame_count=event_message_body.frame_count,
                     frame_timestamp=event_message_body.frame_timestamp,
-                    frame_face_count=0,
+                    frame=None,
+                    frame_face_idx=None,
+                    frame_face_count=len(face_dets),
+                    frame_face_bbox=None,
+                    frame_height=frame_height,
+                    frame_width=frame_width,
                 ),
             )
             return

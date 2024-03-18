@@ -103,7 +103,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                 self.publish_next(
                     "face_detect_topic",
                     FaceDetectMessageBody(frame_count, frame_timestamp, frame),
-                    is_async=False,  # TODO: 暂时变为同步
+                    is_async=True,
                     is_wait_async=True,
                     wait_async_timeout=(1 / video_fps),
                 )

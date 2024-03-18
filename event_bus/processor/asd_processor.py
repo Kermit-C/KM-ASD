@@ -43,23 +43,32 @@ class AsdProcessor(BaseEventBusProcessor):
         if event_message_body.type == "V":
             assert event_message_body.frame_count is not None
             assert event_message_body.frame_timestamp is not None
-            assert event_message_body.frame is not None
-            assert event_message_body.frame_face_idx is not None
             assert event_message_body.frame_face_count is not None
-            assert event_message_body.frame_face_bbox is not None
             assert event_message_body.frame_height is not None
             assert event_message_body.frame_width is not None
-            await self.store.save_frame(
-                request_id=self.get_request_id(),
-                frame_count=event_message_body.frame_count,
-                frame_timestamp=event_message_body.frame_timestamp,
-                face_frame=event_message_body.frame,
-                face_idx=event_message_body.frame_face_idx,
-                face_bbox=event_message_body.frame_face_bbox,
-                frame_face_count=event_message_body.frame_face_count,
-                frame_height=event_message_body.frame_height,
-                frame_width=event_message_body.frame_width,
-            )
+            if event_message_body.frame_face_count == 0:
+                await self.store.save_empty_face_frame(
+                    request_id=self.get_request_id(),
+                    frame_count=event_message_body.frame_count,
+                    frame_timestamp=event_message_body.frame_timestamp,
+                    frame_height=event_message_body.frame_height,
+                    frame_width=event_message_body.frame_width,
+                )
+            else:
+                assert event_message_body.frame is not None
+                assert event_message_body.frame_face_idx is not None
+                assert event_message_body.frame_face_bbox is not None
+                await self.store.save_frame(
+                    request_id=self.get_request_id(),
+                    frame_count=event_message_body.frame_count,
+                    frame_timestamp=event_message_body.frame_timestamp,
+                    face_frame=event_message_body.frame,
+                    face_idx=event_message_body.frame_face_idx,
+                    face_bbox=event_message_body.frame_face_bbox,
+                    frame_face_count=event_message_body.frame_face_count,
+                    frame_height=event_message_body.frame_height,
+                    frame_width=event_message_body.frame_width,
+                )
             await self._process_asd(event_message_body.frame_count)
         elif event_message_body.type == "A":
             assert event_message_body.audio_frame_count is not None
@@ -125,49 +134,75 @@ class AsdProcessor(BaseEventBusProcessor):
                         face_dicts = self.store.get_frame_faces(
                             self.get_request_id(), wait_asd_frame_count
                         )
-                        faces: list[np.ndarray] = [
-                            face_dict["face_frame"] for face_dict in face_dicts
-                        ]
-                        face_bboxes: list[tuple[int, int, int, int]] = [
-                            face_dict["face_bbox"] for face_dict in face_dicts
-                        ]
-                        audio: np.ndarray = self.store.get_frame_audio(
-                            self.get_request_id(), wait_asd_frame_count
-                        )  # type: ignore
 
-                        lag_idx = (wait_asd_frame_count - 1) % self.detect_lag
-                        if lag_idx == 0:
-                            try:
-                                is_active_list = await call_asd(
+                        if len(face_dicts) > 0:
+                            # 人脸不为空，检测
+                            faces: list[np.ndarray] = [
+                                face_dict["face_frame"] for face_dict in face_dicts
+                            ]
+                            face_bboxes: list[tuple[int, int, int, int]] = [
+                                face_dict["face_bbox"] for face_dict in face_dicts
+                            ]
+                            audio: np.ndarray = self.store.get_frame_audio(
+                                self.get_request_id(), wait_asd_frame_count
+                            )  # type: ignore
+
+                            lag_idx = (wait_asd_frame_count - 1) % self.detect_lag
+                            if lag_idx == 0:
+                                try:
+                                    is_active_list = await call_asd(
+                                        self.get_request_id(),
+                                        wait_asd_frame_count,
+                                        faces,
+                                        face_bboxes,
+                                        audio,
+                                        self.processor_timeout,
+                                        self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                        )["frame_height"],
+                                        self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                        )["frame_width"],
+                                    )
+                                except:
+                                    is_active_list = [False] * len(faces)
+                            else:
+                                # 取这一个 lag 的第一个帧的人脸
+                                is_active_list = self.store.get_frame_is_active_list(
                                     self.get_request_id(),
-                                    wait_asd_frame_count,
-                                    faces,
-                                    face_bboxes,
-                                    audio,
-                                    self.processor_timeout,
-                                    self.store.get_frame_info(
-                                        self.get_request_id(), wait_asd_frame_count  # type: ignore
-                                    )["frame_height"],
-                                    self.store.get_frame_info(
-                                        self.get_request_id(), wait_asd_frame_count  # type: ignore
-                                    )["frame_width"],
+                                    wait_asd_frame_count - lag_idx,
                                 )
-                            except:
-                                is_active_list = [False] * len(faces)
-                        else:
-                            # 取这一个 lag 的第一个帧的人脸
-                            is_active_list = self.store.get_frame_is_active_list(
-                                self.get_request_id(),
-                                wait_asd_frame_count - lag_idx,
-                            )
-                            # 人脸数不等，则全 False
-                            if len(is_active_list) != len(faces):
-                                is_active_list = [False] * len(faces)
+                                # 人脸数不等，则全 False
+                                if len(is_active_list) != len(faces):
+                                    is_active_list = [False] * len(faces)
 
-                        for face_bbox, is_active, face_dict in zip(
-                            face_bboxes, is_active_list, face_dicts
-                        ):
-                            asd_status = 1 if is_active else 0
+                            for face_bbox, is_active, face_dict in zip(
+                                face_bboxes, is_active_list, face_dicts
+                            ):
+                                asd_status = 1 if is_active else 0
+                                self.publish_next(
+                                    "reduce_topic",
+                                    ReduceMessageBody(
+                                        type="ASD",
+                                        frame_count=wait_asd_frame_count,
+                                        frame_timestamp=self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count
+                                        )[  # type: ignore
+                                            "frame_timestamp"
+                                        ],
+                                        frame_face_idx=face_dict["face_idx"],
+                                        frame_face_count=self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count
+                                        )[  # type: ignore
+                                            "frame_face_count"
+                                        ],
+                                        frame_face_bbox=face_bbox,
+                                        frame_asd_status=asd_status,
+                                    ),
+                                )
+                        else:
+                            # 人脸为空，直接发到 reduce
+                            is_active_list = []
                             self.publish_next(
                                 "reduce_topic",
                                 ReduceMessageBody(
@@ -178,16 +213,10 @@ class AsdProcessor(BaseEventBusProcessor):
                                     )[  # type: ignore
                                         "frame_timestamp"
                                     ],
-                                    frame_face_idx=face_dict["face_idx"],
-                                    frame_face_count=self.store.get_frame_info(
-                                        self.get_request_id(), wait_asd_frame_count
-                                    )[  # type: ignore
-                                        "frame_face_count"
-                                    ],
-                                    frame_face_bbox=face_bbox,
-                                    frame_asd_status=asd_status,
+                                    frame_face_count=0,
                                 ),
                             )
+
                         self.store.set_frame_asded(
                             self.get_request_id(), wait_asd_frame_count, is_active_list
                         )

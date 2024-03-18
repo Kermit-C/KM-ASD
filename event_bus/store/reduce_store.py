@@ -107,6 +107,8 @@ class ReduceStore:
 
     def is_frame_result_complete(self, request_id: str, frame_count: int) -> bool:
         """判断帧结果是否完整（只要人脸结果完成了就行，不管 SPEAKER_VERIFICATE）"""
+        if frame_count < 1:
+            return False
         if not self.store_of_request.has(request_id):
             return False
         request_store = self.store_of_request.get(request_id)
@@ -127,6 +129,8 @@ class ReduceStore:
 
     def is_frame_resulted(self, request_id: str, frame_count: int) -> bool:
         """判断帧结果是否处理完"""
+        if frame_count < 1:
+            return False
         if not self.store_of_request.has(request_id):
             return False
         request_store = self.store_of_request.get(request_id)
@@ -139,6 +143,8 @@ class ReduceStore:
 
     def is_frame_before_all_resulted(self, request_id: str, frame_count: int) -> bool:
         """判断帧之前的结果是否全部处理完"""
+        if frame_count < 1:
+            return False
         if not self.store_of_request.has(request_id):
             return False
         request_store = self.store_of_request.get(request_id)
@@ -148,6 +154,8 @@ class ReduceStore:
         self, request_id: str, frame_count: int
     ) -> list[int]:
         """获取帧之后所有完整但未处理的帧"""
+        if frame_count < 1:
+            return []
         if not self.store_of_request.has(request_id):
             return []
         request_store = self.store_of_request.get(request_id)
