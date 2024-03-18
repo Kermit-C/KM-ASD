@@ -33,7 +33,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
         ]
 
     async def process_async(self, event_message_body: SpeakerVerificateMessageBody):
-        self.store.save_frame(
+        await self.store.save_frame(
             self.get_request_id(),
             event_message_body.audio_frame_count,
             event_message_body.audio_frame_timestamp,
@@ -97,7 +97,7 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
                 ),
             )
 
-    def process_exception(
+    async def process_exception_async(
         self, event_message_body: SpeakerVerificateMessageBody, exception: Exception
     ):
         # logging.error("FaceRecognizeProcessor process_exception", exception)

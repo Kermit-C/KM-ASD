@@ -7,8 +7,9 @@
 """
 
 
+import asyncio
 import logging
-from threading import RLock
+from asyncio import Lock
 from typing import Optional
 
 import numpy as np
@@ -34,8 +35,9 @@ class AsdProcessor(BaseEventBusProcessor):
         super().__init__(processor_name, is_async=True)
         self.store = ActiveSpeakerDetectionStore(LocalStore.create)
         self.frames_per_clip: int = self.processor_properties["frmc"]
-        self.asd_create_lock_lock: RLock = RLock()
-        self.asd_lock_of_request: dict[str, RLock] = {}
+        self.detect_lag: int = self.processor_properties["detect_lag"]
+        self.asd_create_lock_lock: Lock = Lock()
+        self.asd_lock_of_request: dict[str, tuple[int, Lock]] = {}
 
     async def process_async(self, event_message_body: AsdMessageBody):
         if event_message_body.type == "V":
@@ -47,7 +49,7 @@ class AsdProcessor(BaseEventBusProcessor):
             assert event_message_body.frame_face_bbox is not None
             assert event_message_body.frame_height is not None
             assert event_message_body.frame_width is not None
-            self.store.save_frame(
+            await self.store.save_frame(
                 request_id=self.get_request_id(),
                 frame_count=event_message_body.frame_count,
                 frame_timestamp=event_message_body.frame_timestamp,
@@ -70,7 +72,7 @@ class AsdProcessor(BaseEventBusProcessor):
             )
             if parsed_frame_count is None or parsed_frame_timestamp is None:
                 return
-            self.store.save_audio_frame(
+            await self.store.save_audio_frame(
                 request_id=self.get_request_id(),
                 frame_count=parsed_frame_count,
                 frame_timestamp=parsed_frame_timestamp,
@@ -83,21 +85,28 @@ class AsdProcessor(BaseEventBusProcessor):
         else:
             raise ValueError("AsdProcessor event_message_body.type error")
 
-    def process_exception(
+    async def process_exception_async(
         self, event_message_body: AsdMessageBody, exception: Exception
     ):
         # 已在 process 内部处理过 ASD 调用异常，其他异常直接抛出，视为不可恢复异常
         raise ValueError("AsdProcessor event_message_body.type error", exception)
 
     async def _process_asd(self, frame_count: int):
-        with self.asd_create_lock_lock:
+        async with self.asd_create_lock_lock:
             if self.get_request_id() not in self.asd_lock_of_request:
-                self.asd_lock_of_request[self.get_request_id()] = RLock()
-                asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
+                self.asd_lock_of_request[self.get_request_id()] = (1, Lock())
+                _, asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
             else:
-                asd_lock_of_request = self.asd_lock_of_request[self.get_request_id()]
+                use_count, asd_lock_of_request = self.asd_lock_of_request[
+                    self.get_request_id()
+                ]
+                self.asd_lock_of_request[self.get_request_id()] = (
+                    use_count + 1,
+                    asd_lock_of_request,
+                )
 
-        with asd_lock_of_request:
+        # 保证检测顺序
+        async with asd_lock_of_request:
             if (
                 self.store.is_frame_completed(self.get_request_id(), frame_count)
                 and not self.store.is_frame_asded(self.get_request_id(), frame_count)
@@ -126,23 +135,34 @@ class AsdProcessor(BaseEventBusProcessor):
                             self.get_request_id(), wait_asd_frame_count
                         )  # type: ignore
 
-                        try:
-                            is_active_list = await call_asd(
+                        lag_idx = (wait_asd_frame_count - 1) % self.detect_lag
+                        if lag_idx == 0:
+                            try:
+                                is_active_list = await call_asd(
+                                    self.get_request_id(),
+                                    wait_asd_frame_count,
+                                    faces,
+                                    face_bboxes,
+                                    audio,
+                                    self.processor_timeout,
+                                    self.store.get_frame_info(
+                                        self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                    )["frame_height"],
+                                    self.store.get_frame_info(
+                                        self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                    )["frame_width"],
+                                )
+                            except:
+                                is_active_list = [False] * len(faces)
+                        else:
+                            # 取这一个 lag 的第一个帧的人脸
+                            is_active_list = self.store.get_frame_is_active_list(
                                 self.get_request_id(),
-                                wait_asd_frame_count,
-                                faces,
-                                face_bboxes,
-                                audio,
-                                self.processor_timeout,
-                                self.store.get_frame_info(
-                                    self.get_request_id(), wait_asd_frame_count  # type: ignore
-                                )["frame_height"],
-                                self.store.get_frame_info(
-                                    self.get_request_id(), wait_asd_frame_count  # type: ignore
-                                )["frame_width"],
+                                wait_asd_frame_count - lag_idx,
                             )
-                        except:
-                            is_active_list = [False] * len(faces)
+                            # 人脸数不等，则全 False
+                            if len(is_active_list) != len(faces):
+                                is_active_list = [False] * len(faces)
 
                         for face_bbox, is_active, face_dict in zip(
                             face_bboxes, is_active_list, face_dicts
@@ -169,7 +189,7 @@ class AsdProcessor(BaseEventBusProcessor):
                                 ),
                             )
                         self.store.set_frame_asded(
-                            self.get_request_id(), wait_asd_frame_count
+                            self.get_request_id(), wait_asd_frame_count, is_active_list
                         )
 
                     # 判断一下下一个帧是否已经完整，以防处理上面的时候有新的帧进来，导致卡死
@@ -179,9 +199,15 @@ class AsdProcessor(BaseEventBusProcessor):
                     ):
                         break
 
-        with self.asd_create_lock_lock:
+        async with self.asd_create_lock_lock:
             if self.get_request_id() in self.asd_lock_of_request:
-                del self.asd_lock_of_request[self.get_request_id()]
+                if (self.asd_lock_of_request[self.get_request_id()][0] - 1) == 0:
+                    del self.asd_lock_of_request[self.get_request_id()]
+                else:
+                    self.asd_lock_of_request[self.get_request_id()] = (
+                        self.asd_lock_of_request[self.get_request_id()][0] - 1,
+                        self.asd_lock_of_request[self.get_request_id()][1],
+                    )
 
     def _parse_audio_frame(
         self, audio_frame: np.ndarray, audio_frame_timestamp: int

@@ -27,7 +27,7 @@ extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
 
 asd_enabled = True
-asd_model = None
+asd_model = "active_speaker_detection/results/22.pth"
 asd_cpu = False
 asd_p_threshold = 0.5
 asd_same_face_between_frames_iou_threshold = 0.5
@@ -65,7 +65,7 @@ event_bus = {
         "VideoToFrameProcessor": {
             "processor_name": "video_to_frame_processor",
             "topic": "video_to_frame_topic",
-            "timeout": 60,  # 暂未使用
+            "timeout": 6000,  # 暂未使用
             "properties": {
                 "target_video_fps": 30,
             },
@@ -73,7 +73,7 @@ event_bus = {
         "AudioToPcmProcessor": {
             "processor_name": "audio_to_pcm_processor",
             "topic": "audio_to_pcm_topic",
-            "timeout": 60,  # 暂未使用
+            "timeout": 6000,  # 暂未使用
             "properties": {
                 "audio_to_pcm_sample_rate": 16000,
                 "frame_length": 8000,  # 500ms
@@ -83,15 +83,15 @@ event_bus = {
         "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
-            "timeout": 10,  # 2 * (1 / 30),  # 2帧时间
+            "timeout": 1,  # 3 * (1 / 30),  # 3帧时间
             "properties": {
-                # "face_detect_model_path": "models/face_detect_model",
+                "detect_lag": 3,  # 3 帧
             },
         },
         "FaceCropProcessor": {
             "processor_name": "face_crop_processor",
             "topic": "face_crop_topic",
-            "timeout": 1,
+            "timeout": 6000,  # 暂未使用
             "properties": {
                 "face_crop_size": 112,
                 "same_face_between_frames_iou_threshold": 0.5,
@@ -100,34 +100,32 @@ event_bus = {
         "FaceRecognizeProcessor": {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
-            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
+            "timeout": 1,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
-                # "face_recognize_model_path": "models/face_recognize_model",
                 "same_face_between_frames_iou_threshold": 0.5,
             },
         },
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
-            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
+            "timeout": 1,  # 10 * (1 / 30),  # 10帧时间
             "properties": {
-                # "asd_model_path": "models/asd_model",
                 "frmc": AsdInferenceParams["frmc"],
+                "detect_lag": AsdInferenceParams["strd"],
             },
         },
         "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
-            "timeout": 10,  # 5 * (1 / 30),  # 5帧时间
+            "timeout": 1,  # 5 * (1 / 30),  # 5帧时间
             "properties": {
-                # "speaker_verificate_model_path": "models/speaker_verificate_model",
                 "aggregate_frame_length": 24000,  # 1500ms
             },
         },
         "ReduceProcessor": {
             "processor_name": "reduce_processor",
             "topic": "reduce_topic",
-            "timeout": 1 / 30,  # 1帧时间 暂未使用
+            "timeout": 6000,  # 暂未使用
             "properties": {
                 # "output_path": "output",
             },

@@ -56,10 +56,8 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
         audio = audio[0]  # 采样值在 -1 到 1 之间
 
         # 分帧
-        for i in range(0, len(audio), self.frame_step):
-            if i - self.frame_length + 1 >= 0:
-                audio_frame = audio[i - self.frame_length + 1 : i + 1]
-            else:
+        for i in range(0, len(audio) + self.frame_step, self.frame_step):
+            if i - self.frame_length + 1 < 0:
                 audio_frame = torch.cat(
                     [
                         torch.zeros(
@@ -70,6 +68,19 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
                         audio[: i + 1],
                     ]
                 )
+            elif i + 1 > len(audio):
+                audio_frame = torch.cat(
+                    [
+                        audio[i - self.frame_length + 1 :],
+                        torch.zeros(
+                            i + 1 - len(audio),
+                            dtype=audio.dtype,
+                            device=audio.device,
+                        ),
+                    ]
+                )
+            else:
+                audio_frame = audio[i - self.frame_length + 1 : i + 1]
             yield (
                 audio_frame,  # pcm
                 self.audio_to_pcm_sample_rate,  # sample_rate

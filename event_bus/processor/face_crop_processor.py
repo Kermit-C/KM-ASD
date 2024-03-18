@@ -6,6 +6,7 @@
 @Date: 2024-02-18 15:51:15
 """
 
+import asyncio
 import logging
 import time
 
@@ -24,13 +25,13 @@ class FaceCropProcessor(BaseEventBusProcessor):
     """人脸裁剪处理器"""
 
     def __init__(self, processor_name: str):
-        super().__init__(processor_name)
+        super().__init__(processor_name, is_async=True)
         self.store = FaceCropStore(LocalStore.create)
         self.same_face_between_frames_iou_threshold: float = self.processor_properties[
             "same_face_between_frames_iou_threshold"
         ]
 
-    def process(self, event_message_body: FaceCropMessageBody):
+    async def process_async(self, event_message_body: FaceCropMessageBody):
         frame = event_message_body.frame
         face_dets = event_message_body.face_dets
         frame_height, frame_width, _ = frame.shape
@@ -55,8 +56,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
         while last_frame_faces is None:
             time_interval = 0.01
             if retry_count > 0:
-                # TODO: 修复性能问题，换一种方式实现
-                time.sleep(time_interval)
+                await asyncio.sleep(time_interval)
             if (
                 retry_count > (self.processor_timeout / time_interval)
                 or event_message_body.frame_count == 1
@@ -125,7 +125,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
             right_mouth_x -= x1
             right_mouth_y -= y1
 
-            self.store.save_face(
+            await self.store.save_face(
                 self.get_request_id(),
                 event_message_body.frame_count,
                 event_message_body.frame_timestamp,
@@ -167,7 +167,7 @@ class FaceCropProcessor(BaseEventBusProcessor):
                 ),
             )
 
-    def process_exception(
+    async def process_exception_async(
         self, event_message_body: FaceCropMessageBody, exception: Exception
     ):
         # logging.error("FaceCropProcessor process_exception", exception)

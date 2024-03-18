@@ -41,7 +41,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
     def call_asd(
         self,
         request: model_service_pb2.AsdRequest,
-        context: grpc.aio.ServicerContext,
+        context: grpc.ServicerContext,
     ) -> model_service_pb2.AsdResponse:
         request_id = request.meta.request_id  # type: ignore
         video_id = request.request_id  # type: ignore
@@ -61,6 +61,9 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         if not is_acquired:
             ms_logger.error(f"Active speaker detection worker is busy: {request_id}")
             raise Exception("Active speaker detection worker is busy")
+        if not context.is_active(): # type: ignore
+            raise Exception("Face recognition request is cancelled")
+
         try:
             ms_logger.debug(f"Start processing ASD request: {request_id}")
             is_active_list = detect_active_speaker(
@@ -86,7 +89,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
     def call_face_detection(
         self,
         request: model_service_pb2.FaceDetectionRequest,
-        context: grpc.aio.ServicerContext,
+        context: grpc.ServicerContext,
     ) -> model_service_pb2.FaceDetectionResponse:
         request_id = request.meta.request_id  # type: ignore
         face_image = request.face_image  # type: ignore
@@ -98,6 +101,9 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Face detection worker is busy")
+        if not context.is_active(): # type: ignore
+            raise Exception("Face recognition request is cancelled")
+
         try:
             face_dets = detect_faces(face_image_np)
         finally:
@@ -113,7 +119,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
     def call_face_recognition(
         self,
         request: model_service_pb2.FaceRecognitionRequest,
-        context: grpc.aio.ServicerContext,
+        context: grpc.ServicerContext,
     ) -> model_service_pb2.FaceRecognitionResponse:
         request_id = request.meta.request_id  # type: ignore
         face_image = request.face_image  # type: ignore
@@ -127,6 +133,9 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Face recognition worker is busy")
+        if not context.is_active(): # type: ignore
+            raise Exception("Face recognition request is cancelled")
+
         try:
             label = recognize_faces(face_image_np, face_lmks_np)
         finally:
@@ -142,7 +151,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
     def call_speaker_verification(
         self,
         request: model_service_pb2.SpeakerVerificationRequest,
-        context: grpc.aio.ServicerContext,
+        context: grpc.ServicerContext,
     ) -> model_service_pb2.SpeakerVerificationResponse:
         request_id = request.meta.request_id  # type: ignore
         voice_data = request.voice_data  # type: ignore
@@ -154,6 +163,9 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Speaker verification worker is busy")
+        if not context.is_active(): # type: ignore
+            raise Exception("Face recognition request is cancelled")
+
         try:
             label = verify_speakers(voice_data_np)
         finally:
@@ -169,7 +181,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
     def register_speaker(
         self,
         request: model_service_pb2.RegisterSpeakerRequest,
-        context: grpc.aio.ServicerContext,
+        context: grpc.ServicerContext,
     ) -> model_service_pb2.RegisterSpeakerResponse:
         request_id = request.meta.request_id  # type: ignore
         voice_data = request.voice_data  # type: ignore
@@ -182,6 +194,9 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Speaker verification worker is busy")
+        if not context.is_active(): # type: ignore
+            raise Exception("Face recognition request is cancelled")
+
         try:
             label = register_speaker(voice_data_np, label)
         finally:

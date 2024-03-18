@@ -7,7 +7,7 @@
 """
 
 
-from threading import RLock
+from asyncio import Lock
 from typing import Callable, Optional
 
 import numpy as np
@@ -27,9 +27,9 @@ class SpeakerVerificateStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
-        self.save_frame_lock = RLock()
+        self.save_frame_lock = Lock()
 
-    def save_frame(
+    async def save_frame(
         self,
         request_id: str,
         audio_frame_count: int,
@@ -39,7 +39,7 @@ class SpeakerVerificateStore:
         audio_frame_step: int,
         audio_frame: torch.Tensor,
     ):
-        with self.save_frame_lock:
+        async with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
                 self.store_of_request.put(
                     request_id,

@@ -50,7 +50,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
                 event_message_body.face_lmks,
                 self.processor_timeout,
             )
-        self.store.save_face(
+        await self.store.save_face(
             self.get_request_id(),
             event_message_body.frame_count,
             event_message_body.frame_timestamp,
@@ -70,7 +70,7 @@ class FaceRecognizeProcessor(BaseEventBusProcessor):
             ),
         )
 
-    def process_exception(
+    async def process_exception_async(
         self, event_message_body: FaceRecognizeMessageBody, exception: Exception
     ):
         # logging.error("FaceRecognizeProcessor process_exception", exception)

@@ -6,7 +6,7 @@
 @Date: 2024-02-19 15:50:28
 """
 
-from threading import RLock
+from asyncio import Lock
 from typing import Callable, Optional
 
 import numpy as np
@@ -25,9 +25,9 @@ class FaceCropStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
-        self.save_face_lock = RLock()
+        self.save_face_lock = Lock()
 
-    def save_face(
+    async def save_face(
         self,
         request_id: str,
         frame_count: int,
@@ -36,7 +36,7 @@ class FaceCropStore:
         frame_face_idx: int,
         frame_face_bbox: tuple[int, int, int, int],
     ):
-        with self.save_face_lock:
+        async with self.save_face_lock:
             if not self.store_of_request.has(request_id):
                 self.store_of_request.put(request_id, {"frames": []})
             request_store = self.store_of_request.get(request_id)

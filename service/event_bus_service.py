@@ -68,15 +68,9 @@ def process(
                 }
 
             _consume_cache[request_id]["video_frames"].append(message_body.frame)
-            if (
-                _consume_cache[request_id]["video_fps"] < 0
-                and message_body.video_fps > 0
-            ):
+            if message_body.video_fps > 0:
                 _consume_cache[request_id]["video_fps"] = message_body.video_fps
-            if (
-                _consume_cache[request_id]["video_frame_count"] < 0
-                and message_body.video_frame_count > 0
-            ):
+            if message_body.video_frame_count > 0:
                 _consume_cache[request_id][
                     "video_frame_count"
                 ] = message_body.video_frame_count

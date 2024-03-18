@@ -34,14 +34,23 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
         video_frame_count = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
         # 用于计数帧数
         frame_count = 0
+
+        next_ret, next_frame = video_capture.read()
         while True:
             # 读取的 frame 是 BGR 格式
-            ret, frame = video_capture.read()
+            ret, frame = next_ret, next_frame
             if not ret:
                 break
             frame_count += 1
             frame_timestamp = int((frame_count / video_fps) * 1000)
-            yield frame, frame_count, frame_timestamp, video_fps, video_frame_count
+
+            # 预读下一帧，用于判断是否是最后一帧
+            next_ret, next_frame = video_capture.read()
+            if not next_ret:
+                # 下一帧为空，说明当前帧是最后一帧
+                yield frame, frame_count, frame_timestamp, video_fps, frame_count
+            else:
+                yield frame, frame_count, frame_timestamp, video_fps, video_frame_count
 
         # 释放资源
         video_capture.release()
@@ -61,6 +70,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
             )
             if source_video_fps / self.processor_properties["target_video_fps"] > 1:
                 # 将过大的帧率转成目标帧率
+                # TODO: 有问题，可能导致 video_frame_count 对不上而卡死
                 if (
                     frame_count
                     % int(
@@ -93,7 +103,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                 self.publish_next(
                     "face_detect_topic",
                     FaceDetectMessageBody(frame_count, frame_timestamp, frame),
-                    is_async=True,
+                    is_async=False,  # TODO: 暂时变为同步
                     is_wait_async=True,
                     wait_async_timeout=(1 / video_fps),
                 )

@@ -6,7 +6,7 @@
 @Date: 2024-02-22 17:37:10
 """
 
-from threading import RLock
+from asyncio import Lock
 from typing import Callable, Optional
 
 import numpy as np
@@ -27,9 +27,9 @@ class ActiveSpeakerDetectionStore:
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
         self.max_frame_count = max_frame_count
-        self.save_frame_lock = RLock()
+        self.save_frame_lock = Lock()
 
-    def save_frame(
+    async def save_frame(
         self,
         request_id: str,
         frame_count: int,
@@ -41,7 +41,7 @@ class ActiveSpeakerDetectionStore:
         frame_height: int,  # 视频帧高度
         frame_width: int,  # 视频帧宽度
     ):
-        with self.save_frame_lock:
+        async with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
                 self.store_of_request.put(
                     request_id, {"frames": [], "frame_asded_count": 0}
@@ -82,14 +82,14 @@ class ActiveSpeakerDetectionStore:
                     len(request_store["frames"]) - self.max_frame_count
                 )
 
-    def save_audio_frame(
+    async def save_audio_frame(
         self,
         request_id: str,
         frame_count: int,
         frame_timestamp: int,
         audio_frame: np.ndarray,
     ):
-        with self.save_frame_lock:
+        async with self.save_frame_lock:
             if not self.store_of_request.has(request_id):
                 self.store_of_request.put(
                     request_id, {"frames": [], "frame_asded_count": 0}
@@ -107,6 +107,7 @@ class ActiveSpeakerDetectionStore:
                     "faces": [],
                     "audio_frame": audio_frame,
                     "is_asded": False,
+                    "is_active_list": [],
                 }
             else:
                 request_store["frames"][frame_count - 1]["audio_frame"] = audio_frame
@@ -155,13 +156,16 @@ class ActiveSpeakerDetectionStore:
         if not self.store_of_request.has(request_id):
             return []
         request_store = self.store_of_request.get(request_id)
-        return [
-            i
-            for i in range(frame_count + 1, len(request_store["frames"]) + 1)
-            if self.is_frame_completed(request_id, i)
-        ]
+        result = []
+        for i in range(frame_count + 1, len(request_store["frames"]) + 1):
+            if not self.is_frame_completed(request_id, i):
+                return result
+            result.append(i)
+        return result
 
-    def set_frame_asded(self, request_id: str, frame_count: int):
+    def set_frame_asded(
+        self, request_id: str, frame_count: int, is_active_list: list[bool]
+    ):
         if frame_count < 1:
             return
         if not self.store_of_request.has(request_id):
@@ -171,6 +175,17 @@ class ActiveSpeakerDetectionStore:
         if len(request_store["frames"]) < frame_count:
             return
         request_store["frames"][frame_count - 1]["is_asded"] = True
+        request_store["frames"][frame_count - 1]["is_active_list"] = is_active_list
+
+    def get_frame_is_active_list(self, request_id: str, frame_count: int) -> list[bool]:
+        if frame_count < 1:
+            return []
+        if not self.store_of_request.has(request_id):
+            return []
+        request_store = self.store_of_request.get(request_id)
+        if len(request_store["frames"]) < frame_count:
+            return []
+        return request_store["frames"][frame_count - 1]["is_active_list"]
 
     def get_frame_info(self, request_id: str, frame_count: int) -> Optional[dict]:
         if frame_count < 1:
