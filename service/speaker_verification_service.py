@@ -6,9 +6,10 @@
 @Date: 2024-02-18 18:50:02
 """
 
-import logging
+import multiprocessing as mp
 import os
-from typing import Optional
+from multiprocessing.pool import Pool
+from typing import Optional, Union
 
 import numpy as np
 import torch
@@ -18,20 +19,28 @@ import config
 from speaker_verification import EcapaTdnnVerificator
 from store.local_store import LocalStore
 from utils.hash_util import calculate_md5
+from utils.logger_util import infer_logger, ms_logger
 from utils.uuid_util import get_uuid
 
 from .store.speaker_verification_store import SpeakerVerificationStore
 
-verificator: Optional[EcapaTdnnVerificator] = None
+# 主进程中的全局变量
+verificator_pool: Optional[Pool] = None
 speaker_verification_store: SpeakerVerificationStore
+
+# 进程池每个进程中的全局变量
+verificator: Optional[EcapaTdnnVerificator] = None
 
 
 def load_verificator():
-    global verificator
-    if verificator is not None:
-        return verificator
-    verificator = EcapaTdnnVerificator(cpu=config.speaker_verificate_cpu)
-    return verificator
+    global verificator_pool
+    if verificator_pool is None:
+        verificator_pool = mp.Pool(
+            config.model_service_server_speaker_verificate_max_workers,
+            initializer=init_verificator_pool_process,
+        )
+    ms_logger.info("speaker verificator pool loaded")
+    return verificator_pool
 
 
 def load_speaker_verification_store():
@@ -44,6 +53,31 @@ def load_speaker_verification_store():
     return speaker_verification_store
 
 
+# 初始化进程池的进程
+def init_verificator_pool_process():
+    global verificator
+    if verificator is not None:
+        return verificator
+    verificator = EcapaTdnnVerificator(cpu=config.speaker_verificate_cpu)
+    ms_logger.info("speaker verificator worker loaded")
+    return verificator
+
+
+# 以下是进程池中的函数
+def verificator_gen_feat(audio: Union[str, np.ndarray]) -> torch.Tensor:
+    if verificator is None:
+        raise ValueError("Verificator is not loaded")
+    return verificator.gen_feat(audio)
+
+
+def verificator_calc_score_batch(emb1: torch.Tensor, emb2: torch.Tensor) -> np.ndarray:
+    if verificator is None:
+        raise ValueError("Verificator is not loaded")
+    return verificator.calc_score_batch(emb1, emb2)
+
+
+# 以下是主进程中的函数
+
 def register_speakers():
     if not os.path.exists(config.speaker_verificate_register_path):
         return
@@ -54,27 +88,28 @@ def register_speakers():
                 label = ".".join(os.path.basename(file).split(".")[:-1])
                 audio = capture_audio(audio_path)
                 register_speaker(audio.numpy(), label)
-                logging.info(f"Register speaker {label} successfully")
+                ms_logger.info(f"register speaker {label} successfully")
 
 
 def register_speaker(audio: np.ndarray, label: str):
-    global verificator
-    if verificator is None:
-        verificator = load_verificator()
-    feat = verificator.gen_feat(audio)
+    if verificator_pool is None:
+        raise ValueError("Verificator pool is not loaded")
+    feat = verificator_pool.apply(verificator_gen_feat, (audio,))
     speaker_verification_store.save_feat(label, feat)
 
 
 def verify_speakers(
     audio: np.ndarray,
 ) -> str:
-    if verificator is None:
-        raise ValueError("Verificator is not loaded")
+    if verificator_pool is None:
+        raise ValueError("Verificator pool is not loaded")
     lib_feat, lib_labels = get_lib_feat_and_labels()
     if lib_feat.size(0) == 0:
         return ""
-    feat = verificator.gen_feat(audio)
-    score = verificator.calc_score_batch(feat.unsqueeze(0), lib_feat)
+    feat = verificator_pool.apply(verificator_gen_feat, (audio,))
+    score = verificator_pool.apply(
+        verificator_calc_score_batch, (feat.unsqueeze(0), lib_feat)
+    )
     score = score[0]
     max_idx = np.argmax(score)
     max_score = score[max_idx]

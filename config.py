@@ -12,7 +12,7 @@ from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationAr
 ########## 模型服务配置 ##########
 
 model_service_server_grpc_port = 50051
-model_service_server_max_workers = 200
+model_service_server_max_workers = 100
 model_service_server_asd_max_workers = 10
 model_service_server_asd_worker_wait_timeout = 10
 model_service_server_face_detection_max_workers = 10

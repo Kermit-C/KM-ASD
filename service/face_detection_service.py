@@ -7,16 +7,36 @@
 """
 
 
-from typing import Any, Optional
+import multiprocessing as mp
+from multiprocessing.pool import Pool
+from typing import Any, Optional, Union
 
+import cv2
 import numpy as np
 
 import config
 from face_detection.retinaface_torch import RetinaFaceDetector
+from utils.logger_util import infer_logger, ms_logger
 
+# 主进程中的全局变量
+detector_pool: Optional[Pool] = None
+
+# 进程池每个进程中的全局变量
 detector: Optional[RetinaFaceDetector] = None
 
 def load_detector():
+    global detector_pool
+    if detector_pool is None:
+        detector_pool = mp.Pool(
+            config.model_service_server_face_detection_max_workers,
+            initializer=init_detector_pool_process,
+        )
+    ms_logger.info("face detector pool loaded")
+    return detector_pool
+
+
+# 初始化进程池的进程
+def init_detector_pool_process():
     global detector
     if detector is not None:
         return detector
@@ -25,6 +45,7 @@ def load_detector():
         network=config.face_detection_network,
         cpu=config.face_detection_cpu,
     )
+    ms_logger.info("face detector worker loaded")
     return detector
 
 
@@ -33,12 +54,23 @@ def destroy_detector():
     pass
 
 
-def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
+# 以下是进程池中的函数
+def detector_detect_faces(
+    image_or_image_path: Union[cv2.typing.MatLike, np.ndarray, str],
+    save_path: Optional[str] = None,
+):
     if detector is None:
         raise ValueError("Detector is not loaded")
-    face_dets, _ = detector.detect_faces(
-        image_or_image_path=image,
-    )
+    return detector.detect_faces(image_or_image_path, save_path)
+
+
+# 以下是主进程中的函数
+
+
+def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
+    if detector_pool is None:
+        raise ValueError("Detector pool is not loaded")
+    face_dets, _ = detector_pool.apply(detector_detect_faces, (image,))
     face_dets = filter(
         lambda x: x[4] > config.face_detection_confidence_threshold, face_dets
     )

@@ -6,9 +6,10 @@
 @Date: 2024-02-18 18:09:13
 """
 
-import logging
+import multiprocessing as mp
 import os
-from typing import Optional
+from multiprocessing.pool import Pool
+from typing import Optional, Union
 
 import numpy as np
 
@@ -16,24 +17,32 @@ import config
 from face_recognition import ArcFaceRecognizer
 from store.local_store import LocalStore
 from utils.hash_util import calculate_md5
+from utils.logger_util import infer_logger, ms_logger
 from utils.uuid_util import get_uuid
 
-from .face_detection_service import destroy_detector, load_detector
+from .face_detection_service import (
+    destroy_detector,
+    detector_detect_faces,
+    load_detector,
+)
 from .store.face_recognition_store import FaceRecognitionStore
 
-recognizer: Optional[ArcFaceRecognizer] = None
+# 主进程中的全局变量
+recognizer_pool: Optional[Pool] = None
 face_recognition_store: FaceRecognitionStore
 
+# 进程池每个进程中的全局变量
+recognizer: Optional[ArcFaceRecognizer] = None
+
 def load_recognizer():
-    global recognizer
-    if recognizer is not None:
-        return recognizer
-    recognizer = ArcFaceRecognizer(
-        trained_model=config.face_recognize_model,
-        network=config.face_recognize_network,
-        cpu=config.face_recognize_cpu,
-    )
-    return recognizer
+    global recognizer_pool
+    if recognizer_pool is None:
+        recognizer_pool = mp.Pool(
+            config.model_service_server_face_recognize_max_workers,
+            initializer=init_recognizer_pool_process,
+        )
+    ms_logger.info("face recognizer pool loaded")
+    return recognizer_pool
 
 
 def load_face_recognition_store():
@@ -45,6 +54,39 @@ def load_face_recognition_store():
     register_faces()
     return face_recognition_store
 
+
+# 初始化进程池的进程
+def init_recognizer_pool_process():
+    global recognizer
+    if recognizer is not None:
+        return recognizer
+    recognizer = ArcFaceRecognizer(
+        trained_model=config.face_recognize_model,
+        network=config.face_recognize_network,
+        cpu=config.face_recognize_cpu,
+    )
+    ms_logger.info("face recognizer worker loaded")
+    return recognizer
+
+
+# 以下是进程池中的函数
+def recognizer_gen_feat(
+    img: Union[str, np.ndarray], face_lmks: Optional[np.ndarray] = None
+) -> np.ndarray:
+    if recognizer is None:
+        raise ValueError("Recognizer is not loaded")
+    return recognizer.gen_feat(img, face_lmks)
+
+
+def recognizer_calc_similarity_batch(
+    feat1: np.ndarray, feat2: np.ndarray
+) -> np.ndarray:
+    if recognizer is None:
+        raise ValueError("Recognizer is not loaded")
+    return recognizer.calc_similarity_batch(feat1, feat2)
+
+
+# 以下是主进程中的函数
 
 def register_faces():
     if not os.path.exists(config.face_recognize_register_path):
@@ -64,7 +106,7 @@ def register_faces():
                 face_lmks -= np.array([face_bbox[0], face_bbox[1]])
 
                 register_face(face, face_lmks, label)
-                logging.info(f"Register face {label} successfully")
+                ms_logger.info(f"register face {label} successfully")
 
     # 服务没有开启人脸检测服务的话，使用完就关闭
     if not config.face_detection_enabled:
@@ -76,12 +118,14 @@ def register_face(
     face_lmks: np.ndarray,
     label: str,
 ):
-    global recognizer
-    if recognizer is None:
-        recognizer = load_recognizer()
-    feat = recognizer.gen_feat(
-        img=face,
-        face_lmks=face_lmks,
+    if recognizer_pool is None:
+        raise ValueError("Recognizer pool is not loaded")
+    feat = recognizer_pool.apply(
+        recognizer_gen_feat,
+        (
+            face,
+            face_lmks,
+        ),
     )
     face_recognition_store.save_feat(label, feat)
 
@@ -90,16 +134,21 @@ def recognize_faces(
     face: np.ndarray,
     face_lmks: np.ndarray,
 ) -> str:
-    if recognizer is None:
-        raise ValueError("Recognizer is not loaded")
-    feat = recognizer.gen_feat(
-        img=face,
-        face_lmks=face_lmks,
+    if recognizer_pool is None:
+        raise ValueError("Recognizer pool is not loaded")
+    feat = recognizer_pool.apply(
+        recognizer_gen_feat,
+        (
+            face,
+            face_lmks,
+        ),
     )
     lib_feat, lib_labels = get_lib_feat_and_labels()
     if lib_feat.shape[0] == 0:
         return create_new_label(feat)
-    sim = recognizer.calc_similarity_batch(np.expand_dims(feat, axis=0), lib_feat)
+    sim = recognizer_pool.apply(
+        recognizer_calc_similarity_batch, (np.expand_dims(feat, axis=0), lib_feat)
+    )
     sim = sim[0]
     max_idx = np.argmax(sim)
     max_sim = sim[max_idx]
@@ -124,8 +173,8 @@ def create_new_label(feature: np.ndarray) -> str:
 def detect_faces(
     image_path: str,
 ) -> tuple[Optional[np.ndarray], tuple[int, int, int, int], np.ndarray]:
-    face_detector = load_detector()
-    face_dets, img = face_detector.detect_faces(image_path)
+    face_detector_pool = load_detector()
+    face_dets, img = face_detector_pool.apply(detector_detect_faces, (image_path,))
     face_dets = list(
         filter(
             lambda x: x[4] > config.face_detection_confidence_threshold,

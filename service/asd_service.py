@@ -6,8 +6,10 @@
 @Date: 2024-02-22 10:44:41
 """
 
+import multiprocessing as mp
 import random
 import time
+from multiprocessing.pool import Pool
 from typing import Optional
 
 import numpy as np
@@ -16,23 +18,26 @@ import config
 from active_speaker_detection.asd_config import inference_params as infer_config
 from active_speaker_detection.asd_inference import ActiveSpeakerDetector
 from store.local_store import LocalStore
-from utils.logger_util import infer_logger
+from utils.logger_util import infer_logger, ms_logger
 
 from .store.asd_store import ActiveSpeakerDetectionStore
 
-detector: Optional[ActiveSpeakerDetector] = None
+# 主进程中的全局变量
+detector_pool: Optional[Pool] = None
 asd_store: ActiveSpeakerDetectionStore
 
+# 进程池每个进程中的全局变量
+detector: Optional[ActiveSpeakerDetector] = None
 
 def load_detector():
-    global detector
-    if detector is not None:
-        return detector
-    detector = ActiveSpeakerDetector(
-        trained_model=config.asd_model,
-        cpu=config.asd_cpu,
-    )
-    return detector
+    global detector_pool
+    if detector_pool is None:
+        detector_pool = mp.Pool(
+            config.model_service_server_asd_max_workers,
+            initializer=init_detector_pool_process,
+        )
+    ms_logger.info("active speaker detector pool loaded")
+    return detector_pool
 
 
 def load_asd_store():
@@ -40,6 +45,46 @@ def load_asd_store():
     asd_store = ActiveSpeakerDetectionStore(LocalStore.create, max_request_count=1000)
     return asd_store
 
+
+# 初始化进程池的进程
+def init_detector_pool_process():
+    global detector
+    if detector is not None:
+        return detector
+    detector = ActiveSpeakerDetector(
+        trained_model=config.asd_model,
+        cpu=config.asd_cpu,
+    )
+    ms_logger.info("active speaker detector worker loaded")
+    return detector
+
+
+# 以下是进程池中的函数
+
+
+def detector_gen_feature(
+    faces: list[list[np.ndarray]], audios: list[np.ndarray]
+) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+    if detector is None:
+        raise ValueError("Detector is not loaded")
+    return detector.gen_feature(faces, audios)
+
+
+def detector_detect_active_speaker(
+    faces: list[list[np.ndarray]],
+    audios: list[np.ndarray],
+    face_bboxes: list[list[tuple[float, float, float, float]]],
+    faces_vf_emb: Optional[list[list[np.ndarray]]] = None,
+    audios_vf_emb: Optional[list[np.ndarray]] = None,
+) -> list[list[float]]:
+    if detector is None:
+        raise ValueError("Detector is not loaded")
+    return detector.detect_active_speaker(
+        faces, audios, face_bboxes, faces_vf_emb, audios_vf_emb
+    )
+
+
+# 以下是主进程中的函数
 
 def detect_active_speaker(
     request_id: str,
@@ -61,8 +106,8 @@ def detect_active_speaker(
     :param frame_width: 画面宽
     :param only_save_frame: 是否只保存帧，不进行推理
     """
-    if detector is None:
-        raise ValueError("Detector is not loaded")
+    if detector_pool is None:
+        raise ValueError("Detector pool is not loaded")
 
     # 人脸为空直接返回
     if len(faces) == 0:
@@ -86,8 +131,8 @@ def detect_active_speaker(
         frame_count=frame_count,
     )
     curr_time = time.time()
-    audio_feats, face_feats, vf_a_emb, vf_v_emb = detector.gen_feature(
-        faces_clip_list, [audio]
+    audio_feats, face_feats, vf_a_emb, vf_v_emb = detector_pool.apply(
+        detector_gen_feature, (faces_clip_list, [audio])
     )
     infer_logger.debug(
         f"Asd gen_feature cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
@@ -118,12 +163,15 @@ def detect_active_speaker(
     )
 
     curr_time = time.time()
-    p_list: list[list[float]] = detector.detect_active_speaker(
-        faces=face_list,
-        audios=audio_list,
-        face_bboxes=faces_rbbox_clip_list,
-        faces_vf_emb=face_vf_emb_list,
-        audios_vf_emb=audio_vf_emb_list,
+    p_list: list[list[float]] = detector_pool.apply(
+        detector_detect_active_speaker,
+        (
+            face_list,
+            audio_list,
+            faces_rbbox_clip_list,
+            face_vf_emb_list,
+            audio_vf_emb_list,
+        ),
     )
     infer_logger.debug(
         f"Asd detect_active_speaker cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
