@@ -8,6 +8,7 @@
 
 import multiprocessing as mp
 import os
+import time
 from multiprocessing.pool import Pool
 from typing import Optional, Union
 
@@ -108,9 +109,17 @@ def verify_speakers(
     lib_feat, lib_labels = get_lib_feat_and_labels()
     if lib_feat.size(0) == 0:
         return ""
+    curr_time = time.time()
     feat = verificator_pool.apply(verificator_gen_feat, (audio,))
+    infer_logger.debug(
+        f"Speaker verificate gen_feature cost: {time.time() - curr_time:.4f}s"
+    )
+    curr_time = time.time()
     score = verificator_pool.apply(
         verificator_calc_score_batch, (feat.unsqueeze(0), lib_feat)
+    )
+    infer_logger.debug(
+        f"Speaker verificate calc_score_batch cost: {time.time() - curr_time:.4f}s"
     )
     score = score[0]
     max_idx = np.argmax(score)

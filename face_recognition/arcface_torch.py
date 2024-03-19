@@ -120,7 +120,7 @@ class ArcFaceRecognizer:
         start = timeit.default_timer()
         feat = self.net(img).detach().cpu().numpy()
         stop = timeit.default_timer()
-        print("Arcface forward time: %.2f s. " % (stop - start))
+        # print("Arcface forward time: %.2f s. " % (stop - start))
         feat /= np.sqrt(np.sum(feat**2, -1, keepdims=True))  # l2 norm
 
         return np.squeeze(feat)

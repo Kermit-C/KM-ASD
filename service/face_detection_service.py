@@ -71,7 +71,14 @@ def detector_detect_faces(
 def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
     if detector_pool is None:
         raise ValueError("Detector pool is not loaded")
-    face_dets, _ = detector_pool.apply(detector_detect_faces, (image,))
+    face_dets, _, forward_time, misc_time = detector_pool.apply(
+        detector_detect_faces, (image,)
+    )
+    infer_logger.debug(
+        "Face detection forward time: {:.4f}s misc: {:.4f}s".format(
+            forward_time, misc_time
+        )
+    )
     face_dets = filter(
         lambda x: x[4] > config.face_detection_confidence_threshold, face_dets
     )

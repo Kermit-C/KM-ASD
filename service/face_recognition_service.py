@@ -8,6 +8,7 @@
 
 import multiprocessing as mp
 import os
+import time
 from multiprocessing.pool import Pool
 from typing import Optional, Union
 
@@ -138,6 +139,7 @@ def recognize_faces(
 ) -> str:
     if recognizer_pool is None:
         raise ValueError("Recognizer pool is not loaded")
+    curr_time = time.time()
     feat = recognizer_pool.apply(
         recognizer_gen_feat,
         (
@@ -145,11 +147,18 @@ def recognize_faces(
             face_lmks,
         ),
     )
+    infer_logger.debug(
+        f"Face recognize gen_feature cost: {time.time() - curr_time:.4f}s"
+    )
     lib_feat, lib_labels = get_lib_feat_and_labels()
     if lib_feat.shape[0] == 0:
         return create_new_label(feat)
+    curr_time = time.time()
     sim = recognizer_pool.apply(
         recognizer_calc_similarity_batch, (np.expand_dims(feat, axis=0), lib_feat)
+    )
+    infer_logger.debug(
+        f"Face recognize calc_similarity_batch cost: {time.time() - curr_time:.4f}s"
     )
     sim = sim[0]
     max_idx = np.argmax(sim)
@@ -176,7 +185,7 @@ def detect_faces(
     image_path: str,
 ) -> tuple[Optional[np.ndarray], tuple[int, int, int, int], np.ndarray]:
     face_detector_pool = load_detector()
-    face_dets, img = face_detector_pool.apply(detector_detect_faces, (image_path,))
+    face_dets, img, *_ = face_detector_pool.apply(detector_detect_faces, (image_path,))
     face_dets = list(
         filter(
             lambda x: x[4] > config.face_detection_confidence_threshold,
