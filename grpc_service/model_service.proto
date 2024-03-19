@@ -39,6 +39,7 @@ message AsdRequest {
     // 画面的宽高
     int32 frame_width = 15;
     int32 frame_height = 16;
+    bool only_save_frame = 17;
 };
 
 message AsdResponse {

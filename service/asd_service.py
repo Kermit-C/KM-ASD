@@ -49,6 +49,7 @@ def detect_active_speaker(
     audio: np.ndarray,
     frame_height: int,
     frame_width: int,
+    only_save_frame: bool = False,
 ) -> list[bool]:
     """
     :param request_id: request id，需要区分不同的请求，因为需要保存上下文，构造图
@@ -56,6 +57,9 @@ def detect_active_speaker(
     :param faces: 某刻画面中的人脸列表
     :param face_bboxes: 人脸列表对应的人脸框列表
     :param audio: audio, shape (n_samples,), float32 pcm
+    :param frame_height: 画面高
+    :param frame_width: 画面宽
+    :param only_save_frame: 是否只保存帧，不进行推理
     """
     if detector is None:
         raise ValueError("Detector is not loaded")
@@ -72,6 +76,9 @@ def detect_active_speaker(
             face_bbox=face_bbox,
             audio_frame=audio,
         )
+
+    if only_save_frame:
+        return []
 
     # 生成特征
     audio, faces_clip_list = get_faces_and_audios_of_encoder(

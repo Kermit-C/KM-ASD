@@ -167,6 +167,25 @@ class AsdProcessor(BaseEventBusProcessor):
                                 except:
                                     is_active_list = [False] * len(faces)
                             else:
+                                # 仅保存帧到 ASD 服务
+                                try:
+                                    await call_asd(
+                                        self.get_request_id(),
+                                        wait_asd_frame_count,
+                                        faces,
+                                        face_bboxes,
+                                        audio,
+                                        self.processor_timeout,
+                                        self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                        )["frame_height"],
+                                        self.store.get_frame_info(
+                                            self.get_request_id(), wait_asd_frame_count  # type: ignore
+                                        )["frame_width"],
+                                        only_save_frame=True,
+                                    )
+                                except:
+                                    pass
                                 # 取这一个 lag 的第一个帧的人脸
                                 is_active_list = self.store.get_frame_is_active_list(
                                     self.get_request_id(),

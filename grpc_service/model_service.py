@@ -51,6 +51,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         audio = pickle.loads(request.audio)  # type: ignore
         frame_width = request.frame_width  # type: ignore
         frame_height = request.frame_height  # type: ignore
+        only_save_frame = request.only_save_frame  # type: ignore
 
         ms_logger.debug(f"Received ASD request: {request_id}")
 
@@ -74,6 +75,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                 audio,
                 frame_height,
                 frame_width,
+                only_save_frame,
             )
         finally:
             ms_logger.debug(f"Finish processing ASD request: {request_id}")

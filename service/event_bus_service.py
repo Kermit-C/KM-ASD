@@ -115,6 +115,7 @@ async def call_asd(
     timeout: float,
     frame_height: int,
     frame_width: int,
+    only_save_frame: bool = False,
 ) -> list[bool]:
     # 调用说话人检测服务
     # TODO: 实现负载均衡
@@ -133,6 +134,7 @@ async def call_asd(
                 audio=pickle.dumps(audio),
                 frame_height=frame_height,
                 frame_width=frame_width,
+                only_save_frame=only_save_frame,
             ),
             timeout=timeout,
         )
