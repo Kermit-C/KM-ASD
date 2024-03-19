@@ -32,6 +32,7 @@ detector: Optional[ActiveSpeakerDetector] = None
 def load_detector():
     global detector_pool
     if detector_pool is None:
+        mp.set_start_method("spawn", True)
         detector_pool = mp.Pool(
             config.model_service_server_asd_max_workers,
             initializer=init_detector_pool_process,

@@ -37,6 +37,7 @@ recognizer: Optional[ArcFaceRecognizer] = None
 def load_recognizer():
     global recognizer_pool
     if recognizer_pool is None:
+        mp.set_start_method("spawn", True)
         recognizer_pool = mp.Pool(
             config.model_service_server_face_recognize_max_workers,
             initializer=init_recognizer_pool_process,

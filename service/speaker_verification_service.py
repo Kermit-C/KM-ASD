@@ -35,6 +35,7 @@ verificator: Optional[EcapaTdnnVerificator] = None
 def load_verificator():
     global verificator_pool
     if verificator_pool is None:
+        mp.set_start_method("spawn", True)
         verificator_pool = mp.Pool(
             config.model_service_server_speaker_verificate_max_workers,
             initializer=init_verificator_pool_process,
