@@ -24,15 +24,15 @@ from service.speaker_verification_service import (
 def initialize_models(model_type: str):
     if model_type == "asd":
         load_asd_store()
-        return load_asd_detector()
+        load_asd_detector()
     elif model_type == "face_detection":
-        return load_face_detector()
+        load_face_detector()
     elif model_type == "face_recognition":
         load_face_recognition_store()
-        return load_recognizer()
+        load_recognizer()
     elif model_type == "speaker_verification":
         load_speaker_verification_store()
-        return load_verificator()
+        load_verificator()
     else:
         raise ValueError(f"Invalid model type: {model_type}")
 

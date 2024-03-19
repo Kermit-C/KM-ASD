@@ -75,7 +75,7 @@ class EcapaTdnnVerificator:
         start = timeit.default_timer()
         emb = self.model(inp).detach().cpu()
         stop = timeit.default_timer()
-        print("Ecapa forward time: %.2f s. " % (stop - start))
+        # print("Ecapa forward time: %.2f s. " % (stop - start))
         emb = F.normalize(emb, p=2, dim=1)
         return emb  # (split_num, 192)
 
