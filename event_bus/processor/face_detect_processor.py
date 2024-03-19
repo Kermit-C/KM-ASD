@@ -139,6 +139,8 @@ class FaceDetectProcessor(BaseEventBusProcessor):
     def move_face_det_by_last_lag(self, lag_rate, curr_lag_face_det, last_lag_face_det):
         """根据上一 lag 的人脸位置，平移当前 lag 的人脸位置"""
 
+        lag_rate = lag_rate * 0.25
+
         x1 = int(
             lag_rate
             * (curr_lag_face_det["bbox"]["x1"] - last_lag_face_det["bbox"]["x1"])
