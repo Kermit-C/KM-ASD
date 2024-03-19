@@ -93,8 +93,9 @@ def register_speakers():
 
 
 def register_speaker(audio: np.ndarray, label: str):
+    global verificator_pool
     if verificator_pool is None:
-        raise ValueError("Verificator pool is not loaded")
+        verificator_pool = load_verificator()
     feat = verificator_pool.apply(verificator_gen_feat, (audio,))
     speaker_verification_store.save_feat(label, feat)
 

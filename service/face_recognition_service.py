@@ -119,8 +119,9 @@ def register_face(
     face_lmks: np.ndarray,
     label: str,
 ):
+    global recognizer_pool
     if recognizer_pool is None:
-        raise ValueError("Recognizer pool is not loaded")
+        recognizer_pool = load_recognizer()
     feat = recognizer_pool.apply(
         recognizer_gen_feat,
         (

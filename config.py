@@ -13,13 +13,13 @@ from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationAr
 
 model_service_server_grpc_port = 50051
 model_service_server_max_workers = 100
-model_service_server_asd_max_workers = 10
+model_service_server_asd_max_workers = 1
 model_service_server_asd_worker_wait_timeout = 10
-model_service_server_face_detection_max_workers = 10
+model_service_server_face_detection_max_workers = 1
 model_service_server_face_detection_worker_wait_timeout = 10
-model_service_server_face_recognize_max_workers = 2
+model_service_server_face_recognize_max_workers = 1
 model_service_server_face_recognize_worker_wait_timeout = 10
-model_service_server_speaker_verificate_max_workers = 2
+model_service_server_speaker_verificate_max_workers = 1
 model_service_server_speaker_verificate_worker_wait_timeout = 10
 model_service_server_thread_name_prefix = "model_service_server"
 
