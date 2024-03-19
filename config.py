@@ -86,6 +86,7 @@ event_bus = {
             "timeout": 1,  # 3 * (1 / 30),  # 3帧时间
             "properties": {
                 "detect_lag": 3,  # 3 帧
+                "same_face_between_frames_iou_threshold": 0.5,
             },
         },
         "FaceCropProcessor": {
