@@ -180,15 +180,21 @@ class FaceCropProcessor(BaseEventBusProcessor):
     async def process_exception_async(
         self, event_message_body: FaceCropMessageBody, exception: Exception
     ):
-        # logging.error("FaceCropProcessor process_exception", exception)
-        # 直接到 reduce
+        # 视为空人脸处理
+        frame = event_message_body.frame
+        frame_height, frame_width, _ = frame.shape
         self.publish_next(
-            "reduce_topic",
-            ReduceMessageBody(
-                type="ASD",
+            "asd_topic",
+            AsdMessageBody(
+                type="V",
                 frame_count=event_message_body.frame_count,
                 frame_timestamp=event_message_body.frame_timestamp,
+                frame=None,
+                frame_face_idx=None,
                 frame_face_count=0,
+                frame_face_bbox=None,
+                frame_height=frame_height,
+                frame_width=frame_width,
             ),
         )
 
