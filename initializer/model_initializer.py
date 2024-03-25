@@ -8,6 +8,7 @@
 
 import config
 from manager.grpc_server_manager import start_server
+from manager.metric_manager import init as init_metric_manager
 from service.asd_service import load_asd_store
 from service.asd_service import load_detector as load_asd_detector
 from service.face_detection_service import load_detector as load_face_detector
@@ -38,6 +39,7 @@ def initialize_models(model_type: str):
 
 
 def initialize_model_service(wait_for_termination=True):
+    init_metric_manager()
     start_server(
         config.model_service_server_max_workers,
         config.model_service_server_grpc_port,

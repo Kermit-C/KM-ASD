@@ -63,6 +63,7 @@ class Logger:
         )
 
 
+mt_logger = Logger("Metric", is_show_time=True)
 eb_logger = Logger("EventBus", is_show_time=True)
 ms_logger = Logger("ModelService", is_show_time=True)
 infer_logger = Logger("Inference", is_show_time=True)

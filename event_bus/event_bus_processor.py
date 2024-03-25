@@ -14,6 +14,7 @@ from concurrent.futures import Future
 from typing import Coroutine, Optional
 
 from config import event_bus
+from manager.metric_manager import create_collector
 from utils.logger_util import eb_logger
 
 from .event_bus_excecutor import check_running_loop, get_event_loop
@@ -39,6 +40,11 @@ class BaseEventBusProcessor:
         self.last_message_async: contextvars.ContextVar = contextvars.ContextVar(
             "last_message_async"
         )
+
+        self.metric_collector_of_duration = create_collector(
+            f"eventbus_processor_{self.processor_name}_duration"
+        )
+        # TODO: 其他指标
 
     def process(self, event_message_body: EventMessageBody):
         """处理消息，需要重写"""
@@ -143,6 +149,7 @@ class BaseEventBusProcessor:
             eb_logger.debug(
                 f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
             )
+            self.metric_collector_of_duration.collect(time.time() - start_time)
 
     async def _handler_async(self, event_message: EventMessage):
         """处理消息，异步处理"""
@@ -167,6 +174,7 @@ class BaseEventBusProcessor:
             eb_logger.debug(
                 f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
             )
+            self.metric_collector_of_duration.collect(time.time() - start_time)
 
     def _listener(self, event_message: EventMessage):
         """监听消息"""

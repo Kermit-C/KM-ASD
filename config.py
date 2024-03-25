@@ -9,6 +9,11 @@
 from active_speaker_detection.asd_config import inference_params as AsdInferenceParams
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
+########## 通用配置 ##########
+metric_dump_interval = 60
+metric_dump_dir = "tmp/metric"
+
+
 ########## 模型服务配置 ##########
 
 model_service_server_grpc_port = 50051
@@ -83,7 +88,7 @@ event_bus = {
         "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
-            "timeout": 1,  # 3 * (1 / 30),  # 3帧时间
+            "timeout": 3,  # 3 * (1 / 30),  # 3帧时间
             "properties": {
                 "detect_lag": 3,  # 3 帧
                 "same_face_between_frames_iou_threshold": 0.5,
@@ -109,7 +114,7 @@ event_bus = {
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
-            "timeout": 1,  # 10 * (1 / 30),  # 10帧时间
+            "timeout": 3,  # 10 * (1 / 30),  # 10帧时间
             "properties": {
                 "frmc": AsdInferenceParams["frmc"],
                 "detect_lag": AsdInferenceParams["strd"],

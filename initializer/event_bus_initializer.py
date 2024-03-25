@@ -17,10 +17,12 @@ from event_bus.processor.face_recognize_processor import FaceRecognizeProcessor
 from event_bus.processor.reduce_processor import ReduceProcessor
 from event_bus.processor.speaker_verificate_processor import SpeakerVerificateProcessor
 from event_bus.processor.video_to_frame_processor import VideoToFrameProcessor
+from manager.metric_manager import init as init_metric_manager
 
 
 def init_event_bus():
     """初始化事件总线"""
+    init_metric_manager()
     init_event_bus_executor()
     create_processor(
         VideoToFrameProcessor(
