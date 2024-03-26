@@ -17,6 +17,7 @@ import numpy as np
 import config
 from active_speaker_detection.asd_config import inference_params as infer_config
 from active_speaker_detection.asd_inference import ActiveSpeakerDetector
+from manager.metric_manager import MetricCollector, create_collector
 from store.local_store import LocalStore
 from utils.logger_util import infer_logger, ms_logger
 
@@ -25,6 +26,8 @@ from .store.asd_store import ActiveSpeakerDetectionStore
 # 主进程中的全局变量
 detector_pool: Optional[Pool] = None
 asd_store: ActiveSpeakerDetectionStore
+metric_collector_of_feat_duration: MetricCollector
+metric_collector_of_graph_duration: MetricCollector
 
 # 进程池每个进程中的全局变量
 detector: Optional[ActiveSpeakerDetector] = None
@@ -45,6 +48,17 @@ def load_asd_store():
     global asd_store
     asd_store = ActiveSpeakerDetectionStore(LocalStore.create, max_request_count=1000)
     return asd_store
+
+
+def load_asd_metric():
+    global metric_collector_of_feat_duration
+    global metric_collector_of_graph_duration
+    metric_collector_of_feat_duration = create_collector(
+        f"model_service_asd_feat_duration"
+    )
+    metric_collector_of_graph_duration = create_collector(
+        f"model_service_asd_graph_duration"
+    )
 
 
 # 初始化进程池的进程
@@ -138,6 +152,7 @@ def detect_active_speaker(
     infer_logger.debug(
         f"Asd gen_feature cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
     )
+    metric_collector_of_feat_duration.collect(time.time() - curr_time)
     for i in range(len(faces_clip_list)):
         asd_store.save_frame_feat(
             request_id=request_id,
@@ -177,6 +192,7 @@ def detect_active_speaker(
     infer_logger.debug(
         f"Asd detect_active_speaker cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
     )
+    metric_collector_of_graph_duration.collect(time.time() - curr_time)
 
     request_faces_result_idxes = []
     for face_bbox in face_bboxes:

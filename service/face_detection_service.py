@@ -16,10 +16,13 @@ import numpy as np
 
 import config
 from face_detection.retinaface_torch import RetinaFaceDetector
+from manager.metric_manager import MetricCollector, create_collector
 from utils.logger_util import infer_logger, ms_logger
 
 # 主进程中的全局变量
 detector_pool: Optional[Pool] = None
+metric_collector_of_forward_duration: MetricCollector
+metric_collector_of_misc_duration: MetricCollector
 
 # 进程池每个进程中的全局变量
 detector: Optional[RetinaFaceDetector] = None
@@ -34,6 +37,17 @@ def load_detector():
         )
     ms_logger.info("face detector pool loaded")
     return detector_pool
+
+
+def load_face_detection_metric():
+    global metric_collector_of_forward_duration
+    global metric_collector_of_misc_duration
+    metric_collector_of_forward_duration = create_collector(
+        f"model_service_face_detection_forward_duration"
+    )
+    metric_collector_of_misc_duration = create_collector(
+        f"model_service_face_detection_misc_duration"
+    )
 
 
 # 初始化进程池的进程
@@ -79,6 +93,9 @@ def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
             forward_time, misc_time
         )
     )
+    metric_collector_of_forward_duration.collect(forward_time)
+    metric_collector_of_misc_duration.collect(misc_time)
+
     face_dets = filter(
         lambda x: x[4] > config.face_detection_confidence_threshold, face_dets
     )

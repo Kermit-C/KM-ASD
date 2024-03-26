@@ -42,9 +42,14 @@ class BaseEventBusProcessor:
         )
 
         self.metric_collector_of_duration = create_collector(
-            f"eventbus_processor_{self.processor_name}_duration"
+            f"eventbus_{self.processor_name}_duration"
         )
-        # TODO: 其他指标
+        self.metric_collector_of_exception = create_collector(
+            f"eventbus_{self.processor_name}_exception"
+        )
+        self.metric_collector_of_timeout = create_collector(
+            f"eventbus_{self.processor_name}_timeout"
+        )
 
     def process(self, event_message_body: EventMessageBody):
         """处理消息，需要重写"""
@@ -138,6 +143,11 @@ class BaseEventBusProcessor:
         except Exception as e:
             try:
                 eb_logger.debug(f"processor {self.processor_name} exception: {str(e)}")
+                if isinstance(e, asyncio.TimeoutError):
+                    self.metric_collector_of_timeout.collect(1)
+                else:
+                    self.metric_collector_of_exception.collect(1)
+
                 assert isinstance(event_message.body, EventMessageBody)
                 self.process_exception(event_message.body, e)
             except Exception as ee:

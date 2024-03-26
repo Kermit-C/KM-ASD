@@ -17,6 +17,7 @@ import torch
 import torchaudio
 
 import config
+from manager.metric_manager import MetricCollector, create_collector
 from speaker_verification import EcapaTdnnVerificator
 from store.local_store import LocalStore
 from utils.hash_util import calculate_md5
@@ -28,6 +29,8 @@ from .store.speaker_verification_store import SpeakerVerificationStore
 # 主进程中的全局变量
 verificator_pool: Optional[Pool] = None
 speaker_verification_store: SpeakerVerificationStore
+metric_collector_of_feat_duration: MetricCollector
+metric_collector_of_sim_duration: MetricCollector
 
 # 进程池每个进程中的全局变量
 verificator: Optional[EcapaTdnnVerificator] = None
@@ -53,6 +56,17 @@ def load_speaker_verification_store():
     )
     register_speakers()
     return speaker_verification_store
+
+
+def load_speaker_verification_metric():
+    global metric_collector_of_feat_duration
+    global metric_collector_of_sim_duration
+    metric_collector_of_feat_duration = create_collector(
+        f"model_service_speaker_verification_feat_duration"
+    )
+    metric_collector_of_sim_duration = create_collector(
+        f"model_service_speaker_verification_sim_duration"
+    )
 
 
 # 初始化进程池的进程
@@ -114,6 +128,8 @@ def verify_speakers(
     infer_logger.debug(
         f"Speaker verificate gen_feature cost: {time.time() - curr_time:.4f}s"
     )
+    metric_collector_of_feat_duration.collect(time.time() - curr_time)
+
     curr_time = time.time()
     score = verificator_pool.apply(
         verificator_calc_score_batch, (feat.unsqueeze(0), lib_feat)
@@ -121,6 +137,7 @@ def verify_speakers(
     infer_logger.debug(
         f"Speaker verificate calc_score_batch cost: {time.time() - curr_time:.4f}s"
     )
+    metric_collector_of_sim_duration.collect(time.time() - curr_time)
     score = score[0]
     max_idx = np.argmax(score)
     max_score = score[max_idx]

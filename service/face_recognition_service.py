@@ -16,6 +16,7 @@ import numpy as np
 
 import config
 from face_recognition import ArcFaceRecognizer
+from manager.metric_manager import MetricCollector, create_collector
 from store.local_store import LocalStore
 from utils.hash_util import calculate_md5
 from utils.logger_util import infer_logger, ms_logger
@@ -31,6 +32,8 @@ from .store.face_recognition_store import FaceRecognitionStore
 # 主进程中的全局变量
 recognizer_pool: Optional[Pool] = None
 face_recognition_store: FaceRecognitionStore
+metric_collector_of_feat_duration: MetricCollector
+metric_collector_of_sim_duration: MetricCollector
 
 # 进程池每个进程中的全局变量
 recognizer: Optional[ArcFaceRecognizer] = None
@@ -55,6 +58,17 @@ def load_face_recognition_store():
     )
     register_faces()
     return face_recognition_store
+
+
+def load_face_recognition_metric():
+    global metric_collector_of_feat_duration
+    global metric_collector_of_sim_duration
+    metric_collector_of_feat_duration = create_collector(
+        f"model_service_face_recognition_feat_duration"
+    )
+    metric_collector_of_sim_duration = create_collector(
+        f"model_service_face_recognition_sim_duration"
+    )
 
 
 # 初始化进程池的进程
@@ -150,6 +164,8 @@ def recognize_faces(
     infer_logger.debug(
         f"Face recognize gen_feature cost: {time.time() - curr_time:.4f}s"
     )
+    metric_collector_of_feat_duration.collect(time.time() - curr_time)
+
     lib_feat, lib_labels = get_lib_feat_and_labels()
     if lib_feat.shape[0] == 0:
         return create_new_label(feat)
@@ -160,6 +176,7 @@ def recognize_faces(
     infer_logger.debug(
         f"Face recognize calc_similarity_batch cost: {time.time() - curr_time:.4f}s"
     )
+    metric_collector_of_sim_duration.collect(time.time() - curr_time)
     sim = sim[0]
     max_idx = np.argmax(sim)
     max_sim = sim[max_idx]

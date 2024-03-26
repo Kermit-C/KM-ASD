@@ -81,7 +81,7 @@ def _dump():
 class MetricCollector:
     """指标收集器"""
 
-    def __init__(self, metric_name: str, dir_path: str, decimal_places: int = 2):
+    def __init__(self, metric_name: str, dir_path: str, decimal_places: int = 4):
         self.metric_name = metric_name
         self.dir_path = dir_path
         self.decimal_places = decimal_places
