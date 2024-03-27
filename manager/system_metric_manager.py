@@ -83,7 +83,8 @@ def _get_and_metric_cpu():
         mem_metric_collector.collect(mem_percent)
         swap_mem_metric_collector.collect(swap_mem_percent)
 
-        time.sleep(1)
+        # 不能刚好卡在 1s，否则部分时刻指标会为空
+        time.sleep(0.5)
 
 
 def _get_and_metric_gpu():
@@ -100,4 +101,5 @@ def _get_and_metric_gpu():
             gpu_load_metric_collector_list[j].collect(gpu.load * 100)
             gpu_mem_metric_collector_list[j].collect(gpu.memoryUtil * 100)
 
-        time.sleep(1)
+        # 不能刚好卡在 1s，否则部分时刻指标会为空
+        time.sleep(0.5)
