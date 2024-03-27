@@ -24,6 +24,7 @@ swap_mem_metric_collector: MetricCollector
 gpu_metric_thread: Optional[threading.Thread] = None
 gpu_load_metric_collector_list: list[MetricCollector]
 gpu_mem_metric_collector_list: list[MetricCollector]
+is_metric_collector_loaded: bool = False
 
 
 def init():
@@ -50,6 +51,12 @@ def load_metric_collector():
     global swap_mem_metric_collector
     global gpu_load_metric_collector_list
     global gpu_mem_metric_collector_list
+    global is_metric_collector_loaded
+
+    if is_metric_collector_loaded:
+        sm_logger.warning("System metric collector already loaded.")
+        return
+    is_metric_collector_loaded = True
     cpu_metric_collector = create_collector("system_cpu")
     mem_metric_collector = create_collector("system_mem")
     swap_mem_metric_collector = create_collector("system_swap_mem")
