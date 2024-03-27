@@ -13,6 +13,8 @@ from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationAr
 metric_dump_interval = 60
 metric_dump_dir = "tmp/metric"
 
+system_metric_gpu_list = [0]
+
 
 ########## 模型服务配置 ##########
 
