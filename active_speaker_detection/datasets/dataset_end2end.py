@@ -103,6 +103,8 @@ class End2endDataset(Dataset):
         center_node_mask = []
         # 最后一个时间戳的掩码
         last_node_mask = []
+        # 第一个时间戳的掩码
+        first_node_mask = []
 
         # 所有时间戳
         all_ts = [ted[1] for ted in target_entity_metadata]
@@ -273,6 +275,7 @@ class End2endDataset(Dataset):
                         time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
                     )
                     last_node_mask.append(time_idx == len(time_context) - 1)
+                    first_node_mask.append(time_idx == 0)
                 feature_list.append(torch.stack([a_extend_data, v_data], dim=0))
                 target_list.append((target_a, target))
                 audio_feature_mask.append(False)
@@ -289,6 +292,7 @@ class End2endDataset(Dataset):
                     time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
                 )
                 last_node_mask.append(time_idx == len(time_context) - 1)
+                first_node_mask.append(time_idx == 0)
 
         # 边的出发点，每一条无向边会正反记录两次
         source_vertices: list[int] = []
@@ -359,8 +363,8 @@ class End2endDataset(Dataset):
                             * self.graph_time_stride
                         )
                         self_connect.append(int(i == j))
-                        if last_node_mask[j]:
-                            # 如果是最后一个时间戳的节点，再连接一次
+                        if last_node_mask[j] or first_node_mask[j]:
+                            # 如果是首尾时间戳的节点，再连接一次
                             source_vertices.append(source_vertices[-1])
                             target_vertices.append(target_vertices[-1])
                             source_vertices_pos.append(source_vertices_pos[-1])
