@@ -283,20 +283,13 @@ class GraphDataset(Dataset):
                     entity_list.append("")
                     timestamp_idx_list.append(time_idx)
                     position_list.append((0, 0, 1, 1))
-                    is_last_node = time_idx == (
-                        len(time_context) - 1 - self.graph_time_steps // 2
-                    )
-                    # 最后一个节点是 0，最后一个图是 1，然后依次 2,3...
                     distance_to_last_graph_list.append(
-                        (
-                            (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
-                            // self.graph_time_steps
-                        )
-                        + 1
-                        if not is_last_node
-                        else 0
+                        (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
+                        // self.graph_time_steps
                     )
-                    center_node_mask.append(is_last_node)
+                    center_node_mask.append(
+                        time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
+                    )
                     last_node_mask.append(time_idx == len(time_context) - 1)
                 target_list.append(target)
                 audio_feature_mask.append(False)
@@ -304,20 +297,13 @@ class GraphDataset(Dataset):
                 entity_list.append(entity)
                 timestamp_idx_list.append(time_idx)
                 position_list.append(pos)
-                is_last_node = time_idx == (
-                    len(time_context) - 1 - self.graph_time_steps // 2
-                )
-                # 最后一个节点是 0，最后一个图是 1，然后依次 2,3...
                 distance_to_last_graph_list.append(
-                    (
-                        (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
-                        // self.graph_time_steps
-                    )
-                    + 1
-                    if not is_last_node
-                    else 0
+                    (self.graph_time_steps * self.graph_time_num - 1 - time_idx)
+                    // self.graph_time_steps
                 )
-                center_node_mask.append(is_last_node)
+                center_node_mask.append(
+                    time_idx == (len(time_context) - 1 - self.graph_time_steps // 2)
+                )
                 last_node_mask.append(time_idx == len(time_context) - 1)
 
         # 边的出发点，每一条无向边会正反记录两次
@@ -389,6 +375,17 @@ class GraphDataset(Dataset):
                             * self.graph_time_stride
                         )
                         self_connect.append(int(i == j))
+                        if last_node_mask[j]:
+                            # 如果是最后一个时间戳的节点，再连接一次
+                            source_vertices.append(source_vertices[-1])
+                            target_vertices.append(target_vertices[-1])
+                            source_vertices_pos.append(source_vertices_pos[-1])
+                            target_vertices_pos.append(target_vertices_pos[-1])
+                            source_vertices_audio.append(source_vertices_audio[-1])
+                            target_vertices_audio.append(target_vertices_audio[-1])
+                            time_delta_rate.append(time_delta_rate[-1])
+                            time_delta.append(time_delta[-1])
+                            self_connect.append(self_connect[-1])
                     elif self.is_edge_across_entity:
                         # 不同实体在不同时刻之间的连接
                         source_vertices.append(i)
