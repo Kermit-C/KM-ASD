@@ -173,7 +173,6 @@ def _train_model_amp_avl(
         distance_to_last_graph = torch.tensor(
             distance_to_last_graph_list, dtype=torch.float16
         ).to(device)
-        max_distance = int(distance_to_last_graph.max().item())
 
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
@@ -184,19 +183,8 @@ def _train_model_amp_avl(
         with torch.set_grad_enabled(True):
             with autocast(True):
                 outputs, *_ = model(graph_data)
-
-                # 分小图计算损失
-                loss = torch.zeros(1, device=device)
-                total_weight = 0
-                for d in range(max_distance + 1):
-                    curr_weight = 1 / (d + 1)
-                    total_weight += curr_weight
-                    # 图的损失
-                    loss += curr_weight * criterion(
-                        outputs[distance_to_last_graph == d],
-                        targets[distance_to_last_graph == d],
-                    )
-                loss /= total_weight
+                # 图的损失
+                loss = criterion(outputs, targets)
 
             scaler.scale(loss).backward()  # type: ignore
             scaler.step(optimizer)
@@ -348,7 +336,6 @@ def _test_model_graph_losses(
         distance_to_last_graph = torch.tensor(
             distance_to_last_graph_list, dtype=torch.float16
         ).to(device)
-        max_distance = int(distance_to_last_graph.max().item())
 
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
@@ -357,19 +344,8 @@ def _test_model_graph_losses(
 
         with torch.set_grad_enabled(False):
             outputs, *_ = model(graph_data)
-
-            # 分小图计算损失
-            loss = torch.zeros(1, device=device)
-            total_weight = 0
-            for d in range(max_distance + 1):
-                curr_weight = 1 / (d + 1)
-                total_weight += curr_weight
-                # 图的损失
-                loss += curr_weight * criterion(
-                    outputs[distance_to_last_graph == d],
-                    targets[distance_to_last_graph == d],
-                )
-            loss /= total_weight
+            # 图的损失
+            loss = criterion(outputs, targets)
 
             label_lst.extend(
                 targets[video_node_mask][distance_to_last_graph[video_node_mask] == 0]

@@ -238,7 +238,6 @@ def _train_model_amp_avl(
         distance_to_last_graph = torch.tensor(
             distance_to_last_graph_list, dtype=torch.float16
         ).to(device)
-        max_distance = int(distance_to_last_graph.max().item())
 
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
@@ -258,35 +257,9 @@ def _train_model_amp_avl(
                     graph_data, audio_size
                 )
 
-                # 分小图计算损失
-                aux_loss_a = torch.zeros(1, device=device)
-                aux_loss_v = torch.zeros(1, device=device)
-                loss_graph = torch.zeros(1, device=device)
-                total_weight = 0
-                for d in range(max_distance + 1):
-                    curr_weight = 1 / (d + 1)
-                    total_weight += curr_weight
-                    # 单独音频和视频的损失
-                    aux_loss_a += curr_weight * criterion(
-                        audio_out[distance_to_last_graph[audio_node_mask] == d],
-                        targets_a[audio_node_mask][
-                            distance_to_last_graph[audio_node_mask] == d
-                        ],
-                    )
-                    aux_loss_v += curr_weight * criterion(
-                        video_out[distance_to_last_graph[video_node_mask] == d],
-                        targets_v[video_node_mask][
-                            distance_to_last_graph[video_node_mask] == d
-                        ],
-                    )
-                    # 图的损失
-                    loss_graph += curr_weight * criterion(
-                        outputs[distance_to_last_graph == d],
-                        targets_g[distance_to_last_graph == d],
-                    )
-                aux_loss_a /= total_weight
-                aux_loss_v /= total_weight
-                loss_graph /= total_weight
+                aux_loss_a = criterion(audio_out, targets_a[audio_node_mask])
+                aux_loss_v = criterion(video_out, targets_v[video_node_mask])
+                loss_graph = criterion(outputs, targets_g)
 
                 if vf_a_emb is not None and vf_v_emb is not None:
                     # 音脸损失
@@ -491,7 +464,6 @@ def _test_model_graph_losses(
         distance_to_last_graph = torch.tensor(
             distance_to_last_graph_list, dtype=torch.float16
         ).to(device)
-        max_distance = int(distance_to_last_graph.max().item())
 
         audio_node_mask = []
         for mask in graph_data.audio_node_mask:
@@ -510,33 +482,9 @@ def _test_model_graph_losses(
                 graph_data, audio_size
             )
 
-            # 分小图计算损失
-            aux_loss_a = torch.zeros(1, device=device)
-            aux_loss_v = torch.zeros(1, device=device)
-            loss_graph = torch.zeros(1, device=device)
-            total_weight = 0
-            for d in range(max_distance + 1):
-                curr_weight = 1 / (d + 1)
-                total_weight += curr_weight
-                loss_graph += curr_weight * criterion(
-                    outputs[distance_to_last_graph == d],
-                    targets_g[distance_to_last_graph == d],
-                )
-                aux_loss_a += curr_weight * criterion(
-                    audio_out[distance_to_last_graph[audio_node_mask] == d],
-                    targets_a[audio_node_mask][
-                        distance_to_last_graph[audio_node_mask] == d
-                    ],
-                )
-                aux_loss_v += curr_weight * criterion(
-                    video_out[distance_to_last_graph[video_node_mask] == d],
-                    targets_v[video_node_mask][
-                        distance_to_last_graph[video_node_mask] == d
-                    ],
-                )
-            aux_loss_a /= total_weight
-            aux_loss_v /= total_weight
-            loss_graph /= total_weight
+            aux_loss_a = criterion(audio_out, targets_a[audio_node_mask])
+            aux_loss_v = criterion(video_out, targets_v[video_node_mask])
+            loss_graph = criterion(outputs, targets_g)
 
             if vf_a_emb is not None and vf_v_emb is not None:
                 aux_loss_vf: torch.Tensor = vf_critierion(
