@@ -146,5 +146,17 @@ event_bus = {
 ########## 压力测试配置 ##########
 
 stress_test_video_dir = "tmp/stress_test"
-stress_test_executor_workers = 10
 stress_test_executor_thread_name_prefix = "stress_test_executor"
+# 爬坡 (worker_num, worker_interval)
+stress_test_ramp_worker_list = [
+    (10, 60),
+    (20, 60),
+    (30, 60),
+    (40, 60),
+    (50, 60),
+    (60, 60),
+    (70, 60),
+    (80, 60),
+    (90, 60),
+    (100, 60),
+]
