@@ -10,6 +10,7 @@ from active_speaker_detection.asd_config import inference_params as AsdInference
 from speaker_verification.ecapa_tdnn_config import Args as SpeakerVerificationArgs
 
 ########## 通用配置 ##########
+
 metric_dump_interval = 60
 metric_dump_dir = "tmp/metric"
 
@@ -140,3 +141,10 @@ event_bus = {
         },
     },
 }
+
+
+########## 压力测试配置 ##########
+
+stress_test_video_dir = "tmp/stress_test"
+stress_test_executor_workers = 10
+stress_test_executor_thread_name_prefix = "stress_test_executor"
