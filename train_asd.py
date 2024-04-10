@@ -16,6 +16,7 @@ python train_asd.py --name=R3D18 --stage=encoder_gen_feat --frmc=13 --ctx=2 --nc
 python train_asd.py --name=R3D18 --stage=graph --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
 python train_asd.py --name=R3D18 --stage=end2end --frmc=13 --ctx=2 --nclp=7 --strd=3 --size=160
 ```
+其中 nclp 需要为奇数
 """
 
 if __name__ == "__main__":
