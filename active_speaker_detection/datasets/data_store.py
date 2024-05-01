@@ -95,7 +95,7 @@ class DataStore:
         graph_time_stride: int,
     ) -> List[str]:
         """获取时间上下文，返回时间戳列表
-        :param graph_time_steps 0 表示取所有时间戳
+        :param graph_time_steps 必须为奇数；0 表示取所有时间戳
         """
         # 所有时间戳
         all_ts = [ed[1] for ed in entity_data]
