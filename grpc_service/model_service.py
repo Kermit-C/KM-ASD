@@ -53,20 +53,20 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         frame_height = request.frame_height  # type: ignore
         only_save_frame = request.only_save_frame  # type: ignore
 
-        ms_logger.debug(f"Received ASD request: {request_id}")
+        # ms_logger.debug(f"Received ASD request: {request_id}")
 
         is_acquired = self.asd_semaphore.acquire(
             blocking=True,
             timeout=config.model_service_server_asd_worker_wait_timeout,
         )
         if not is_acquired:
-            ms_logger.error(f"Active speaker detection worker is busy: {request_id}")
+            # ms_logger.error(f"Active speaker detection worker is busy: {request_id}")
             raise Exception("Active speaker detection worker is busy")
-        if not context.is_active(): # type: ignore
-            raise Exception("Face recognition request is cancelled")
 
         try:
-            ms_logger.debug(f"Start processing ASD request: {request_id}")
+            if not context.is_active():  # type: ignore
+                raise Exception("Face recognition request is cancelled")
+            # ms_logger.debug(f"Start processing ASD request: {request_id}")
             is_active_list = detect_active_speaker(
                 video_id,
                 frame_count,
@@ -78,7 +78,7 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
                 only_save_frame,
             )
         finally:
-            ms_logger.debug(f"Finish processing ASD request: {request_id}")
+            # ms_logger.debug(f"Finish processing ASD request: {request_id}")
             self.asd_semaphore.release()
 
         return model_service_pb2.AsdResponse(
@@ -103,10 +103,10 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Face detection worker is busy")
-        if not context.is_active(): # type: ignore
-            raise Exception("Face recognition request is cancelled")
 
         try:
+            if not context.is_active():  # type: ignore
+                raise Exception("Face recognition request is cancelled")
             face_dets = detect_faces(face_image_np)
         finally:
             self.face_detection_semaphore.release()
@@ -135,10 +135,10 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Face recognition worker is busy")
-        if not context.is_active(): # type: ignore
-            raise Exception("Face recognition request is cancelled")
 
         try:
+            if not context.is_active():  # type: ignore
+                raise Exception("Face recognition request is cancelled")
             label = recognize_faces(face_image_np, face_lmks_np)
         finally:
             self.face_recognition_semaphore.release()
@@ -165,10 +165,10 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Speaker verification worker is busy")
-        if not context.is_active(): # type: ignore
-            raise Exception("Face recognition request is cancelled")
 
         try:
+            if not context.is_active():  # type: ignore
+                raise Exception("Face recognition request is cancelled")
             label = verify_speakers(voice_data_np)
         finally:
             self.speaker_verification_semaphore.release()
@@ -196,10 +196,10 @@ class ModelServiceServicer(model_service_pb2_grpc.ModelServiceServicer):
         )
         if not is_acquired:
             raise Exception("Speaker verification worker is busy")
-        if not context.is_active(): # type: ignore
-            raise Exception("Face recognition request is cancelled")
 
         try:
+            if not context.is_active():  # type: ignore
+                raise Exception("Face recognition request is cancelled")
             label = register_speaker(voice_data_np, label)
         finally:
             self.speaker_verification_semaphore.release()

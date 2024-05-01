@@ -9,6 +9,7 @@
 import os
 import random
 import time
+import uuid
 from concurrent import futures
 
 import config
@@ -86,10 +87,13 @@ def _excute(id: int, request_id: str):
 
         video = random.choice(video_list)
         process(
-            request_id,
+            request_id
+            + "_"
+            + uuid.UUID(int=random.getrandbits(128)).hex[:8],  # str(uuid.uuid4())[:8],
             video["video_path"],
             video["audio_path"],
             config.render_video_path,
+            is_stress_test=True,
         )
         st_logger.info(f"Request {request_id} process video {video['video_path']}")
 

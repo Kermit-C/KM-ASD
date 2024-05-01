@@ -40,6 +40,7 @@ def process(
     audio_path: str,
     render_video_path: str,
     timeout_second: Optional[int] = None,
+    is_stress_test: bool = False,
 ) -> str:
     """处理视频和音频，返回处理后的视频路径"""
     v_body = VideoToFrameMessageBody(video_path=video_path)
@@ -80,13 +81,16 @@ def process(
             == _consume_cache[request_id]["video_frame_count"]
         ):
             # 完成了视频帧的处理就渲染视频
-            result_video_path = render_video(
-                request_id,
-                render_video_path,
-                _consume_cache[request_id]["video_frames"],
-                audio_path,
-                _consume_cache[request_id]["video_fps"],
-            )
+            if not is_stress_test:
+                result_video_path = render_video(
+                    request_id,
+                    render_video_path,
+                    _consume_cache[request_id]["video_frames"],
+                    audio_path,
+                    _consume_cache[request_id]["video_fps"],
+                )
+            else:
+                result_video_path = ""
             del _consume_cache[request_id]
             del _consume_lock[request_id]
             result_future.set_result(result_video_path)
