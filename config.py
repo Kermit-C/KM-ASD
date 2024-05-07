@@ -150,9 +150,21 @@ stress_test_executor_thread_name_prefix = "stress_test_executor"
 # 爬坡 (worker_num, worker_interval)
 stress_test_ramp_worker_list = [
     (1, 60),
+    (1, 60),
+    (1, 60),
+    (2, 60),
+    (2, 60),
     (2, 60),
     (4, 60),
+    (4, 60),
+    (4, 60),
+    (6, 60),
+    (6, 60),
     (6, 60),
     (8, 60),
+    (8, 60),
+    (8, 60),
+    (10, 60),
+    (10, 60),
     (10, 60),
 ]

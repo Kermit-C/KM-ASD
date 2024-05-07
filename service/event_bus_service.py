@@ -128,20 +128,26 @@ async def call_asd(
     async with grpc.aio.insecure_channel(server_host) as channel:
         stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
-        response: model_service_pb2.AsdResponse = await stub.call_asd(
-            model_service_pb2.AsdRequest(
-                meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
-                request_id=request_id,
-                frame_count=frame_count,
-                faces=pickle.dumps(faces),
-                face_bboxes=pickle.dumps(face_bboxes),
-                audio=pickle.dumps(audio),
-                frame_height=frame_height,
-                frame_width=frame_width,
-                only_save_frame=only_save_frame,
-            ),
-            timeout=timeout,
-        )
+        try:
+            response: model_service_pb2.AsdResponse = await stub.call_asd(
+                model_service_pb2.AsdRequest(
+                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                    request_id=request_id,
+                    frame_count=frame_count,
+                    faces=pickle.dumps(faces),
+                    face_bboxes=pickle.dumps(face_bboxes),
+                    audio=pickle.dumps(audio),
+                    frame_height=frame_height,
+                    frame_width=frame_width,
+                    only_save_frame=only_save_frame,
+                ),
+                timeout=timeout,
+            )
+        except grpc.aio.AioRpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise asyncio.TimeoutError("ASD service took too long to respond")
+            else:
+                raise e
         is_active_list: list[bool] = response.is_active  # type: ignore
 
         return is_active_list
@@ -158,15 +164,23 @@ async def call_face_detection(
         stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         frame_bytes = pickle.dumps(frame)
-        response: model_service_pb2.FaceDetectionResponse = (
-            await stub.call_face_detection(
-                model_service_pb2.FaceDetectionRequest(
-                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
-                    face_image=frame_bytes,
-                ),
-                timeout=timeout,
+        try:
+            response: model_service_pb2.FaceDetectionResponse = (
+                await stub.call_face_detection(
+                    model_service_pb2.FaceDetectionRequest(
+                        meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                        face_image=frame_bytes,
+                    ),
+                    timeout=timeout,
+                )
             )
-        )
+        except grpc.aio.AioRpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise asyncio.TimeoutError(
+                    "Face detection service took too long to respond"
+                )
+            else:
+                raise e
         face_dets_json: str = response.face_dets_json  # type: ignore
         face_dets: list[dict[str, Any]] = json.loads(face_dets_json)
 
@@ -185,16 +199,24 @@ async def call_face_recognition(
 
         face_bytes = pickle.dumps(face)
         face_lmks_bytes = pickle.dumps(face_lmks)
-        response: model_service_pb2.FaceRecognitionResponse = (
-            await stub.call_face_recognition(
-                model_service_pb2.FaceRecognitionRequest(
-                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
-                    face_image=face_bytes,
-                    face_lmks=face_lmks_bytes,
-                ),
-                timeout=timeout,
+        try:
+            response: model_service_pb2.FaceRecognitionResponse = (
+                await stub.call_face_recognition(
+                    model_service_pb2.FaceRecognitionRequest(
+                        meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                        face_image=face_bytes,
+                        face_lmks=face_lmks_bytes,
+                    ),
+                    timeout=timeout,
+                )
             )
-        )
+        except grpc.aio.AioRpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise asyncio.TimeoutError(
+                    "Face recognition service took too long to respond"
+                )
+            else:
+                raise e
         label: str = response.label  # type: ignore
 
         return label
@@ -209,15 +231,23 @@ async def call_speaker_verification(audio: torch.Tensor, timeout: float) -> str:
         stub = model_service_pb2_grpc.ModelServiceStub(channel)
 
         audio_bytes = pickle.dumps(audio.numpy())
-        response: model_service_pb2.SpeakerVerificationResponse = (
-            await stub.call_speaker_verification(
-                model_service_pb2.SpeakerVerificationRequest(
-                    meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
-                    voice_data=audio_bytes,
-                ),
-                timeout=timeout,
+        try:
+            response: model_service_pb2.SpeakerVerificationResponse = (
+                await stub.call_speaker_verification(
+                    model_service_pb2.SpeakerVerificationRequest(
+                        meta=model_service_pb2.RequestMetaData(request_id=get_uuid()),  # type: ignore
+                        voice_data=audio_bytes,
+                    ),
+                    timeout=timeout,
+                )
             )
-        )
+        except grpc.aio.AioRpcError as e:
+            if e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise asyncio.TimeoutError(
+                    "Speaker verification service took too long to respond"
+                )
+            else:
+                raise e
         label: str = response.label  # type: ignore
 
         return label
