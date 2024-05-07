@@ -22,13 +22,13 @@ system_metric_gpu_list = [0]
 model_service_server_grpc_port = 50051
 model_service_server_max_workers = 100
 model_service_server_asd_max_workers = 1
-model_service_server_asd_worker_wait_timeout = 10
-model_service_server_face_detection_max_workers = 1
-model_service_server_face_detection_worker_wait_timeout = 10
+model_service_server_asd_worker_wait_timeout = 0.2
+model_service_server_face_detection_max_workers = 2
+model_service_server_face_detection_worker_wait_timeout = 0.1
 model_service_server_face_recognize_max_workers = 1
-model_service_server_face_recognize_worker_wait_timeout = 10
+model_service_server_face_recognize_worker_wait_timeout = 0.15
 model_service_server_speaker_verificate_max_workers = 1
-model_service_server_speaker_verificate_worker_wait_timeout = 10
+model_service_server_speaker_verificate_worker_wait_timeout = 0.15
 model_service_server_thread_name_prefix = "model_service_server"
 
 extract_audio_track_sample_rate = 16000
@@ -91,7 +91,7 @@ event_bus = {
         "FaceDetectProcessor": {
             "processor_name": "face_detect_processor",
             "topic": "face_detect_topic",
-            "timeout": 3,  # 3 * (1 / 30),  # 3帧时间
+            "timeout": 3 * (1 / 30),  # 3帧时间
             "properties": {
                 "detect_lag": 3,  # 3 帧
                 "same_face_between_frames_iou_threshold": 0.5,
@@ -109,7 +109,7 @@ event_bus = {
         "FaceRecognizeProcessor": {
             "processor_name": "face_recognize_processor",
             "topic": "face_recognize_topic",
-            "timeout": 1,  # 5 * (1 / 30),  # 5帧时间
+            "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
                 "same_face_between_frames_iou_threshold": 0.5,
             },
@@ -117,7 +117,7 @@ event_bus = {
         "AsdProcessor": {
             "processor_name": "asd_processor",
             "topic": "asd_topic",
-            "timeout": 3,  # 10 * (1 / 30),  # 10帧时间
+            "timeout": 6 * (1 / 30),  # 6帧时间
             "properties": {
                 "frmc": AsdInferenceParams["frmc"],
                 "detect_lag": AsdInferenceParams["strd"],
@@ -126,7 +126,7 @@ event_bus = {
         "SpeakerVerificateProcessor": {
             "processor_name": "speaker_verificate_processor",
             "topic": "speaker_verificate_topic",
-            "timeout": 1,  # 5 * (1 / 30),  # 5帧时间
+            "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
                 "aggregate_frame_length": 24000,  # 1500ms
             },

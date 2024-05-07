@@ -62,6 +62,9 @@ class RetinaFaceDetector:
         self.device = torch.device("cpu" if cpu else "cuda")
         self.net = self.net.to(self.device)
 
+        # cache
+        self.priors_cache = {}
+
     def detect_faces(
         self,
         image_or_image_path: Union[cv2.typing.MatLike, np.ndarray, str],
@@ -123,9 +126,11 @@ class RetinaFaceDetector:
         _t["forward_pass"].toc()
         _t["misc"].tic()
 
-        priorbox = PriorBox(self.cfg, image_size=(im_height, im_width))
-        priors = priorbox.forward()
-        priors = priors.to(self.device)
+        if (im_height, im_width) not in self.priors_cache:
+            self.priors_cache[(im_height, im_width)] = self._create_priors(
+                im_height, im_width
+            )
+        priors = self.priors_cache[(im_height, im_width)].to(self.device)
         prior_data = priors.data
         boxes = decode(loc.data.squeeze(0), prior_data, self.cfg["variance"])
         boxes = boxes * scale
@@ -196,6 +201,11 @@ class RetinaFaceDetector:
             for b in dets
         ]
         return results, img_raw, _t["forward_pass"].average_time, _t["misc"].average_time  # type: ignore
+
+    def _create_priors(self, im_height, im_width):
+        priorbox = PriorBox(self.cfg, image_size=(im_height, im_width))
+        priors = priorbox.forward()
+        return priors
 
     def _check_keys(self, model, pretrained_state_dict):
         ckpt_keys = set(pretrained_state_dict.keys())
