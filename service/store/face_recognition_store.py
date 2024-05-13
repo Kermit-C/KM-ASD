@@ -27,6 +27,9 @@ class FaceRecognitionStore:
     def has_feat(self, label: str) -> bool:
         return self.store_of_label.has(label)
 
+    def refresh_feat_lru(self, label: str):
+        self.store_of_label.get(label)
+
     def save_feat(self, label: str, feat: np.ndarray):
         self.store_of_label.put(label, feat)
 

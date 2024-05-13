@@ -183,6 +183,7 @@ def recognize_faces(
     if max_sim < config.face_recognize_sim_threshold:
         return create_new_label(feat)
     label = lib_labels[max_idx]
+    face_recognition_store.refresh_feat_lru(label)
     return label
 
 

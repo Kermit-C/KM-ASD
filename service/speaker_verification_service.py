@@ -144,6 +144,7 @@ def verify_speakers(
     if max_score < config.speaker_verificate_score_threshold:
         return ""
     label = lib_labels[max_idx]
+    speaker_verification_store.refresh_feat_lru(label)
     return label
 
 
