@@ -472,12 +472,12 @@ def get_faces_and_audios_of_graph(
 
     nonrepeat_last_bbox_list = list(set(faces_bbox_list[-1]))
     nonrepeat_last_bbox_list.sort(key=lambda x: x[0] if x is not None else -1)
-    divide_group_num = len(nonrepeat_last_bbox_list) // divide_num + 1
+    divide_group_num = len(nonrepeat_last_bbox_list) // infer_config["ctx"] + 1
     for i in range(divide_group_num):
         target_last_bbox_list = nonrepeat_last_bbox_list[
-            i * divide_num : (i + 1) * divide_num
+            i * infer_config["ctx"] : (i + 1) * infer_config["ctx"]
         ]
-        for _ in range(len(target_last_bbox_list), divide_num):
+        for _ in range(len(target_last_bbox_list), infer_config["ctx"]):
             target_last_bbox_list.append(random.choice(nonrepeat_last_bbox_list))
 
         sub_faces_list = []
