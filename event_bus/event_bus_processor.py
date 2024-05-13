@@ -44,6 +44,9 @@ class BaseEventBusProcessor:
         self.metric_collector_of_duration = create_collector(
             f"eventbus_{self.processor_name}_duration"
         )
+        self.metric_collector_of_total = create_collector(
+            f"eventbus_{self.processor_name}_total"
+        )
         self.metric_collector_of_exception = create_collector(
             f"eventbus_{self.processor_name}_exception"
         )
@@ -159,6 +162,7 @@ class BaseEventBusProcessor:
             eb_logger.debug(
                 f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
             )
+            self.metric_collector_of_total.collect(1)
             self.metric_collector_of_duration.collect(time.time() - start_time)
 
     async def _handler_async(self, event_message: EventMessage):
@@ -172,6 +176,11 @@ class BaseEventBusProcessor:
         except Exception as e:
             try:
                 eb_logger.debug(f"processor {self.processor_name} exception: {str(e)}")
+                if isinstance(e, asyncio.TimeoutError):
+                    self.metric_collector_of_timeout.collect(1)
+                else:
+                    self.metric_collector_of_exception.collect(1)
+
                 assert isinstance(event_message.body, EventMessageBody)
                 await self.process_exception_async(event_message.body, e)
             except Exception as ee:
@@ -184,6 +193,7 @@ class BaseEventBusProcessor:
             eb_logger.debug(
                 f"processor {self.processor_name} finished, cost {int((time.time() - start_time) * 1000)} ms"
             )
+            self.metric_collector_of_total.collect(1)
             self.metric_collector_of_duration.collect(time.time() - start_time)
 
     def _listener(self, event_message: EventMessage):
