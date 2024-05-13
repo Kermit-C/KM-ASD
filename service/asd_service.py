@@ -10,7 +10,7 @@ import multiprocessing as mp
 import random
 import time
 from multiprocessing.pool import Pool
-from typing import Optional
+from typing import Generator, Optional
 
 import numpy as np
 
@@ -164,35 +164,37 @@ def detect_active_speaker(
             audio_vf_emb=vf_a_emb[0] if len(vf_a_emb) > 0 else None,
         )
 
-    (
-        face_list,
-        face_vf_emb_list,
-        audio_list,
-        audio_vf_emb_list,
-        faces_rbbox_clip_list,
-        faces_bbox_clip_list,
-    ) = get_faces_and_audios_of_graph(
+    p_list: list[list[float]] = []
+    faces_bbox_clip_list = []
+    for (
+        sub_face_list,
+        sub_face_vf_emb_list,
+        sub_audio_list,
+        sub_audio_vf_emb_list,
+        sub_faces_rbbox_clip_list,
+        sub_faces_bbox_clip_list,
+    ) in get_faces_and_audios_of_graph(
         request_id=request_id,
         frame_count=frame_count,
         frame_height=frame_height,
         frame_width=frame_width,
-    )
-
-    curr_time = time.time()
-    p_list: list[list[float]] = detector_pool.apply(
-        detector_detect_active_speaker,
-        (
-            face_list,
-            audio_list,
-            faces_rbbox_clip_list,
-            face_vf_emb_list,
-            audio_vf_emb_list,
-        ),
-    )
-    infer_logger.debug(
-        f"Asd detect_active_speaker cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
-    )
-    metric_collector_of_graph_duration.collect(time.time() - curr_time)
+    ):
+        curr_time = time.time()
+        p_list += detector_pool.apply(
+            detector_detect_active_speaker,
+            (
+                sub_face_list,
+                sub_audio_list,
+                sub_faces_rbbox_clip_list,
+                sub_face_vf_emb_list,
+                sub_audio_vf_emb_list,
+            ),
+        )
+        faces_bbox_clip_list += sub_faces_bbox_clip_list
+        infer_logger.debug(
+            f"Asd detect_active_speaker cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
+        )
+        metric_collector_of_graph_duration.collect(time.time() - curr_time)
 
     request_faces_result_idxes = []
     for face_bbox in face_bboxes:
@@ -320,17 +322,18 @@ def get_faces_and_audios_of_graph(
     frame_count: int,
     frame_height: int,
     frame_width: int,
-) -> tuple[
+) -> Generator[
     list[list[np.ndarray]],
     Optional[list[list[np.ndarray]]],
     list[np.ndarray],
-    Optional[list[np.ndarray]],
+    Optional[list[np.ndarray]],  # type: ignore
     list[list[tuple[float, float, float, float]]],
     list[list[tuple[int, int, int, int]]],
-]:
+]:  # type: ignore
+    divide_num: int = 5
     max_ctx_size: int = (
-        infer_config["ctx"] * 1
-    )  # TODO: 三倍的上下文大小，一次请求可以分治成三份分别请求算法
+        infer_config["ctx"] * divide_num
+    )  # 五倍的上下文大小，一次请求可以分治成五份分别请求算法
     n_clips: int = infer_config["nclp"]
     strd: int = infer_config["strd"]
     encoder_enable_vf = infer_config["encoder_enable_vf"]
@@ -463,14 +466,55 @@ def get_faces_and_audios_of_graph(
             )
         faces_rbbox_clip_list.append(rbbox_list)
 
-    return (
-        faces_list,  # type: ignore
-        face_vf_emb_list if encoder_enable_vf else None,
-        audio_list,  # type: ignore
-        audio_vf_emb_list if encoder_enable_vf else None,
-        faces_rbbox_clip_list,
-        faces_bbox_list,  # type: ignore
-    )
+    nonrepeat_last_bbox_list = list(set(faces_bbox_list[-1]))
+    nonrepeat_last_bbox_list.sort(key=lambda x: x[0] if x is not None else -1)
+    divide_group_num = len(nonrepeat_last_bbox_list) // divide_num + 1
+    for i in range(divide_group_num):
+        target_last_bbox_list = nonrepeat_last_bbox_list[
+            i * divide_num : (i + 1) * divide_num
+        ]
+        for _ in range(len(target_last_bbox_list), divide_num):
+            target_last_bbox_list.append(random.choice(nonrepeat_last_bbox_list))
+
+        sub_faces_list = []
+        sub_face_vf_emb_list = []
+        sub_faces_rbbox_clip_list = []
+        sub_faces_bbox_list = []
+
+        for j in range(n_clips):
+            sub_faces_list.append(
+                [
+                    faces_list[j][faces_bbox_list[-1].index(bbox)]
+                    for bbox in target_last_bbox_list
+                ]
+            )
+            sub_face_vf_emb_list.append(
+                [
+                    face_vf_emb_list[j][faces_bbox_list[-1].index(bbox)]
+                    for bbox in target_last_bbox_list
+                ]
+            )
+            sub_faces_bbox_list.append(
+                [
+                    faces_bbox_list[j][faces_bbox_list[-1].index(bbox)]
+                    for bbox in target_last_bbox_list
+                ]
+            )
+            sub_faces_rbbox_clip_list.append(
+                [
+                    faces_rbbox_clip_list[j][faces_bbox_list[-1].index(bbox)]
+                    for bbox in target_last_bbox_list
+                ]
+            )
+
+        yield (
+            sub_faces_list,  # type: ignore
+            sub_face_vf_emb_list if encoder_enable_vf else None,
+            audio_list,  # type: ignore
+            audio_vf_emb_list if encoder_enable_vf else None,
+            sub_faces_rbbox_clip_list,
+            sub_faces_bbox_list,  # type: ignore
+        )
 
 
 def get_face_idx_from_last_frame(
