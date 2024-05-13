@@ -160,7 +160,9 @@ class ReduceProcessor(BaseEventBusProcessor):
         speaker_face_label = []
         non_speaker_face_bbox = []
         non_speaker_face_label = []
-        speaker_offscreen_voice_label: list[str] = frame_result["frame_voice_label"]
+        speaker_offscreen_voice_label: list[str] = [
+            x for x in set(frame_result["frame_voice_label"]) if x is not None
+        ]
         for i in range(frame_result["frame_face_count"]):
             if frame_result["frame_face_asd_status"][i] == 1:
                 speaker_face_bbox.append(frame_result["frame_face_bbox"][i])

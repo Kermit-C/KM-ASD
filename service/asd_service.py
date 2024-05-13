@@ -323,13 +323,17 @@ def get_faces_and_audios_of_graph(
     frame_height: int,
     frame_width: int,
 ) -> Generator[
-    list[list[np.ndarray]],
-    Optional[list[list[np.ndarray]]],
-    list[np.ndarray],
-    Optional[list[np.ndarray]],  # type: ignore
-    list[list[tuple[float, float, float, float]]],
-    list[list[tuple[int, int, int, int]]],
-]:  # type: ignore
+    tuple[
+        list[list[np.ndarray]],
+        Optional[list[list[np.ndarray]]],
+        list[np.ndarray],
+        Optional[list[np.ndarray]],
+        list[list[tuple[float, float, float, float]]],
+        list[list[tuple[int, int, int, int]]],
+    ],
+    None,
+    None,
+]:
     divide_num: int = 5
     max_ctx_size: int = (
         infer_config["ctx"] * divide_num
