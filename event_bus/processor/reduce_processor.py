@@ -158,9 +158,9 @@ class ReduceProcessor(BaseEventBusProcessor):
 
         speaker_face_bbox = []
         speaker_face_label = []
-        speaker_offscreen_voice_label: list[str] = frame_result["frame_voice_label"]
         non_speaker_face_bbox = []
         non_speaker_face_label = []
+        speaker_offscreen_voice_label: list[str] = frame_result["frame_voice_label"]
         for i in range(frame_result["frame_face_count"]):
             if frame_result["frame_face_asd_status"][i] == 1:
                 speaker_face_bbox.append(frame_result["frame_face_bbox"][i])
@@ -168,6 +168,11 @@ class ReduceProcessor(BaseEventBusProcessor):
             else:
                 non_speaker_face_bbox.append(frame_result["frame_face_bbox"][i])
                 non_speaker_face_label.append(frame_result["frame_face_label"][i])
+
+            if frame_result["frame_face_label"][i] in speaker_offscreen_voice_label:
+                speaker_offscreen_voice_label.remove(
+                    frame_result["frame_face_label"][i]
+                )
 
         frame = self._get_video_frame_from_timestamp(
             self.get_request_id(), frame_timestamp
