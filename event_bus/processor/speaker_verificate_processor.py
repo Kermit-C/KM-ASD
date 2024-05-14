@@ -48,9 +48,6 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
             event_message_body.audio_frame_step,
             event_message_body.audio_frame_length,
         )
-        # 如果不是聚合帧的整数倍，则不处理
-        if event_message_body.audio_frame_count % frame_number_of_aggregate != 0:
-            return
 
         # 获取聚合帧
         frames: list[torch.Tensor] = []
@@ -68,40 +65,39 @@ class SpeakerVerificateProcessor(BaseEventBusProcessor):
             event_message_body.audio_frame_length,
         )
 
-        label = await call_speaker_verification(aggregate_frame, self.processor_timeout)
-        if not label:
-            return
+        label = (
+            await call_speaker_verification(aggregate_frame, self.processor_timeout)
+            or ""
+        )
 
-        # 所有聚合帧都使用这个标签
-        for frame_count in range(
-            event_message_body.audio_frame_count - frame_number_of_aggregate + 1,
-            event_message_body.audio_frame_count + 1,
-        ):
-            self.store.save_frame_label(
-                self.get_request_id(),
-                frame_count,
-                label,
-            )
-            frame = self.store.get_frame(self.get_request_id(), frame_count)
-            assert frame is not None
-            self.publish_next(
-                "reduce_topic",
-                ReduceMessageBody(
-                    type="SPEAKER_VERIFICATE",
-                    audio_sample_rate=event_message_body.audio_sample_rate,
-                    audio_frame_length=event_message_body.audio_frame_length,
-                    audio_frame_step=event_message_body.audio_frame_step,
-                    audio_frame_count=frame_count,
-                    audio_frame_timestamp=frame["audio_frame_timestamp"],
-                    frame_voice_label=label,
-                ),
-            )
+        self.publish_next(
+            "reduce_topic",
+            ReduceMessageBody(
+                type="SPEAKER_VERIFICATE",
+                audio_sample_rate=event_message_body.audio_sample_rate,
+                audio_frame_length=event_message_body.audio_frame_length,
+                audio_frame_step=event_message_body.audio_frame_step,
+                audio_frame_count=event_message_body.audio_frame_count,
+                audio_frame_timestamp=event_message_body.audio_frame_timestamp,
+                frame_voice_label=label,
+            ),
+        )
 
     async def process_exception_async(
         self, event_message_body: SpeakerVerificateMessageBody, exception: Exception
     ):
-        # logging.error("FaceRecognizeProcessor process_exception", exception)
-        pass
+        self.publish_next(
+            "reduce_topic",
+            ReduceMessageBody(
+                type="SPEAKER_VERIFICATE",
+                audio_sample_rate=event_message_body.audio_sample_rate,
+                audio_frame_length=event_message_body.audio_frame_length,
+                audio_frame_step=event_message_body.audio_frame_step,
+                audio_frame_count=event_message_body.audio_frame_count,
+                audio_frame_timestamp=event_message_body.audio_frame_timestamp,
+                frame_voice_label="",
+            ),
+        )
 
     def get_frame_number_of_aggregate(
         self, aggregate_frame_length: int, frame_step: int, frame_length: int

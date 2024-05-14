@@ -117,7 +117,8 @@ class ReduceProcessor(BaseEventBusProcessor):
             assert event_message_body.frame_count is not None
             assert event_message_body.frame_timestamp is not None
             is_frame_result_complete = self.store.is_frame_result_complete(
-                self.get_request_id(), event_message_body.frame_count
+                self.get_request_id(),
+                event_message_body.frame_count,
             )
             is_frame_resulted = self.store.is_frame_resulted(
                 self.get_request_id(), event_message_body.frame_count
@@ -161,7 +162,7 @@ class ReduceProcessor(BaseEventBusProcessor):
         non_speaker_face_bbox = []
         non_speaker_face_label = []
         speaker_offscreen_voice_label: list[str] = [
-            x for x in set(frame_result["frame_voice_label"]) if x is not None
+            x for x in set(frame_result["frame_voice_label"]) if x
         ]
         for i in range(frame_result["frame_face_count"]):
             if frame_result["frame_face_asd_status"][i] == 1:

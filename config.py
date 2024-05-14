@@ -51,7 +51,7 @@ face_recognize_enabled = True
 face_recognize_model = "face_recognition/arcface_weights/ms1mv3_r18_backbone.pth"
 face_recognize_network = "r18"
 face_recognize_cpu = False
-face_recognize_sim_threshold = 0.5
+face_recognize_sim_threshold = 0.4
 face_recognize_register_path = "tmp/register/faces"
 
 speaker_verificate_enabled = True
@@ -122,6 +122,7 @@ event_bus = {
             "properties": {
                 "frmc": AsdInferenceParams["frmc"],
                 "detect_lag": AsdInferenceParams["strd"],
+                "smooth_window": 6,
             },
         },
         "SpeakerVerificateProcessor": {
@@ -129,7 +130,7 @@ event_bus = {
             "topic": "speaker_verificate_topic",
             "timeout": 5 * (1 / 30),  # 5帧时间
             "properties": {
-                "aggregate_frame_length": 24000,  # 1500ms
+                "aggregate_frame_length": 14400,  # 900ms
             },
         },
         "ReduceProcessor": {

@@ -36,6 +36,7 @@ class AsdProcessor(BaseEventBusProcessor):
         self.store = ActiveSpeakerDetectionStore(LocalStore.create)
         self.frames_per_clip: int = self.processor_properties["frmc"]
         self.detect_lag: int = self.processor_properties["detect_lag"]
+        self.smooth_window: int = self.processor_properties["smooth_window"]
         self.asd_create_lock_lock: Lock = Lock()
         self.asd_lock_of_request: dict[str, tuple[int, Lock]] = {}
 
@@ -195,8 +196,39 @@ class AsdProcessor(BaseEventBusProcessor):
                                 if len(is_active_list) != len(faces):
                                     is_active_list = [False] * len(faces)
 
+                            # 平滑处理，取前 smooth_window 个帧的平均值
+                            avg_active_p = [1 if x else 0 for x in is_active_list]
+                            for before_frame_count in range(
+                                wait_asd_frame_count - lag_idx - self.smooth_window + 1,
+                                wait_asd_frame_count - lag_idx,
+                            ):
+                                before_is_active_list = [
+                                    1 if x else 0
+                                    for x in self.store.get_frame_is_active_list(
+                                        self.get_request_id(), before_frame_count
+                                    )
+                                ]
+                                if len(before_is_active_list) != len(is_active_list):
+                                    avg_active_p = [
+                                        1 * self.smooth_window if x else 0
+                                        for x in is_active_list
+                                    ]
+                                    break
+                                avg_active_p = [
+                                    avg_active_p[i] + before_is_active_list[i]
+                                    for i in range(len(before_is_active_list))
+                                ]
+                            avg_active_p = [
+                                x / self.smooth_window for x in avg_active_p
+                            ]
+                            # 只有从 1 到 0 的平滑，从 0 到 1 使用检测值
+                            smooth_is_active_list = [
+                                is_active or p > 0.5
+                                for p, is_active in zip(avg_active_p, is_active_list)
+                            ]
+
                             for face_bbox, is_active, face_dict in zip(
-                                face_bboxes, is_active_list, face_dicts
+                                face_bboxes, smooth_is_active_list, face_dicts
                             ):
                                 asd_status = 1 if is_active else 0
                                 self.publish_next(

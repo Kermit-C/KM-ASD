@@ -96,8 +96,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                 video_fps,
                 video_frame_count,
             )
-            # TODO: 最终需要去掉 or True
-            if self.is_real_time() or True:
+            if self.is_real_time():
                 # 实时处理
                 # 等待人脸检测结果，最大等待是帧间隔
                 self.publish_next(
