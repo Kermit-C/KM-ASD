@@ -35,16 +35,17 @@ extract_audio_track_sample_rate = 16000
 render_video_path = "tmp/render"
 
 asd_enabled = True
-asd_model = "active_speaker_detection/results/22.pth"
+asd_model = "active_speaker_detection/weights/KM_ASD_18.pth"
 asd_cpu = False
-asd_p_threshold = 0.5
+asd_p_threshold = 0.70
 asd_same_face_between_frames_iou_threshold = 0.5
 
 face_detection_enabled = True
 face_detection_model = "face_detection/retinaface_weights/mobilenet0.25_Final.pth"
 face_detection_network = "mobile0.25"
 face_detection_cpu = False
-face_detection_confidence_threshold = 0.5
+face_detection_confidence_threshold = 0.99
+face_detection_expand_rate = 0.1
 
 face_recognize_enabled = True
 face_recognize_model = "face_recognition/arcface_weights/ms1mv3_r18_backbone.pth"

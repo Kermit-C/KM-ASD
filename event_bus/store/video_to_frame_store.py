@@ -34,7 +34,8 @@ class VideoToFrameStore:
         with self.save_frame_lock:
             if not self.frame_store_of_request.has(request_id):
                 self.frame_store_of_request.put(
-                    request_id, {"frames": [], "frames_ts_to_cnt_dict": {}}
+                    request_id,
+                    {"frames": [], "frames_ts_to_cnt_dict": {}},
                 )
             request_store = self.frame_store_of_request.get(request_id)
             while len(request_store["frames"]) <= frame_count - 1:
@@ -51,7 +52,23 @@ class VideoToFrameStore:
         video_frame_count: int,
     ):
         self.info_store_of_request.put(
-            request_id, {"video_fps": video_fps, "video_frame_count": video_frame_count}
+            request_id,
+            {
+                "video_fps": video_fps,
+                "video_frame_count": video_frame_count,
+                "is_complete": False,
+            },
+        )
+
+    def put_is_complete(self, request_id: str):
+        info = self.info_store_of_request.get(request_id)
+        self.info_store_of_request.put(
+            request_id,
+            {
+                "video_fps": info["video_fps"],
+                "video_frame_count": info["video_frame_count"],
+                "is_complete": True,
+            },
         )
 
     def get_frames(self, request_id: str) -> Optional[list[np.ndarray]]:
@@ -87,6 +104,7 @@ class VideoToFrameStore:
         frame_timestamps = list(
             self.frame_store_of_request.get(request_id)["frames_ts_to_cnt_dict"].keys()
         )
+        is_complete = self.info_store_of_request.get(request_id)["is_complete"]
         # 顺序 save_frame 的话，下面就不需要排序，排序是个性能点
         # frame_timestamps.sort()
         # TODO: 二分查找优化
@@ -103,7 +121,10 @@ class VideoToFrameStore:
                         < abs(frame_timestamps[i] - timestamp)
                         else frame_timestamps[i]
                     )
-        return None
+        if is_complete:
+            return frame_timestamps[-1]
+        else:
+            return None
 
     def get_info(self, request_id: str) -> dict:
         if not self.info_store_of_request.has(request_id):

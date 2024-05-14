@@ -102,10 +102,25 @@ def detect_faces(image: np.ndarray) -> list[dict[str, Any]]:
     return [
         {
             "bbox": {
-                "x1": face_det[0],
-                "y1": face_det[1],
-                "x2": face_det[2],
-                "y2": face_det[3],
+                "x1": max(
+                    0,
+                    int(face_det[0] - config.face_detection_expand_rate * face_det[5]),
+                ),
+                "y1": max(
+                    0,
+                    int(
+                        face_det[1]
+                        - config.face_detection_expand_rate * 1.5 * face_det[6]
+                    ),
+                ),
+                "x2": min(
+                    image.shape[1],
+                    int(face_det[2] + config.face_detection_expand_rate * face_det[5]),
+                ),
+                "y2": min(
+                    image.shape[0],
+                    int(face_det[3] + config.face_detection_expand_rate * face_det[6]),
+                ),
                 "width": face_det[5],
                 "height": face_det[6],
             },

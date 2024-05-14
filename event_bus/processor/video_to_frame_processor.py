@@ -115,6 +115,7 @@ class VideoToFrameProcessor(BaseEventBusProcessor):
                     FaceDetectMessageBody(frame_count, frame_timestamp, frame),
                     is_async=False,
                 )
+        self.store.put_is_complete(self.get_request_id())
 
     def process_exception(
         self, event_message_body: VideoToFrameMessageBody, exception: Exception

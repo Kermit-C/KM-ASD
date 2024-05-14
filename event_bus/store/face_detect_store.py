@@ -15,12 +15,13 @@ from store.store import Store
 
 
 class FaceDetectStore:
+
     def __init__(
         self,
         store_creater: Callable[[bool, int], Store],
         max_request_count: int = 1000,
         # 保留的最大帧数
-        max_frame_count: int = 50,
+        max_frame_count: int = 500,
     ):
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
@@ -60,6 +61,8 @@ class FaceDetectStore:
             return None
         if len(self.store_of_request.get(request_id)["frames"]) < frame_count:
             return None
+        if self.store_of_request.get(request_id)["frames"][frame_count - 1] is None:
+            return None
         return self.store_of_request.get(request_id)["frames"][frame_count - 1][
             "face_dets"
         ]
@@ -70,6 +73,8 @@ class FaceDetectStore:
         if not self.store_of_request.has(request_id):
             return None
         if len(self.store_of_request.get(request_id)["frames"]) < frame_count:
+            return None
+        if self.store_of_request.get(request_id)["frames"][frame_count - 1] is None:
             return None
         return self.store_of_request.get(request_id)["frames"][frame_count - 1][
             "frame_timestamp"

@@ -22,7 +22,7 @@ class ActiveSpeakerDetectionStore:
         store_creater: Callable[[bool, int], Store],
         max_request_count: int = 1000,
         # 保留的最大帧数
-        max_frame_count: int = 1000,
+        max_frame_count: int = 10000,
     ):
         self.store_creater = store_creater
         self.store_of_request = store_creater(True, max_request_count)
@@ -162,6 +162,8 @@ class ActiveSpeakerDetectionStore:
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
             return False
+        if request_store["frames"][frame_count - 1] is None:
+            return False
         return (
             request_store["frames"][frame_count - 1] is not None
             and len(request_store["frames"][frame_count - 1]["faces"])
@@ -176,6 +178,8 @@ class ActiveSpeakerDetectionStore:
             return False
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
+            return False
+        if request_store["frames"][frame_count - 1] is None:
             return False
         return (
             request_store["frames"] is not None
@@ -216,6 +220,8 @@ class ActiveSpeakerDetectionStore:
         request_store["frame_asded_count"] = frame_count
         if len(request_store["frames"]) < frame_count:
             return
+        if request_store["frames"][frame_count - 1] is None:
+            return
         request_store["frames"][frame_count - 1]["is_asded"] = True
         request_store["frames"][frame_count - 1]["is_active_list"] = is_active_list
 
@@ -226,6 +232,8 @@ class ActiveSpeakerDetectionStore:
             return []
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
+            return []
+        if request_store["frames"][frame_count - 1] is None:
             return []
         return request_store["frames"][frame_count - 1]["is_active_list"]
 
@@ -247,6 +255,8 @@ class ActiveSpeakerDetectionStore:
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
             return []
+        if request_store["frames"][frame_count - 1] is None:
+            return []
         return request_store["frames"][frame_count - 1]["faces"]
 
     def get_frame_audio(
@@ -258,5 +268,7 @@ class ActiveSpeakerDetectionStore:
             return None
         request_store = self.store_of_request.get(request_id)
         if len(request_store["frames"]) < frame_count:
+            return None
+        if request_store["frames"][frame_count - 1] is None:
             return None
         return request_store["frames"][frame_count - 1]["audio_frame"]

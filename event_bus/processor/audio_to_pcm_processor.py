@@ -115,7 +115,6 @@ class AudioToPcmProcessor(BaseEventBusProcessor):
                 is None
             ):
                 # 等待对应视频帧有了之后，再继续，否则后面 asd 和 reduce 的时候会因为找不到对应的视频帧而卡住
-                # TODO: 但如果视频帧一直没有，那么就会一直卡住，实时化的时候需要调整
                 time.sleep(0.01)
 
             self.publish_next(

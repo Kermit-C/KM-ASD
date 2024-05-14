@@ -165,7 +165,7 @@ def detect_active_speaker(
         )
 
     p_list: list[list[float]] = []
-    faces_bbox_clip_list = []
+    faces_bbox_clip_list: list[list[tuple[int, int, int, int]]] = []
     for (
         sub_face_list,
         sub_face_vf_emb_list,
@@ -180,17 +180,32 @@ def detect_active_speaker(
         frame_width=frame_width,
     ):
         curr_time = time.time()
-        p_list += detector_pool.apply(
-            detector_detect_active_speaker,
-            (
-                sub_face_list,
-                sub_audio_list,
-                sub_faces_rbbox_clip_list,
-                sub_face_vf_emb_list,
-                sub_audio_vf_emb_list,
-            ),
-        )
-        faces_bbox_clip_list += sub_faces_bbox_clip_list
+        if len(p_list) == 0:
+            p_list = detector_pool.apply(
+                detector_detect_active_speaker,
+                (
+                    sub_face_list,
+                    sub_audio_list,
+                    sub_faces_rbbox_clip_list,
+                    sub_face_vf_emb_list,
+                    sub_audio_vf_emb_list,
+                ),
+            )
+            faces_bbox_clip_list = sub_faces_bbox_clip_list
+        else:
+            sub_p_list = detector_pool.apply(
+                detector_detect_active_speaker,
+                (
+                    sub_face_list,
+                    sub_audio_list,
+                    sub_faces_rbbox_clip_list,
+                    sub_face_vf_emb_list,
+                    sub_audio_vf_emb_list,
+                ),
+            )
+            for i in range(len(p_list)):
+                p_list[i] += sub_p_list[i]
+                faces_bbox_clip_list[i] += sub_faces_bbox_clip_list[i]
         infer_logger.debug(
             f"Asd detect_active_speaker cost: {time.time() - curr_time:.4f}s, request_id: {request_id}, frame_count: {frame_count}"
         )
@@ -471,14 +486,21 @@ def get_faces_and_audios_of_graph(
         faces_rbbox_clip_list.append(rbbox_list)
 
     nonrepeat_last_bbox_list = list(set(faces_bbox_list[-1]))
-    nonrepeat_last_bbox_list.sort(key=lambda x: x[0] if x is not None else -1)
+    nonrepeat_last_bbox_list.sort(
+        key=lambda x: (x[0] + x[2]) / 2 if x is not None else -1
+    )
     divide_group_num = len(nonrepeat_last_bbox_list) // infer_config["ctx"] + 1
+    last_target_last_bbox_list = None
     for i in range(divide_group_num):
         target_last_bbox_list = nonrepeat_last_bbox_list[
             i * infer_config["ctx"] : (i + 1) * infer_config["ctx"]
         ]
-        for _ in range(len(target_last_bbox_list), infer_config["ctx"]):
-            target_last_bbox_list.append(random.choice(nonrepeat_last_bbox_list))
+        for j in range(len(target_last_bbox_list), infer_config["ctx"]):
+            if last_target_last_bbox_list is None:
+                target_last_bbox_list.append(target_last_bbox_list[-1])
+            else:
+                target_last_bbox_list.append(last_target_last_bbox_list[j])
+        last_target_last_bbox_list = target_last_bbox_list
 
         sub_faces_list = []
         sub_face_vf_emb_list = []

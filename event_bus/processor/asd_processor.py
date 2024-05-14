@@ -98,7 +98,7 @@ class AsdProcessor(BaseEventBusProcessor):
         self, event_message_body: AsdMessageBody, exception: Exception
     ):
         # 已在 process 内部处理过 ASD 调用异常，其他异常直接抛出，视为不可恢复异常
-        raise ValueError("AsdProcessor event_message_body.type error", exception)
+        raise exception
 
     async def _process_asd(self, frame_count: int):
         async with self.asd_create_lock_lock:

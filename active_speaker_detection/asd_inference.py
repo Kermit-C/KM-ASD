@@ -139,6 +139,8 @@ class ActiveSpeakerDetector:
         timestamp_list: list[int] = []
         # 位置列表
         position_list: list[tuple[float, float, float, float]] = []
+        # 最后一个时间戳的掩码
+        last_node_mask = []
 
         node_count = 0
         for i in range(self.graph_time_steps - 1, -1, -1):
@@ -158,6 +160,7 @@ class ActiveSpeakerDetector:
                     audio_feature_idx_list.append(audio_feature_idx)
                     timestamp_list.append(i)
                     position_list.append((0, 0, 1, 1))
+                    last_node_mask.append(i == self.graph_time_steps - 1)
                     node_count += 1
 
                 feature_set[node_count, 0, : audio_data.shape[0]] = audio_data
@@ -178,6 +181,7 @@ class ActiveSpeakerDetector:
                 audio_feature_idx_list.append(audio_feature_idx)
                 timestamp_list.append(i)
                 position_list.append(face_bboxes[i][j])  # type: ignore
+                last_node_mask.append(i == self.graph_time_steps - 1)
 
                 node_count += 1
         feature_set = feature_set[:node_count]
@@ -247,6 +251,17 @@ class ActiveSpeakerDetector:
                             abs(timestamp_i - timestamp_j) * self.graph_time_stride
                         )
                         self_connect.append(int(i == j))
+                        if last_node_mask[j]:
+                            # 如果是最后一个时间戳的节点，再连接一次
+                            source_vertices.append(source_vertices[-1])
+                            target_vertices.append(target_vertices[-1])
+                            source_vertices_pos.append(source_vertices_pos[-1])
+                            target_vertices_pos.append(target_vertices_pos[-1])
+                            source_vertices_audio.append(source_vertices_audio[-1])
+                            target_vertices_audio.append(target_vertices_audio[-1])
+                            time_delta_rate.append(time_delta_rate[-1])
+                            time_delta.append(time_delta[-1])
+                            self_connect.append(self_connect[-1])
                     elif self.is_edge_across_entity:
                         # 不同实体在不同时刻之间的连接
                         source_vertices.append(i)
